@@ -1,0 +1,8 @@
+#Configuration des répertoires utiles à Axile :
+#   ROOT_DIR : repertoire racine
+#   RUNS_DIR : répertoire de stockage des projets
+#Ce fichier doit se trouver sous <ROOT_DIR>/dist/guimain
+#-------------------------------------------------------
+ROOT_DIR = /Users/puiseux/git/spleen 
+RUNS_DIR = /Users/puiseux/git/spleen/work
+VTK_ENABLED = True
