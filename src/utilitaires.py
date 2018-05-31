@@ -21,6 +21,8 @@ import math
 import pickle
 import string
 import sys
+from lecteurdxf import LecteurDXFNervures, LecteurDXF
+from lecteur import LecteurGnuplot
 # from exceptions import *
 from math import acos, atan, cos, sin, tan
 from pprint import pprint
@@ -1275,7 +1277,6 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
     xmax=ymax=-10^10
     colors=cosmetic
     for k,xy in enumerate(XYs) :
-#        print xy.shape
         try: color=colors[k]
         except : color='b-'
         pyplot.plot(xy[:,0],xy[:,1],color)
@@ -1816,17 +1817,17 @@ def pointsFromFile(filename):
     ext = filename.ext.lower()
 #     debug(filename=filename, ext=ext)
     if ext in ('.dxf',) :
-        raise NotImplementedError
-        # lecteur = LecteurDXFNervures(filename)
-        # polygon = lecteur.lire()
-        # return polygon
+        # raise NotImplementedError
+        lecteur = LecteurDXFNervures(filename)
+        polygon = lecteur.lire()
+        return polygon
     elif ext in ('.gnu',) :
-        raise NotImplementedError
-        # lecteur = LecteurGnuplot(filename,patch=False)
-        # lecteur.dim = 2
-        # lecteur.patch = False
-        # polygon = lecteur.lire()
-        # return polygon
+        # raise NotImplementedError
+        lecteur = LecteurGnuplot(filename,patch=False)
+        lecteur.dim = 2
+        lecteur.patch = False
+        polygon = lecteur.lire()
+        return polygon
     elif ext in ('.pts',) :
         raise NotImplementedError
         # lecteur = LecteurNervures(filename)
@@ -1866,19 +1867,13 @@ def pointsFrom(x):#,close_=False):
     --------
     - points : np.ndarray, de shape (N,2) si close_==False
     '''
-    debug(x)
+    # debug(x)
     if x is None :
         return np.zeros((0,2))
+    elif isinstance(x,Path):
+        return pointsFromFile(x)#Fichier
     elif isinstance(x, (str, unicode)) :
-        try :
-            debug(x=x)
-            return pointsFromFile(x)#Fichier
-        except Exception as msg:
-            try :
-                return pointsFrom(eval(x))#chaine de caracteres p.ex.'[1,2,5,12]'
-            except Exception as msg : #pass
-                debug('Exception:', str(msg))
-                raise 
+        return pointsFrom(eval(x))#chaine de caracteres p.ex.'[1,2,5,12]'
     elif isinstance(x, (list, tuple)) :
         npa = np.asarray(x)
 #         debug(shape=npa.shape)
@@ -1887,7 +1882,6 @@ def pointsFrom(x):#,close_=False):
             npa.shape=(len(npa)/2,2)
         return npa
     elif isinstance(x, np.ndarray) :
-#         debug(u'x est deja un np.ndarray. Je ne modifie pas sa shape...%s'%str(x.shape))
         return x
     else :
         raise TypeError (u"pointsFrom() : cas non pris en charge")

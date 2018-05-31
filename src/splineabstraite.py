@@ -23,7 +23,7 @@ from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
 import cPickle
 from utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
-                                     absCurv,dist2, baryCentre, centreGravite, simpson)
+                        absCurv,dist2, baryCentre, centreGravite, simpson)
 # from gui.graphicsbase.graphicscommon import (qpolygonFrom, pointsFrom)
 # from inout.writerpts import writeProfil
 # from preferences import SplinePrefs, NPrefs
@@ -787,8 +787,6 @@ class NSplineAbstract(object):
         >>> print S[1]
         [20.0, 30.0]
         """
-        if isinstance(value,QPointF) :
-            value = [value.x(), value.y()]
         if np.all(self._cpoints[k]==value) : #inutile de déclencher un _update()
             return
         self.cpoints[k] = value
@@ -895,28 +893,19 @@ class NSplineAbstract(object):
         u"""La shape au sens NumPy"""
         return self.cpoints.shape
 
-    @property
-    def qdpolygon(self):
-        u"""Les points discrétisés de la spline"""
-#         #debug ()
-        return qpolygonFrom(self.dpoints)
+#     @property
+#     def qdpolygon(self):
+#         u"""Les points discrétisés de la spline"""
+# #         #debug ()
+#         return qpolygonFrom(self.dpoints)
 
     def boundingRect(self):
-        try :
-            dpts = self.dpoints
-            xM, xm, yM, ym = dpts[:,0].max(), dpts[:,0].min(), dpts[:,1].max(), dpts[:,1].min()
-            return QRectF(xm,ym,xM-xm,yM-ym)
-        except (AttributeError, TypeError, ValueError) :
-            return QRectF()
-#         #La solution avec self.qdpolygon.boundingRect() est tres couteuse
-#         try :
-#             return self.qdpolygon.boundingRect()
-#         except AttributeError :
-#             rdebug('pas de qdpolygon')
-#             return QPolygonF().boundingRect()
+        dpts = self.dpoints
+        xM, xm, yM, ym = dpts[:,0].max(), dpts[:,0].min(), dpts[:,1].max(), dpts[:,1].min()
+        return xm,ym,xM,yM
 
-    def controlBoundingRect(self):
-        return self.qcpolygon.boundingRect()
+    # def controlBoundingRect(self):
+    #     return self.qcpolygon.boundingRect()
 
     @property
     def gravitycenter(self):
@@ -1043,65 +1032,6 @@ class NSplineAbstract(object):
         if show : plt.show()
         return plt
 
-
-################################################################################
-def testComputeSpline():
-    import matplotlib.pyplot as plt
-#     from scipy.interpolate import UnivariateSpline
-#     x = np.linspace(-3, 3, 50)
-#     y = np.exp(-x**2) + 0.1 * np.random.randn(50)
-#     plt.plot(x, y, 'ro', ms=2)
-#
-#     spl = UnivariateSpline(x, y, s=0.01)
-#     xs = np.linspace(-3, 3, 1000)
-#     plt.plot(xs, spl(xs), 'g', lw=1)
-#
-#     # Manually change the amount of smoothing:
-#
-#     spl.set_smoothing_factor(0.5)
-#     plt.plot(xs, spl(xs), 'b', lw=1)
-# #     plt.show()
-
-#     debug(spl.get_coeffs())
-#     debug(spl.get_knots())
-    filename = Path(WORK_DIR,'profils','D2v5p2.pts')
-    points = pointsFrom(filename)
-    corde, nba = -1.0, np.nan
-    bf = points[0]
-    for k, point in enumerate(points) :
-        d = dist2(bf,point)
-        if d > corde :corde, nba = d, k
-    corde = math.sqrt(corde)
-    debug (corde=corde, nba=nba)
-    points*=(1000/corde)#en mm
-    corde = 1000
-#     methode = ('cubic',((2, 0, 0), (1, 0, -corde/2))) #extrados
-    C0 = points[:1+nba]
-    C0 = points[nba:]
-    X0, Y0 = C0[:,0], C0[:,1]
-    w = np.ones(len(C0))
-    w[0]=w[-1]=10000
-
-    parametres = {'w':w, 'k':3, 's':0.5, 'ext':2, 'check_finite':True}
-    _, sx, sy = computeSpline(C0, methode=('us', parametres))
-    Tx=sx.get_knots()
-    Ty=sy.get_knots()
-    TT = sorted(set(np.hstack((Tx,Ty))))
-    debug(TT=TT, n=len(TT))
-    debug(Tx=Tx, n=len(Tx))
-    debug(Ty=Ty, n=len(Ty))
-    debug(Rx=sx.get_residual())
-    debug(Ry=sy.get_residual())
-    X, Y = sx(TT), sy(TT)
-    debug(np.asarray(zip(X,Y)))
-    plt.plot(X0, Y0, 'b', lw=1)
-    plt.plot(X, Y, 'ro', lw=1)
-    plt.show()
-
-
 if __name__=="__main__":
-    # app = QApplication(sys.argv)
-    testComputeSpline()
-#     testElagage2()
-    # sys.exit(app.exec_())
+    debug('Rien a faire')
 

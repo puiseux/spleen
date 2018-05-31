@@ -12,15 +12,7 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 import sys,os,math,cPickle
-# from PyQt4 import QtGui
-# from PyQt4 import QtCore
-# from PyQt4.Qt import SIGNAL
-from PyQt4.QtCore import QString
-from PyQt4.QtGui import QApplication
-from utilitaires import Path
-# from utilitaires.exceptions import PyGlideSplineError
-# from utilitaires.utilitaires import prettystring
-# from model.basicobjects.polyline import NPolyLine
+from polyline import NPolyLine
 from config import DATA_DIR,VALIDATION_DIR,WORK_DIR
 # from inout.lecteurdata import LecteurData
 # from inout.writerpts import writeProfil
@@ -36,7 +28,7 @@ from model.profil.naca import naca4,naca5
 # from model.basicobjects.splinesimple import NSplineSimple
 from model.basicobjects.splinecomposee import NSplineComposee
 from preferences import ProfilPrefs
-from gui.graphicsbase.graphicscommon import pointsFrom, qpolygonFrom
+from utilitaires import pointsFrom
 from model.profil.utilitairesprofil import computeCordeAndNBA
 from pprint import pprint
 from numpy import (asarray,zeros,
@@ -882,13 +874,13 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
         except TypeError :#on peut pas echantillonner
 #             rdebug('impossible d\'echantillonner : nb points de controle=%d'%len(self))
             return np.zeros((0,2))
-    @property
-    def qcpolygon(self):
-        return qpolygonFrom(self.cpoints)
-#
-    @property
-    def qepolygon(self):
-        return qpolygonFrom(self.epoints)
+#     @property
+#     def qcpolygon(self):
+#         return qpolygonFrom(self.cpoints)
+# #
+    # @property
+    # def qepolygon(self):
+    #     return qpolygonFrom(self.epoints)
 #
     @property
     def iba(self):

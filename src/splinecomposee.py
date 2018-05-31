@@ -10,12 +10,12 @@ Description :
 '''
 import sys,os,math
 import numpy as np
-from array import array
-
+from numpy import asarray as array
+from path import Path
 # from PyQt4 import QtGui
 # from PyQt4 import QtCore
-from PyQt4.QtGui import (QApplication, )#QPolygonF)
-from PyQt4.QtCore import (Qt, QPointF,)# QString, QObject)
+# from PyQt4.QtGui import (QApplication, )#QPolygonF)
+# from PyQt4.QtCore import (Qt, QPointF,)# QString, QObject)
 from config import VALIDATION_DIR#, SOURCES_DIR
 # from scipy.optimize import newton, minimize
 # from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
@@ -23,19 +23,9 @@ from config import VALIDATION_DIR#, SOURCES_DIR
 from splineabstraite import NSplineAbstract
 from splinesimple import NSplineSimple
 #from snapper import Snapper
-import preferences
+# import preferences
 # import cPickle
-from utilitaires.utilitaires import (Path,
-#                                      whoami,
-                                     segmentPlusProche,
-                                     debug, rdebug,
-#                                      hardScale, absCurv,dist2,dist, rotate,
-#                                      baryCentre,centreGravite, scourbure,symetrieAxe,
-#                                      splineInterpolation, pointsDoubles,
-#                                      eliminerPointsDoublesConsecutifs
-                                        )
-from gui.graphicsbase.graphicscommon import (#p2s, p2t, pointsFrom,qpolygonFrom,
-                                     qpolygonFrom, pointsFrom)
+from utilitaires import (segmentPlusProche,debug, rdebug, pointsFrom)
 # from inout.writerpts import writeProfil
 # from preferences import SplinePrefs, NPrefs
 
@@ -276,23 +266,23 @@ class NSplineComposee(NSplineAbstract):
 #             spline.cpoints = points
 #         self._update()
 
-    @property
-    def qcpolygon(self):
-        u'''Recomposer un QPolygonF a partir des composants'''
-        self._qcpolygon = qpolygonFrom(self.cpoints)
-        return self._qcpolygon
+    # @property
+    # def qcpolygon(self):
+    #     u'''Recomposer un QPolygonF a partir des composants'''
+    #     self._qcpolygon = qpolygonFrom(self.cpoints)
+    #     return self._qcpolygon
 
-    @property
-    def qepolygon(self):
-        u'''Recomposer un QPolygonF a partir des composants'''
-        self._qepolygon = qpolygonFrom(self.epoints)
-        return self._qepolygon
+    # @property
+    # def qepolygon(self):
+    #     u'''Recomposer un QPolygonF a partir des composants'''
+    #     self._qepolygon = qpolygonFrom(self.epoints)
+    #     return self._qepolygon
 
-    @property
-    def qdpolygon(self):
-        u'''Recomposer un QPolygonF a partir des composants'''
-        self._qdpolygon = qpolygonFrom(self.dpoints)
-        return self._qdpolygon
+    # @property
+    # def qdpolygon(self):
+    #     u'''Recomposer un QPolygonF a partir des composants'''
+    #     self._qdpolygon = qpolygonFrom(self.dpoints)
+    #     return self._qdpolygon
 
     @property
     def info(self):
@@ -350,8 +340,8 @@ class NSplineComposee(NSplineAbstract):
         On bouge un point de contrôle existant :
         mise à jour du polygone de contrôle et _update
         """
-        if isinstance(value, QPointF) :
-            value = [value.x(), value.y()]
+        # if isinstance(value, QPointF) :
+            # value = [value.x(), value.y()]
         #On parcourt les splines, on modifie celle(s) qui est (sont) concernée(s)
         ruptures = self.ruptures
         for ks in range(len(self.splines)) :

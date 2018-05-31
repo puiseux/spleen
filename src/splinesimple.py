@@ -449,7 +449,7 @@ class NSplineSimple(NSplineAbstract):
                                's0 = %.4g ; j*s0-Sj=%.4g > 0'%(s0,j*s0-Sj),
                                ]
                         if j*s0-Sj < s0/1000 :
-                            deb, msg = strace, [u'\nPas grave %s'%self.name]
+                            deb, msg = debug, [u'\nPas grave %s'%self.name]
                         else :
                             deb, msg = rdebug, [u'\nAttention']
                             msg += [
@@ -487,7 +487,7 @@ class NSplineSimple(NSplineAbstract):
         dump = self.toDump()
 #         dump['cpoints'] = points
         dump['name'] = name
-        dump['parent'] = self.parent()
+        # dump['parent'] = self.parent()
         spl = NSplineSimple(**dump)
         spl.hardScale(echelle)
         return spl
@@ -1605,8 +1605,8 @@ def testConstructeurs(filename) :
     print p
     for point in p.qcpolygon :
         print point
-    for point in p.qdpolygon :
-        print point
+    # for point in p.qdpolygon :
+    #     print point
     debug(filename)
 
 #     return
@@ -2347,5 +2347,5 @@ if __name__=="__main__":
         testElagage1(filename)
         debug('fin testElagage1')
     rdebug('fin tests')
-    sys.exit(app.exec_())
+    # sys.exit(app.exec_())
 

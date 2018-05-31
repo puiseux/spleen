@@ -13,29 +13,14 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 '''
 
 import sys,os,math
-from PyQt4 import QtGui
-from PyQt4 import QtCore
-from PyQt4.QtCore import QPointF
-from PyQt4.QtGui import QPolygonF
-# from config import SOURCES_DIR
-from utilitaires import Path
-from inout.writerpts import writeProfil
+from path import Path
 from config import  VALIDATION_DIR
-from utilitaires.utilitaires import (
-#                                      dist,trace,alert, strace, salert,
-                                     debug, rdebug,
-                                     absCurv, my2dPlot,
-#                                      baryCentre,hardScale,rotate,symetrieAxe
-                                     )
+from utilitaires import (debug, rdebug,absCurv, my2dPlot,)
 import numpy as np
-# from scipy import interpolate
-from gui.graphicsbase.graphicscommon import pointsFrom#,qpolygonFrom, p2s, p2t
-# from utilitaires.utilitaires import segmentPlusProche
-# from preferences import PolyLinePrefs
-from model.basicobjects.splinesimple import NSplineSimple
+from utilitaires import pointsFrom
+from splinesimple import NSplineSimple
 from numpy import asarray
-from gui.graphicsbase.graphicscommon import pointsFromFile
-#from utilitaires.exceptions import PyGlideSplineError
+from utilitaires import pointsFromFile
 
 class NPolyLine(NSplineSimple):
     u"""
@@ -147,7 +132,6 @@ def test1NPolyLine():
 
 def testNPolyLine():
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
-    filename=Path(VALIDATION_DIR,'simple','simple2d2.gnu')
     p=NPolyLine()
     p=NPolyLine(points=pointsFrom(filename))
     p.appendPoint((5,10))
@@ -187,7 +171,5 @@ def testNPolyLine():
         my2dPlot((XY0,XY0,XY,XY,np.asarray(centre).reshape((1,2))),equal=True,cosmetic=('b-','bo','r-','ro','g^','r*','r^'))
 
 if __name__=="__main__":
-    app=QtGui.QApplication(sys.argv)
     testNPolyLine()
     test1NPolyLine()
-    sys.exit(app.exec_())
