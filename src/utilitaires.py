@@ -8,26 +8,17 @@ Created on 11 mai 2012
 '''
 import datetime
 import gc  # garbage colector
-# from PyQt4 import QtGui,QtCore
-# from PyQt4.QtCore import (Qt,QSize,QVariant,QPointF,QPoint,)
-# from PyQt4.QtGui import (QTableWidget,QTableWidgetItem,QPushButton,QLayout,
-#                          QVBoxLayout,QHBoxLayout,QGridLayout,QSpacerItem,QSizePolicy,
-#                          QWidget,QScrollArea,QApplication,QKeySequence,
-#                          QShortcut,QFont,QFontMetrics,QHeaderView, QPolygonF, QPolygon)
-# from PyQt4.Qt import SIGNAL,SLOT
-# from inout.format import formData
-#from gui.graphicsbase.graphicscommon import pointsFromPolygon
 import math
 import pickle
 import string
 import sys
-from lecteurdxf import LecteurDXFNervures, LecteurDXF
-from lecteur import LecteurGnuplot
-# from exceptions import *
+# from lecteurdxf import LecteurDXFNervures, LecteurDXF
+# from lecteur import LecteurGnuplot
+# from lecteurs import pointsFromFile
 from math import acos, atan, cos, sin, tan
 from pprint import pprint
 from random import choice
-
+# from lecteurs import pointFromFile
 import numpy as np
 import scipy as sp
 from numpy import _distributor_init, asarray, ones, zeros
@@ -49,7 +40,7 @@ from scipy.optimize import minimize_scalar
 # from model.basicobjects.splineInterpolation import splineInterpolation
 # from model.decoration.contrainte import Contrainte
 from shapely.geometry import LinearRing, Point, Polygon
-
+from matplotlib import pylab
 # import logging
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)
@@ -985,8 +976,8 @@ def _trace(output, *args,**kargs) :
     #     logger.info(msg0 + u' ; '.join(lmsg))
     # elif output is sys.stderr :
     #     logger.warning(msg0+u' ; '.join(lmsg))
-#     try : print>>output, msg0, u' ; '.join(lmsg)
-#     except UnicodeEncodeError: print msg0, lmsg
+    try : print>>output, msg0, u' ; '.join(lmsg)
+    except UnicodeEncodeError: print msg0, lmsg
 
 def rstack(commentaire=''):
     _stack(sys.stderr, commentaire)
@@ -1254,7 +1245,7 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
     comporte n points en 2d ou 3d. seules les deux premieres coord de chaque point sont prises en compte.
     '''
 
-    import math,pylab
+    # import math,pylab
     from matplotlib import pyplot
 #    matplotlib.use('MacOSX')
     nbcourbes=len(XYs)
@@ -1285,7 +1276,7 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
         xmax=max(xmax,np.max(xy[:,0]))
         ymax=max(ymax,np.max(xy[:,1]))
     w,h=xmax-xmin,ymax-ymin
-    dizaine=int(math.log10(w))#10^dizaine <= w < 10^(1+dizaine)
+    # dizaine=int(math.log10(w))#10^dizaine <= w < 10^(1+dizaine)
     ax=pyplot.axes()
     if equal : ax.set_aspect('equal')
     ax.set_xlim(xmin-w/10,xmin+w+w/10)
@@ -1301,7 +1292,7 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
     if legends is not None:
         pylab.legend(legends,shadow=True)#, loc = (0.01, 0.55))
         ltext=pylab.gca().get_legend().get_texts()
-        for k, legend in enumerate(legends) :
+        for k, _ in enumerate(legends) :
             pylab.setp(ltext[k],fontsize=10)#, color = 'b')
 
 #     print ltext
@@ -1414,7 +1405,7 @@ def isInside(p, Q):
     (on note A=Q[i], B=Q[i+1], 0<= i < n )
     """
 #    trace('', p,Q)
-    (x, y) = p
+    # (x, y) = p
 #    trace('', x,y)
     w0 = vect2d(Q[1]-Q[0], p-Q[0])
     for (A, B) in zip(Q[:-1], Q[1:]) :
@@ -1453,7 +1444,7 @@ def isInside0(p, Q, frontiere=False):
         - les deux produits vectoriels AB^Ap et CD^Cp  ont même signe.
     """
 #    trace('', p,Q)
-    (x, y) = p
+    (x, _) = p
 #    trace('', x,y)
     A, B, C, D = Q[0], Q[1], Q[2], Q[3]
 #    trace('', A,B,C,D)
@@ -1680,7 +1671,7 @@ def testIsInside():
                     [-5.92606363,  0.49080254],
                     [-5.92606363, -0.47661251]])
     print isInsideOrFrontier(p, Q, 1.0e-9)
-    return
+    # return
     Q = np.asarray([(0.0,0.0), (1.0,0.5), (1.0,2.0), (0.0, 0.5), (0.,0.)])
     Q = np.asarray([
                     [-5.8630197,  -0.37438482],
@@ -1695,7 +1686,7 @@ def testIsInside():
     p = np.asarray([1.0, 1.0])
     print isInsideOrFrontier(p, Q)
 #    alert('', 'bizarre, a verifier...')
-    return
+    # return
     p = np.asarray((0.5, 1.24999))
     print isInsideOrFrontier(p, Q)
     print isInside0(p, Q)
@@ -1811,80 +1802,8 @@ def projSurProfil(prof,iba,pos,cote):
 #         return 0.5*abc/abs(det(AB, CA))
 
 
-def pointsFromFile(filename):
-    filename = unicode(filename)
-    filename = Path(filename)
-    ext = filename.ext.lower()
-#     debug(filename=filename, ext=ext)
-    if ext in ('.dxf',) :
-        # raise NotImplementedError
-        lecteur = LecteurDXFNervures(filename)
-        polygon = lecteur.lire()
-        return polygon
-    elif ext in ('.gnu',) :
-        # raise NotImplementedError
-        lecteur = LecteurGnuplot(filename,patch=False)
-        lecteur.dim = 2
-        lecteur.patch = False
-        polygon = lecteur.lire()
-        return polygon
-    elif ext in ('.pts',) :
-        raise NotImplementedError
-        # lecteur = LecteurNervures(filename)
-        # polygon = lecteur.lire()
-        # if lecteur.genre.lower()=='voile' :
-        #     raise IOError(whoami()+u"%s n'est pas un polygon2d mais 3d (voile?, profil3d?)"%filename.name)
-        # elif lecteur.dimension == 3 :
-        #     polygon = lecteur.points[:,:-1]
-        # return polygon
-    elif ext in ('.spl',) :
-        """Une spline"""
-        with open(filename,'r') as f :
-            dump = eval(f.read())
-#         if len(lines)>1 :
-#             line = ' '.join([l.strip() for l in lines])
-#         else :
-#             line = lines[0]
-#         dump = eval(line)
-#         debug(dump=dump)
-        try :
-            return np.asarray(dump['cpoints'])
-        except :
-            raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
-    else :
-#         rdebug()
-        raise IOError(u'Je ne sais pas lire ce fichier "%s"'%filename)
-        return np.zeros((0,2))
 
 
-def pointsFrom(x):#,close_=False):
-    u'''
-    Paramètre x:
-        - un np.ndarray((n,2))
-        - un chaine de caractères evaluable par eval(x)
-        - un nom de fichier
-    Retourne :
-    --------
-    - points : np.ndarray, de shape (N,2) si close_==False
-    '''
-    # debug(x)
-    if x is None :
-        return np.zeros((0,2))
-    elif isinstance(x,Path):
-        return pointsFromFile(x)#Fichier
-    elif isinstance(x, (str, unicode)) :
-        return pointsFrom(eval(x))#chaine de caracteres p.ex.'[1,2,5,12]'
-    elif isinstance(x, (list, tuple)) :
-        npa = np.asarray(x)
-#         debug(shape=npa.shape)
-        sh = npa.shape
-        if len(sh) != 2 or sh[1] != 2 :
-            npa.shape=(len(npa)/2,2)
-        return npa
-    elif isinstance(x, np.ndarray) :
-        return x
-    else :
-        raise TypeError (u"pointsFrom() : cas non pris en charge")
 
 def rcercle(A, B, C, eps=0.0):
     u"""retourne le rayon dun cercle passant par les 3 points A,B,C, distincts et non alignes.
@@ -1904,7 +1823,7 @@ def rcercle(A, B, C, eps=0.0):
         return np.inf
     else :
         return 0.5*abc/d
-        return 0.5*abc/abs(det(AB, CA))
+        # return 0.5*abc/abs(det(AB, CA))
 
 def rayonDeCourbure(P):
     u"""
@@ -2029,9 +1948,9 @@ def testSegmentPlusProche():
 #     plt.plot([pt[0],pt1[0]],[pt[1],pt1[1]],'r-o',label='winner')
     plt.legend()
     plt.show()
-    return
-    p7 = 7,0#None, None
-    p2 = 2,0#(1, array([ 2.17647059, -0.70588235]))
+    # return
+    # p7 = 7,0#None, None
+    # p2 = 2,0#(1, array([ 2.17647059, -0.70588235]))
     for x in range(7) :
         S = segmentPlusProche(points, (x,0))
         print 'Point = ', (x,0) , ' ; segmentPlusProche =',S

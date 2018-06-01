@@ -285,12 +285,12 @@ class LecteurGnuplot(Lecteur):
             3. reshape et calcul connectivités.
             Retourne un PatchCMARC
         """
-        for nl,line in enumerate(self.lines) :
+        for nl,_ in enumerate(self.lines) :
             if self.goodLine(nl) : break
         firstline=nl
 
         NN=0
-        for nl,line in enumerate(self.lines[firstline:]) :
+        for nl,_ in enumerate(self.lines[firstline:]) :
             if self.badLine(nl) and self.goodLine(nl+1) :
                 NN+=1
 

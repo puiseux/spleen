@@ -25,7 +25,7 @@ from splinesimple import NSplineSimple
 #from snapper import Snapper
 # import preferences
 # import cPickle
-from utilitaires import (segmentPlusProche,debug, rdebug, pointsFrom)
+from utilitaires import (segmentPlusProche,debug, rdebug)
 # from inout.writerpts import writeProfil
 # from preferences import SplinePrefs, NPrefs
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 class NSplineComposee(NSplineAbstract):
-    prefs = preferences.SplinePrefs()
+    # prefs = preferences.SplinePrefs()
     u"""
     Une spline composée de plusieurs splines simples non périodiques (des brins),
     pour points anguleux, ou profils
@@ -68,9 +68,9 @@ class NSplineComposee(NSplineAbstract):
         """Valeurs par defaut:"""
         self._methode   = [('cubic',"not-a-knot"),]#les methodes pour chaque brin de spline
         self._ruptures   = [0,-1]#les points de séparation des splines
-        self.precision  = [self.defaultprefs.precision,]
-        self.mode       = [self.defaultprefs.mode,]
-        self.nbpe       = [self.defaultprefs.nbpe,]
+        self.precision  = [500,]
+        self.mode       = [('ius',1)]#polyligne
+        self.nbpe       = [100,]
         self.name       = self.classname#+'(%d)'%(id(self))
         self._cpoints   = np.zeros((1,2))
         self.role       = self.classname
@@ -125,7 +125,7 @@ class NSplineComposee(NSplineAbstract):
         for key in ('cpoints', 'points') :#la cle 'cpoints' est prioritaire, en cas
             if dump.has_key(key):
                 cpoints = dump.pop(key)
-                if isinstance(cpoints, (list, tuple, array)) :#types Python de base
+                if isinstance(cpoints, (list, tuple, np.ndarray)) :#types Python de base
                     #obligé de considerer ce cas, car pour le load d'un pkl cpoints est une liste
                     cpoints = np.asarray(cpoints)
                 if not isinstance(cpoints, np.ndarray) :
@@ -294,14 +294,14 @@ class NSplineComposee(NSplineAbstract):
             ]
         return super(NSplineComposee, self).info + infos1
 
-    def debug(self):
-#         return self.__str__()
-        debug(self)
-        return
-        for k, spline in enumerate(self.splines) :
-            print "\nSpline composante numero %d"%k
-            print 27*"="
-            print spline
+        # return
+#     def debug(self):
+# #         return self.__str__()
+#         debug(self)
+        # for k, spline in enumerate(self.splines) :
+        #     print "\nSpline composante numero %d"%k
+        #     print 27*"="
+        #     print spline
 
     def toDump(self):
         dump = super(NSplineComposee, self).toDump()
@@ -372,21 +372,15 @@ class NSplineComposee(NSplineAbstract):
         si i != None, insertion du point pos entre i-1 et i (de sorte qu'il devienne le point i)
             c'est la spline simple contenant [i-1,i] qui fait l'insertion
         """
-        if isinstance(pos, QPointF) :
-            pos = pos.x(), pos.y()
         cpoints = self.cpoints
-#         debug(i=i)
         if i is None :
-            i, H = segmentPlusProche(cpoints, pos)#segment [i, i+1]
-#             debug(i,H)
+            i, _ = segmentPlusProche(cpoints, pos)#segment [i, i+1]
             if i is None :
                 debug('Je ne sais pas ou (dans quel segment) inserer ce point %s'%str(pos))
                 return
         else :
             i = i-1
-#         debug(i,pos)
         si  = self.localiser(i)#si=numero de la spline
-#         debug(si,pos)
         ks, kp = si[-1]
         #i est le kp-ieme point de la spline ks, H est inséré entre i et i+1
         self.splines[ks].insertPoint(pos, 1+kp)
@@ -439,7 +433,7 @@ class NSplineComposee(NSplineAbstract):
             alfa = math.radians(alfa)
         if centre is None :
             centre = self.barycentre
-        for k, spline in enumerate(self.splines) :
+        for spline in self.splines :
             spline.hardRotate(alfa, centre, unit='radians')
         # Les methodes des splines composantes changent (les valeurs des vecteurs dérivées aux extrémités)
         #on n'a pas le droit de changer self.methode...alors on contourne en changeant self._methode
@@ -468,7 +462,7 @@ class NSplineComposee(NSplineAbstract):
             centre = self.barycentre
 #         hardScale(self.cpoints, scale, centre)
 #         debug(cpoints=self.cpoints)
-        for k, spline in enumerate(self.splines) :
+        for spline in self.splines :
             #Attention, il faut que les deux splines soient mises à l'echelle avec le meme centre
             spline.hardScale(scale, centre)
 #             debug(spline.cpoints)
@@ -480,7 +474,7 @@ class NSplineComposee(NSplineAbstract):
     def symetriser(self, axe, centre=None):
         if centre is None :
             centre = self.barycentre[0][axe]
-        for k, spline in enumerate(self.splines) :
+        for spline in self.splines :
             spline.symetriser(axe, centre)
         # Les methodes des splines composantes changent (les valeurs des vecteurs dérivées aux extrémités)
         #on n'a pas le droit de changer self.methode...alors on contourne en changeant self._methode
@@ -603,14 +597,13 @@ def testNSplineComposee():
 
     p = NSplineComposee(name='vide')
     debug(p=p)
-    for point in p.qcpolygon :
-        print point
-    for point in p.qdpolygon :
-        print point
+    # for point in p.qcpolygon :
+    #     print point
+    # for point in p.qdpolygon :
+    #     print point
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     filename=Path(VALIDATION_DIR,'1.gnu')
     filename=Path(VALIDATION_DIR,'simple','simple2d1.gnu')
-    filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     filename=Path(VALIDATION_DIR,'faial2.dxf')
     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
     filename=Path(VALIDATION_DIR,'simple','intrados.gnu')
@@ -619,6 +612,7 @@ def testNSplineComposee():
     filename=Path(VALIDATION_DIR,'simple','demi-cercle.gnu')
     filename=Path(VALIDATION_DIR,'reference.pts')
     filename=Path(VALIDATION_DIR,'simple','profil.gnu')
+    filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
 
     k=0
     for methode in (
@@ -678,7 +672,7 @@ def testNSplineComposee():
                          nbpe=[20,10],
                          name='Profil-%d'%k
                          )
-    S.debug()
+    debug(S)
 #     S[4] = (95,5)
 #     R = S.cpoints[S.ruptures]
 #     debug(original=S,R=R)
@@ -686,7 +680,7 @@ def testNSplineComposee():
     S.plot(plt, titre='Original '+str(S.methode))
 
     S.hardScale((0.2,0.2), centre=np.asarray((0,0)))
-    S.debug()
+    debug(S)
     S.plot(plt, titre='S.hardScale((0.2,0.2))')
 
     S.hardRotate(10)
@@ -757,11 +751,12 @@ def testNSplineComposee():
     S.removePoint(3)
     S.plot(plt, titre='S.removePoint(3)')
     return plt.show()
-    plt.show()
-    return
+    # plt.show()
+    # return
 
 
 def debugNSplineComposee():
+    from lecteurs import pointsFrom
     S0 = NSplineComposee()
     print S0
 #     return
@@ -778,7 +773,6 @@ def debugNSplineComposee():
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     filename=Path(VALIDATION_DIR,'1.gnu')
     filename=Path(VALIDATION_DIR,'simple','simple2d1.gnu')
-    filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     filename=Path(VALIDATION_DIR,'faial2.dxf')
     filename=Path(VALIDATION_DIR,'simple','intrados.gnu')
     filename=Path(VALIDATION_DIR,'simple','anguleux.gnu')
@@ -787,6 +781,7 @@ def debugNSplineComposee():
     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
     filename=Path(VALIDATION_DIR,'simple','profil.gnu')
     filename=Path(VALIDATION_DIR,'reference0.pts')
+    filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
 
     k=0
     for methode in (
@@ -837,7 +832,7 @@ def debugNSplineComposee():
                          nbpe=[50,50],
                          name='Profil-%d'%k
                          )
-    S.debug()
+    debug(S)
 #     S[4] = (95,5)
 #     R = S.cpoints[S.ruptures]
 #     debug(original=S,R=R)
@@ -845,7 +840,7 @@ def debugNSplineComposee():
     S.plot(plt, titre='Original '+str(S.methode))
 
     S.hardScale((0.2,0.2), centre=np.asarray((0,0)))
-    S.debug()
+    debug(S)
     S.plot(plt, titre='S.hardScale((0.2,0.2))')
 
     S.hardRotate(10)
@@ -922,8 +917,7 @@ def debugNSplineComposee():
     plt.show()
     return
 if __name__=="__main__":
-    app = QApplication(sys.argv)
+    from lecteurs import pointsFrom
     debugNSplineComposee()
     testNSplineComposee()
-    sys.exit(app.exec_())
 

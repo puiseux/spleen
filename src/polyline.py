@@ -17,10 +17,9 @@ from path import Path
 from config import  VALIDATION_DIR
 from utilitaires import (debug, rdebug,absCurv, my2dPlot,)
 import numpy as np
-from utilitaires import pointsFrom
+from lecteurs import pointsFrom, pointsFromFile
 from splinesimple import NSplineSimple
 from numpy import asarray
-from utilitaires import pointsFromFile
 
 class NPolyLine(NSplineSimple):
     u"""
@@ -139,8 +138,8 @@ def testNPolyLine():
     points=p.points
     p=NPolyLine(points=points)
     print " => constructeur np.ndarray  :",p
-    p=NPolyLine(points=pointsFrom(p.qcpolygon))
-    print " => constructeur QPolygon  :",p
+    # p=NPolyLine(points=pointsFrom(p.qcpolygon))
+    # print " => constructeur QPolygon  :",p
     print p.scaled(asarray((2,2)))
     #print "constructeur QPolygon :",p
     #print '########## NPolyLine divers (BA, absCurv, extrados, ligne moyenne...) ##########'
@@ -153,7 +152,7 @@ def testNPolyLine():
     p.hardScale((2,2))
     print p.points
 
-    filename=Path(VALIDATION_DIR,'simple','simple2d2.gnu')
+    filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     p = NPolyLine(points=pointsFrom(filename))
     mp = NPolyLine(points=pointsFrom(filename))
     centre=np.asarray((7,0))

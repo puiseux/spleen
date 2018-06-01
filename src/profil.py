@@ -12,49 +12,28 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 import sys,os,math,cPickle
+from path import Path
+from pprint import pprint
 from polyline import NPolyLine
 from config import DATA_DIR,VALIDATION_DIR,WORK_DIR
 # from inout.lecteurdata import LecteurData
 # from inout.writerpts import writeProfil
-from utilitaires.utilitaires import (stack,#trace,alert,
-                                     debug, rdebug,
-                                     dist2,dist,prettyprint,
-#                                      rotate, hardScale,
-                                     rcercle)
+from utilitaires import (stack, debug, rdebug, dist2, dist, rcercle)
 import numpy as np
 # from gui.graphicsbase.graphicscommon import p2s, p2t
-from model.basicobjects.paramgeneraux import ProfsParamNew, ProfsParam
-from model.profil.naca import naca4,naca5
+from paramgeneraux import ProfsParamNew, ProfsParam
+from naca import naca4,naca5
 # from model.basicobjects.splinesimple import NSplineSimple
-from model.basicobjects.splinecomposee import NSplineComposee
-from preferences import ProfilPrefs
+from splinecomposee import NSplineComposee
 from utilitaires import pointsFrom
-from model.profil.utilitairesprofil import computeCordeAndNBA
+from utilitairesprofil import computeCordeAndNBA
 from pprint import pprint
-from numpy import (asarray,zeros,
-#                    linspace, ones, nan
-                   )
+from numpy import (zeros,)
+from numpy import asarray as array
 from scipy.optimize import newton
-from __builtin__ import property
-# from numbers import Number
 
-def computeCordeAndNBA(points):
-    u"""
-    retourne la distance et le numéro du point le plus éloigné de BF=points[0]
-    Dés que la distance décroit, on y est.
-    En principe, corde == 1 et nba==self.nba
-    """
-    corde, nba = -1.0, np.nan
-    bf = points[0]
-    for k, point in enumerate(points) :
-        d = dist2(bf,point)
-        if d > corde :
-            corde, nba = d, k
-    return math.sqrt(corde), nba
-
-class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
-# class Profil(NPolyLine):
-    prefs = ProfilPrefs()
+class Profil(NSplineComposee): 
+    prefs = None
 
     u"""
     Un profil est une NSplineComposee comportant deux NSplineSimple, l'une pour l'extrados,
@@ -90,7 +69,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
                 if len(serie) == 5 : points = naca5(serie, naca[1])
                 dump['points'] = points
                 dump['name'] = 'naca'+serie
-        except KeyError as msg :
+        except KeyError :
     #             debug( msg)
             pass
         #Appelle setDefaultValues() puis load() puis _update()
@@ -127,7 +106,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
 #                 debug(pouvext=pouvext, pouvint=pouvint)
                 self.pouverture = (-pouvext, -pouvint)
 #                 debug()
-            except IndexError as msg :
+            except IndexError:# as msg :
                 pass
 #                 debug(msg)
 
@@ -190,9 +169,9 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
                        tol=tol, maxiter=50, fprime2=lambda t:S.sx(t,2))
             k += 1
             return (t,k) if nbit else t
-            if not dt[0] <= t <= dt[1] : #dépasse les bornes
-                return (np.nan, k) if nbit else np.nan
-            t0 += 0.1
+            # if not dt[0] <= t <= dt[1] : #dépasse les bornes
+            #     return (np.nan, k) if nbit else np.nan
+            # t0 += 0.1
     @property
     def nbpe(self):
         u"""
@@ -213,7 +192,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
 #         debug('entree load',dump_keys=dump.keys())
         super(Profil, self).load(dump)
 #         debug('entree load apres super.load',dump_keys=dump.keys())
-        if isinstance(dump,(str,unicode,QString)) :
+        if isinstance(dump,(Path,)) :
             f = open(dump,'r')
             d = cPickle.load(f)
             self.load(d)
@@ -245,10 +224,10 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
             #une chaîne de caractères '[nptprof=86, iouverture=(46, 47), iba=37]'
             #une liste (certains autres projets?) ou
             self.profparam = ProfsParamNew(**dparams)
-        except TypeError as msg:
+        except TypeError :#as msg:
 #             debug('TypeError', msg)
             self.profparam = dparams.castToProfsParamNew()
-        except KeyError as msg :#pas de profparam dans cette liste d'arguments on prend ceux par defaut
+        except KeyError :#as msg :#pas de profparam dans cette liste d'arguments on prend ceux par defaut
 #             debug('KeyError', msg)
             self.profparam = ProfsParamNew(*self.prefs.profparamnew)
 #         debug(name=self.name, profparams=self.profparam)
@@ -417,7 +396,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
     @property
     def douverture(self, nbp=100):
         u"""Retourne un tableau numpy de nbp points discrétisés de l'ouverture"""
-        touv = (kam, tam), (kav,tav) = self.touverture
+        (kam, tam), (kav,tav) = self.touverture
 #         debug(pouv=self.pouverture, touv=touv)
 #         if kam!=kav :
         if kam == kav : #deux points sur le meme trados
@@ -444,7 +423,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
 #         epoints = super(Profil, self).echantillonner(nbp, mode)
         mode=['courbure','courbure']
         self.nb_echantillonnages += 1
-        re, ri = self.rba
+        _, ri = self.rba
         if abs(ri) < self.corde/100 :
             raise RuntimeWarning('Rayon de bord d\'attaque quasi nul (%.2g) à l\'intrados, => problemes d\'echantillonnage'%ri)
 
@@ -494,7 +473,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
         except RuntimeWarning :
             rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
             raise
-        except ValueError as msg :
+        except ValueError :#as msg :
             rdebug('nbpret=%d<0 ?'%nbpret)
             raise
 #         debug(eret=eret, len_eret=len(eret))
@@ -615,13 +594,13 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
         self.dilatext = 1+coefext/100.0
         self.dilatint = 1+coefint/100.0
         dilate = self.copy()
-        dilate.splines[0].hardScale((1.0, self.dilatext), centre=asarray([0,0]))
-        dilate.splines[1].hardScale((1.0, self.dilatint), centre=asarray([0,0]))
+        dilate.splines[0].hardScale((1.0, self.dilatext), centre=array([0,0]))
+        dilate.splines[1].hardScale((1.0, self.dilatint), centre=array([0,0]))
         return dilate
-        XY = self.points.copy()
-        XY[0:self.iba,1]*=self.dilatext
-        XY[self.iba:,1]*=self.dilatint
-        return XY
+        # XY = self.points.copy()
+        # XY[0:self.iba,1]*=self.dilatext
+        # XY[self.iba:,1]*=self.dilatint
+        # return XY
 
 
     def profilDilateOld(self,coefext,coefint):
@@ -656,7 +635,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
     def normalise(self, scale=1.0):
 #        alert(self)
         facteur = scale/self.corde
-        cba, cbf = np.asarray(self[self.nba]), np.asarray(self[0])
+        cba, cbf = np.array(self[self.nba]), np.array(self[0])
         u = cbf-cba
         alfa = np.arctan2(u[1], u[0])
         if np.abs(alfa) > 1.0e-5 :
@@ -737,7 +716,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
         # Les xi décroissent pour l'extrados
         dEx=extr[1:]-extr[:-1]
         dxex=dEx[:,0]#extr[1:,0] - extr[:-1,0]
-        dyex=dEx[:,1]#extr[1:,0] - extr[:-1,0]
+        # dyex=dEx[:,1]#extr[1:,0] - extr[:-1,0]
         ok=np.all(dxex<0)
         s='' if ok else '****'
         oks.append(ok)
@@ -745,7 +724,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
         # Les xi croissent pour l'intrados
         dIn=intr[1:]-intr[:-1]
         dxin=dIn[:,0]#intr[1:,0] - intr[:-1,0]
-        dyin=dIn[:,1]#intr[1:,0] - intr[:-1,0]
+        # dyin=dIn[:,1]#intr[1:,0] - intr[:-1,0]
         ok=np.all(dxin>0)
         s='' if ok else '****'
         oks.append(ok)
@@ -771,7 +750,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
             reponse.append(s+u"Intrados convexe : %s"%(ok))
             oks.append(ok)
 
-        oks=np.asarray(oks)
+        oks=np.array(oks)
         if np.all(oks) :
             self.conforme=True
             reponse.append(str(oks))
@@ -924,7 +903,7 @@ class Profil(NSplineComposee): #FAIRE ABSOLUMENT CETTE SOLUTION
     def plot(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
         from matplotlib import pyplot as plt
         from matplotlib.widgets import CheckButtons
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         if titre is None : titre = self.name#+str(self.rba)
         plt.title(titre)
         ED = self.splines[0].dpoints
@@ -1071,7 +1050,7 @@ def testProfil(filename):
 #     print p.verification()
     debug( p)
     p.normalise()
-    p.debug()
+    debug(p)
     p.plot(plt, titre='normalise()')
     p[1] = (0.6,0.12)
     p.plot(plt, titre='p[1] = (0.6,0.12)')
@@ -1092,7 +1071,7 @@ def testProfil(filename):
     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
     p=Profil(points=pointsFrom(filename))
     mp=Profil(points=pointsFrom(filename))
-    centre=asarray((7,0))
+    centre=array((7,0))
     mp.hardRotate(30,centre)
     mp.hardScale((0.5,0.5),centre)
     p.dump(Path(WORK_DIR,'profildump.pkl'))
@@ -1176,7 +1155,7 @@ def testEchantillonner(filename):
     P.elaguer(2, True)
     P.pouverture = pam, pav = -10, -40#en % de corde
     debug(P)
-    touv = (kam, tam), (kav,tav) = P.touverture
+    touv  = P.touverture #= (kam, tam), (kav,tav)
     debug(touv=touv)
     debug(ouverture=P.ouverture)
 
@@ -1184,10 +1163,10 @@ def testEchantillonner(filename):
     debug('P._getT(%.1f%%)=%f'%(pav,P._getT(pav)))
 #     P.echantillonner()
     P.plot(plt, titre='echantillonage : pouv=%s, touv=%s'%(str(P.pouverture),str(P.touverture)))
-    P.hardScale(2, centre=asarray([0,0]))
+    P.hardScale(2, centre=array([0,0]))
     P.hardRotate(180, centre=(0,0))
 #     debug(P)
-    touv = (kam, tam), (kav,tav) = P.touverture
+    touv  = P.touverture #= (kam, tam), (kav,tav)
     debug(touv=touv)#,P_t=sint(t))
     debug(ouverture=P.ouverture)
     debug('P._getT(%.1f%%)=%f'%(pam,P._getT(pam)))
@@ -1201,9 +1180,10 @@ def testOuverture(filename):
     pouv = (-20, -50)
     P.pouverture = pouv
     P.plot0(plt, titre='ouverture=%s'%(str(pouv)))
+
 if __name__=="__main__":
     ##########
-    app = QApplication(sys.argv)
+    sys.path.append(Path('..').abspath)
     p = Profil()#constructeur vide
     debug('Constructeur Vide', p)
     filename = Path(VALIDATION_DIR,'1.gnu')
@@ -1222,4 +1202,3 @@ if __name__=="__main__":
     testElaguer(filename)
     testSaveAndOpen(filename)
     testDivers(filename)
-    sys.exit(app.exec_())

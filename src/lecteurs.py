@@ -14,44 +14,119 @@ Description :
 import sys
 import numpy as np
 from lecteur import Lecteur,LecteurGnuplot,LecteurMatlab,LecteurSommaire#,LecteurVTK
-from lecteurcmi import LecteurCMI
-from lecteurcmo import LecteurCMO
+# from lecteurcmi import LecteurCMI
+# from lecteurcmo import LecteurCMO
 from lecteurdata import LecteurData
 from lecteurdxf import LecteurDXF,LecteurDXFNervures,LecteurDXF0, LecteurDXF1
 # from lecteursvg import LecteurSVG
-from lecteurnervures import LecteurNervures
+# from lecteurnervures import LecteurNervures
 from utilitaires import (Path,trace,my2dPlot)
 from config import VALIDATION_DIR
-from utilitaires.utilitaires import rdebug, debug
+from utilitaires import rdebug, debug
+
 
 def pointsFromFile(filename):
-    try :
-#         file_ = unicode(filename)
-        file_ = Path(filename)
-        ext = file_.ext.lower()
-        #trace(self, "lecture sur %s"%file_)
-        if ext in ('.dxf',) :
-            lecteur = LecteurDXFNervures(file_)
-            return lecteur.lire()
-        elif ext in ('.gnu',) :
-            lecteur = LecteurGnuplot(file_,patch=False)
-            lecteur.dim = 2
-            lecteur.patch = False
-            return lecteur.lire()
-        elif ext in ('.pts') :
-            lecteur = LecteurNervures(file_)
-            polygon = lecteur.lire()
-            if lecteur.genre.lower()=='voile' :
-                raise IOError(u"%s n'est pas un polygon2d mais 3d (voile?, profil3d?)"%file_.name)
-            elif lecteur.dimension == 3 :
-                polygon = lecteur.points[:,:-1]
-            return polygon
-        else :
-            msg = 'Je ne sais pas lire ce fichier %s'%file_
-            raise IOError(msg)
+    filename = unicode(filename)
+    filename = Path(filename)
+    ext = filename.ext.lower()
+#     debug(filename=filename, ext=ext)
+    if ext in ('.dxf',) :
+        # raise NotImplementedError
+        lecteur = LecteurDXFNervures(filename)
+        polygon = lecteur.lire()
+        return polygon
+    elif ext in ('.gnu',) :
+        # raise NotImplementedError
+        lecteur = LecteurGnuplot(filename,patch=False)
+        lecteur.dim = 2
+        lecteur.patch = False
+        polygon = lecteur.lire()
+        return polygon
+    elif ext in ('.pts',) :
+        raise NotImplementedError
+        # lecteur = LecteurNervures(filename)
+        # polygon = lecteur.lire()
+        # if lecteur.genre.lower()=='voile' :
+        #     raise IOError(whoami()+u"%s n'est pas un polygon2d mais 3d (voile?, profil3d?)"%filename.name)
+        # elif lecteur.dimension == 3 :
+        #     polygon = lecteur.points[:,:-1]
+        # return polygon
+    elif ext in ('.spl',) :
+        """Une spline"""
+        with open(filename,'r') as f :
+            dump = eval(f.read())
+#         if len(lines)>1 :
+#             line = ' '.join([l.strip() for l in lines])
+#         else :
+#             line = lines[0]
+#         dump = eval(line)
+#         debug(dump=dump)
+        try :
+            return np.asarray(dump['cpoints'])
+        except :
+            raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
+    else :
+#         rdebug()
+        raise IOError(u'Je ne sais pas lire ce fichier "%s"'%filename)
+        # return np.zeros((0,2))
 
-    except Exception as msg:
-        raise IOError(msg)
+# def pointsFromFile(filename):
+#     try :
+# #         file_ = unicode(filename)
+#         file_ = Path(filename)
+#         ext = file_.ext.lower()
+#         #trace(self, "lecture sur %s"%file_)
+#         if ext in ('.dxf',) :
+#             lecteur = LecteurDXFNervures(file_)
+#             return lecteur.lire()
+#         elif ext in ('.gnu',) :
+#             lecteur = LecteurGnuplot(file_,patch=False)
+#             lecteur.dim = 2
+#             lecteur.patch = False
+#             return lecteur.lire()
+#         elif ext in ('.pts') :
+#             lecteur = LecteurNervures(file_)
+#             polygon = lecteur.lire()
+#             if lecteur.genre.lower()=='voile' :
+#                 raise IOError(u"%s n'est pas un polygon2d mais 3d (voile?, profil3d?)"%file_.name)
+#             elif lecteur.dimension == 3 :
+#                 polygon = lecteur.points[:,:-1]
+#             return polygon
+#         else :
+#             msg = 'Je ne sais pas lire ce fichier %s'%file_
+#             raise IOError(msg)
+
+#     except Exception as msg:
+#         raise IOError(msg)
+
+def pointsFrom(x):#,close_=False):
+    u'''
+    Paramètre x:
+        - un np.ndarray((n,2))
+        - un chaine de caractères evaluable par eval(x)
+        - un nom de fichier
+    Retourne :
+    --------
+    - points : np.ndarray, de shape (N,2) si close_==False
+    '''
+    # debug(x)
+    if x is None :
+        return np.zeros((0,2))
+    elif isinstance(x,Path):
+        return pointsFromFile(x)#Fichier
+    elif isinstance(x, (str, unicode)) :
+        return pointsFrom(eval(x))#chaine de caracteres p.ex.'[1,2,5,12]'
+    elif isinstance(x, (list, tuple)) :
+        npa = np.asarray(x)
+#         debug(shape=npa.shape)
+        sh = npa.shape
+        if len(sh) != 2 or sh[1] != 2 :
+            npa.shape=(len(npa)/2,2)
+        return npa
+    elif isinstance(x, np.ndarray) :
+        return x
+    else :
+        raise TypeError (u"pointsFrom() : cas non pris en charge")
 
 
 class LecteurUniversel(object):
@@ -82,8 +157,9 @@ class LecteurUniversel(object):
                         trace(self, 'impossible de lire %s'%filename.name)
 
         elif 'pts' in ext :
-            self.lecteur=LecteurNervures(filename)
-            self.lire()
+            raise NotImplementedError
+            # self.lecteur=LecteurNervures(filename)
+            # self.lire()
         elif 'gnu' in ext :
             try :
                 self.lecteur=LecteurGnuplot(filename,patch=True)

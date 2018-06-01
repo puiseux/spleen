@@ -13,8 +13,8 @@ Description : lecteur générique pour fichier paramètres.
 @deffield    creation: 18 janv. 2013
 '''
 import sys,os
-from inout.lecteur import Lecteur
-from utilitaires import whoami,Path,trace
+from lecteur import Lecteur
+from utilitaires import whoami,trace
 from config import VALIDATION_DIR,DATA_DIR
 
 class LecteurData(Lecteur):
@@ -120,6 +120,7 @@ class LecteurData(Lecteur):
         return self.dict
 
 if __name__=="__main__":
+    from path import Path
     class A():pass
     datadir=Path(DATA_DIR,'preferences')
     files = sorted(datadir.listdir('*.dat'))
@@ -136,20 +137,20 @@ if __name__=="__main__":
         print 21*"-"+'\n'+u"variables instanciées"+'\n'+21*"-"
         for key, val in sorted(a.__dict__.iteritems()) :
             print u"attribut %s=%s"%(key,val)
-    exit()
+    # exit()
     print files
     filename = "profil.dat"
     lecteur=LecteurData(Path(DATA_DIR,"preferences",filename))
     p,n=lecteur.lire()['defaultprofil']
     print type(p),type(n)
     print p, n
-    exit()
+    # exit()
     filename="aero.dat"
     f=LecteurData(Path(datadir,filename))
     d=f.lire()
 #    Exemple d'instanciation dans une variable 'a'
-    class A():pass
-    a=A()
+    # class A():pass
+    # a=A()
     for key,value in sorted(d.iteritems()) :
         print "%10s = %10s : %10s"%(key,str(value),type(value))
         setattr(a,key,type(value)(value))

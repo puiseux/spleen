@@ -8,33 +8,33 @@ Created on 28 octobre 2016
 '''
 import sys,string
 import numpy as np
-from utilitaires.path import Path
+from path import Path
 import pickle
-from exceptions import *
+# from exceptions import *
 import datetime
 import scipy as sp
 # from scipy import interpolate, sum, prod, ones
 from random import choice
-from PyQt4 import QtGui,QtCore
-from PyQt4.QtCore import Qt,QSize,QVariant
-from PyQt4.QtGui import (QTableWidget,QTableWidgetItem,QPushButton,QLayout,QVBoxLayout,QHBoxLayout,QGridLayout,QSpacerItem,QSizePolicy,
-                         QWidget,QScrollArea,QApplication,QKeySequence,QShortcut,QFont,QFontMetrics,QHeaderView)
-from PyQt4.Qt import SIGNAL,SLOT
-from inout.format import formData
+# from PyQt4 import QtGui,QtCore
+# from PyQt4.QtCore import Qt,QSize,QVariant
+# from PyQt4.QtGui import (QTableWidget,QTableWidgetItem,QPushButton,QLayout,QVBoxLayout,QHBoxLayout,QGridLayout,QSpacerItem,QSizePolicy,
+#                          QWidget,QScrollArea,QApplication,QKeySequence,QShortcut,QFont,QFontMetrics,QHeaderView)
+# from PyQt4.Qt import SIGNAL,SLOT
+# from inout.format import formData
 #from PyQt4.QtCore import QPointF
 #from gui.graphicsbase.graphicscommon import pointsFromPolygon
 import math
 from scipy.interpolate import (Rbf, InterpolatedUnivariateSpline,
                                LSQUnivariateSpline, UnivariateSpline,
                                splrep, splev, interp1d, CubicSpline)
-from utilitaires.utilitaires import absCurv, courbure, splineInterpolation, dist2
+from ..utilitaires import absCurv, courbure, splineInterpolation, dist2
 from shapely.geometry import LineString, Polygon, Point
 # from geos import LineString
-DEBOG=True
-VERBOSITY_LEVEL=2
-DEBOG_OUTPUT=sys.stderr
-DEBOG_OUTPUT=sys.stdout
-output=DEBOG_OUTPUT
+# DEBOG=True
+# VERBOSITY_LEVEL=2
+# DEBOG_OUTPUT=sys.stderr
+# DEBOG_OUTPUT=sys.stdout
+# output=DEBOG_OUTPUT
 
 def computeCordeAndNBA(points):
     u"""

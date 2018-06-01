@@ -8,30 +8,27 @@ Description :
 @copyright:   2016 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-import logging
+# import logging
 from numbers import Number
 # logger = logging.getLogger(__name__)
 # logger.setLevel(logging.DEBUG)
 import sys,os,math
 import numpy as np
-# from array import array
+from numpy import asarray as array
 
-# from PyQt4.QtGui import (QApplication, QPolygonF)
-# from PyQt4.QtCore import (Qt, QPointF, QString, QObject, QRectF)
-# from config import VALIDATION_DIR, WORK_DIR
 from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
 import cPickle
 from utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
                         absCurv,dist2, baryCentre, centreGravite, simpson)
-# from gui.graphicsbase.graphicscommon import (qpolygonFrom, pointsFrom)
+from lecteurs import pointsFromFile, pointsFrom
 # from inout.writerpts import writeProfil
 # from preferences import SplinePrefs, NPrefs
 # from pprint import pprint
-# from inout.lecteurs import LecteurUniversel
+from lecteurs import LecteurUniversel
 # from config import RUNS_DIR
 from numpy.core.defchararray import center
-from numpy import asarray, sqrt
+from numpy import sqrt
 from scipy.integrate import quad
 
 
@@ -70,7 +67,7 @@ def absCurvReal(S, T):
 
 #             return ac1+ac2, max(err1, err2)
     else :
-        res = asarray([absCurvReal(S, t) for t in T])
+        res = array([absCurvReal(S, t) for t in T])
 #         res = asarray([quad(lambda s : sqrt(S.sx(s,1)**2+S.sy(s,1)**2), 0.0, t) for t in T])
         return res[:,0],  res[:,1]
 
@@ -233,14 +230,14 @@ def computeSpline(cpoints, methode):
     elif type_ == 'us' :
         weights = np.ones(N)
         W = 1000.0
-        eps = 1.0e-5#NPrefs.EPS
+        # eps = 1.0e-5#NPrefs.EPS
         # en supposant que tous les termes erreur di^2=wi*(xi-f(ti))^2 sont egaux
         # le choix de s suivant implique
         # abs(xi-f(ti))<eps et
         # abs(x1-f(t1))<eps/(N*W) et abs(xN-f(tN))<eps/(N*W)
         weights[0] = weights[-1] = W
         weights /= np.sum(weights)
-        s = eps/(N*W)
+        # s = eps/(N*W)
 #         debug(len(T), parametres)
         sx = UnivariateSpline(T, X, **parametres)#s=la précision de l'ajustement s=0 <=> interpolation
         sy = UnivariateSpline(T, Y, **parametres)
@@ -280,7 +277,7 @@ class NSplineAbstract(object):
     ========================================================================
     Une NSpline est constitué de
     - self.cpoint (property) les points de contrôle sous forme np.ndarray((n,2))
-        C'est lui qui fait référence => et c'est une connerie. Les calculs se font avec points
+        C'est lui qui fait référence 
     - self.cpoints(points) = le setter de self.cpoints, appelle self._update()
     - self.sx, self.sy : une spline parametrique d'interpolation calculées par scipy
     - self.dpoints (property) les points de la spline discrétisée pour visualisation,
@@ -292,10 +289,7 @@ class NSplineAbstract(object):
     - self.nbpe : nb points d'echantillonnage.
     - self.name : le nom de la spline
     - self.role : chaine de caractères, le rôle.
-    - self.qcpolygon de type QPolygonF () : les N points de contrôle.
-        => ATTENTION, à chaque appel l'intégralité du self.cpoints est transformé en QPolygonF.
-    - self.qdpolygon de type QPolygonF () : self.dpoints transformé en QPolygonF
-        => ATTENTION, à chaque appel l'intégralité du self.dpoints est transformé en QPolygonF.
+    
     Méthodes :
     --------
     - self.abscurv() : recalcule les abscisses curvilignes des cpoints, stocké dans _knots.
@@ -306,7 +300,7 @@ class NSplineAbstract(object):
         Normalement c'est fait automatiquement dès que cpoints est modifié
     - self.save(filename) sauvegarde texte simple, un point (=deux coordonnées) par ligne.
     - self.echantillonner() : retourne la spline echantillonnée et renseigne self.epoints.
-    - self.isClosed(eps=1.0e-8) return True si self[0] == self[-1] à eps près
+    - self.isClosed(eps=1.0e-8) return True si dist(self[0],self[-1])< eps (distance norme 1)
     - self.load(dump) : permet de loader une spline sauvegardée sous la forme retournée par self.toDump()
     - self.toDump() retourne un dictionnaire en clair permettant la reconstruction de la spline
     - self.__call__(T) équivaut à P = self(T)
@@ -316,7 +310,7 @@ class NSplineAbstract(object):
     - self.__getitem__(i), équivaut à p = self[i]
         i entier, retourne le i-eme point de contrôle.
     - self.__setitem__(i, p), équivaut à self[i] = p,
-        i entier, p de type (x,y) ou QPointF : affecte p au i-eme point de contrôle.
+        i entier, p de type tuple ou liste (x,y) : affecte p au i-eme point de contrôle.
         puis déclenche un self._update()
     - len(self) = le nb de points de contrôle.
     Les méthodes suivantes déclenchent le _update() i.e. recalcul complet de la spline (sx, sy)
@@ -333,6 +327,7 @@ class NSplineAbstract(object):
         super(NSplineAbstract, self).__init__()
         self.nbupdate = 0
         self.gparent = parent
+        self.sx = self.sy = lambda x, k : None
         self.setDefaultValues()
         self.load(dump)
 #         self._update()Doit etre appelé explicitement par les héritiers au bon moment
@@ -365,13 +360,11 @@ class NSplineAbstract(object):
             X, Y = self.sx(T, diff), self.sy(T, diff)
 #             debug(X)
             try :
-                return np.asarray(zip(X, Y))
+                return array(zip(X, Y))
             except TypeError :
                 return [X,Y]
-        except TypeError as msg :
+        except TypeError :
             return
-            debug(msg)
-#         return np.hstack((self.sx(T), self.sy(T)))
 
     u"""methodes virtuelles pures"""
 ################################################################

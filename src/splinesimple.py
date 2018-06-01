@@ -9,9 +9,9 @@ Description :
 @contact:    pierre@puiseux.name
 '''
 __updated__="2018-05-21"
-from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff,pointsFrom)
+from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
 from splineabstraite import absCurvReal
-
+from lecteurs import pointsFrom
 import sys,os,math
 from array import array
 
@@ -57,8 +57,8 @@ logger.setLevel(logging.DEBUG)
 class NSplineSimple(NSplineAbstract):
     class Default():
         precision = 1000
-        _methode  = ('ius',2)
-        mode      = 'segment'
+        _methode  = ('ius',1)
+        mode      = 'linear'
         nbpe      = 30        
 
     def __init__(self, **dump):# cpoints=None, name='spline', role='spline'):
@@ -207,8 +207,8 @@ class NSplineSimple(NSplineAbstract):
 #                 ns = 0.0 #tant pis, je sais pas
             if  ns > 1.0e-4:#norme du sup, tolerance 0.1 mm
                 rdebug(u'\n'+30*u'!'+u'\n    pour debogage de "%s"'%self.name,u'\n'+30*u'!')
-                try : pprint(self.profil.toDump(), sys.stderr)#cas d'une cloison
-                except : pprint(self.toDump(), sys.stderr)
+                # try : pprint(self.profil.toDump(), sys.stderr)#cas d'une cloison
+                # except : pprint(self.toDump(), sys.stderr)
                 msg = u'BUG : il faut faire un update de la spline car max|self.knots - abscurv|= %g'%ns
                 raise ValueError(msg)
         ##################################################################
@@ -270,7 +270,7 @@ class NSplineSimple(NSplineAbstract):
 #             debug(self.sx.__dict__)
             try :
                 return self.sx._data[0]
-                return self.sx.get_coeffs()#si methode=('ius',k)
+                # return self.sx.get_coeffs()#si methode=('ius',k)
 
             except AttributeError :
                 return self.sx.x#si methode = (cubic','xx')
@@ -383,27 +383,27 @@ class NSplineSimple(NSplineAbstract):
             #on n'a pas le droit de changer la méthode d'une spline.
             #on en reconstruit une, lineaire.
             #TODO:A supprimer de NSplineSimple, utiliser Polygone ou PolyLine
-            cpoints = self.cpoints
-            if self.methode == ('cubic', 'periodic') :
-                #On rajoute un point a la fin, sinon il echantillonne pas tout
-                pass
-    #                 cpoints = np.vstack((cpoints, cpoints[0]))#deja fait à l'init.
-            slin = NSplineSimple(cpoints=cpoints, methode=('ius', 1), precision=0, name='Pour echantillonnage par segment')
-            #On prend nbp-len(self) points linéairement espacés
-            # auxquels on rajoute les points de contrôle
-            T1 = slin.abscurv()
-            if nbp == 0 : nbp = len(self.cpoints)
-            if len(T1)>=nbp : #Pas assez de points (nbp) pour mettre les points de contrôle (T1).
-                T = linspace(ta,tb,nbp)
-    #                 debug(nbp=nbp, T1_shape=T1.shape)#, linshape=linspace(0,1,nbp-len(T1)).shape)
-            else :
-                T = np.hstack((linspace(ta, tb,nbp-len(T1)), T1))#/T1[-1]))
-                np.sort(T)
-    #             #debug(T=T)
-    #             #debug(asarray(slin(T)))
-            self._epoints = asarray(slin(T))
-            if onlyT : return T
-            else : return self._epoints
+    #         cpoints = self.cpoints
+    #         if self.methode == ('cubic', 'periodic') :
+    #             #On rajoute un point a la fin, sinon il echantillonne pas tout
+    #             pass
+    # #                 cpoints = np.vstack((cpoints, cpoints[0]))#deja fait à l'init.
+    #         slin = NSplineSimple(cpoints=cpoints, methode=('ius', 1), precision=0, name='Pour echantillonnage par segment')
+    #         #On prend nbp-len(self) points linéairement espacés
+    #         # auxquels on rajoute les points de contrôle
+    #         T1 = slin.abscurv()
+    #         if nbp == 0 : nbp = len(self.cpoints)
+    #         if len(T1)>=nbp : #Pas assez de points (nbp) pour mettre les points de contrôle (T1).
+    #             T = linspace(ta,tb,nbp)
+    # #                 debug(nbp=nbp, T1_shape=T1.shape)#, linshape=linspace(0,1,nbp-len(T1)).shape)
+    #         else :
+    #             T = np.hstack((linspace(ta, tb,nbp-len(T1)), T1))#/T1[-1]))
+    #             np.sort(T)
+    # #             #debug(T=T)
+    # #             #debug(asarray(slin(T)))
+    #         self._epoints = asarray(slin(T))
+    #         if onlyT : return T
+    #         else : return self._epoints
         elif mode in ('linear', 'lineaire', 'lin') :
             T = linspace(ta, tb, nbp)#y compris ta et tb
             self._epoints = asarray(self(T))
@@ -591,7 +591,7 @@ class NSplineSimple(NSplineAbstract):
         i = self.cpoints.shape[0]#l'indice du dernier point
         if len(self) and dist2(pos, self.cpoints[-1]) == 0 :
             raise ValueError('Point double, Impossible d\'ajouter ce point:%s'%(pos))
-            return #eviter points doubles, les abs curv douvent être strictement croissantes.
+            # return #eviter points doubles, les abs curv douvent être strictement croissantes.
         else :
             self.cpoints = np.vstack((self.cpoints, pos))
             self._update()
@@ -614,8 +614,8 @@ class NSplineSimple(NSplineAbstract):
         si i != None,
             insertion du point pos entre i-1 et i (de sorte qu'il deviennet le point i)
         """
-        if isinstance(pos, QPointF) :
-            pos = pos.x(), pos.y()
+        # if isinstance(pos, QPointF) :
+        # pos = pos.x(), pos.y()
         cpoints = self.cpoints
         if i is None :
             im1, _ = segmentPlusProche(cpoints, pos)
@@ -635,7 +635,7 @@ class NSplineSimple(NSplineAbstract):
         or dist2(pos, cpoints[im1]) == 0 :
 #             debug('segment le plus proche',i=i,H=H,pos=pos)
             raise ValueError('Point double, impossible d\'inserer ce point:%s en position %d'%(str(pos),i))
-            return #eviter points doubles, car les abs curv doivent être strictement croissantes.
+            # return #eviter points doubles, car les abs curv doivent être strictement croissantes.
         else:
             cpoints = np.insert(cpoints, i, (pos,), axis=0)
 #             debug(cpoints=cpoints)
@@ -811,7 +811,7 @@ class NSplineSimple(NSplineAbstract):
         self.echantillonner(nbpe)
         D = self.dpoints
         C = self.cpoints
-        E = self.epoints
+        # E = self.epoints
         _, ax = plt.subplots()
         titre = self.name+' courbure'
         plt.title(titre)
@@ -868,7 +868,7 @@ class NSplineSimple(NSplineAbstract):
         Td = linspace(0,1,1000)
         T0 = self.abscurv()
         c0 = s0.cpoints.copy()
-        d0 = asarray(s0(Td))
+        # d0 = asarray(s0(Td))
 
 #         A, B = c0[0], c0[-1]
 #         c1 = pointsFrom((A,B))
@@ -877,7 +877,7 @@ class NSplineSimple(NSplineAbstract):
         w[0]*=10000
         w[-1]*=10000
         parametres = {'w':w, 'k':3, 's':1.0e-6, 'ext':2, 'check_finite':True}
-        T, sx, sy = computeSpline(c0, methode=('us', parametres))
+        _, sx, sy = computeSpline(c0, methode=('us', parametres))
         Tx = sx.get_knots()
         Ty = sy.get_knots()
         T1 = sorted(set(np.hstack((Tx,Ty))))
@@ -892,7 +892,7 @@ class NSplineSimple(NSplineAbstract):
                            mode=s0.mode)
         d = np.sqrt(max(distance2PointSpline(c0[k], s1, t0=t).fun for k, t in enumerate(T0)))
         debug('AJUSTEMENT avant optimisation : dist = %.2g mm/m '%(self.pourMille(d)))
-        for k in range(1) : refine()
+        for _ in range(1) : refine()
         d = np.sqrt(max(distance2PointSpline(c0[k], s1, t0=t).fun for k, t in enumerate(T0)))
         #courbure totale
         courburetotale0 = self.integraleCourbure(a=0.01, b=0.99)
@@ -985,7 +985,7 @@ class NSplineSimple(NSplineAbstract):
 #             print(u'd1%d = np.asarray(%s)'%(k, str(d1.tolist())))
 #             print(u'insert_pos=%s'%pos0)
             try :
-                res = s1.insertPoint(pos0)
+                s1.insertPoint(pos0)
 #                 debug(res_insert=res)
 #                 s1.plot(plt)
             except ValueError as msg :#Impossible d'inserer le point (point double ?)
@@ -1151,7 +1151,7 @@ class NSplineSimple(NSplineAbstract):
         #courbure totale
         courburetotale0 = self.integraleCourbure(a=0.01, b=0.99)
         courburetotale1 = s1.integraleCourbure(a=0.01, b=0.99)
-        ratio = courburetotale1/courburetotale0
+        # ratio = courburetotale1/courburetotale0
         n0 = len(self)
         n1 = len(s1)
         debug('Apres ELAGAGE : dist = %.2g mm/m ; courbure totale :c1/c0 %f ; %d => %d '%(self.pourMille(d),courburetotale1/courburetotale0,n0,n1))
@@ -1399,7 +1399,7 @@ def testElaguer(filename, trados, fonction='elaguer'):
 #         from matplotlib import pyplot as plt
 #         from matplotlib.widgets import CheckButtons
     #         nbpd = self.precision
-        s1.nbpe = nbpe = s0.nbpe
+        s1.nbpe = s0.nbpe
         titre = ' '.join(('courbures', s0.name, s1.name))
         plt.title(titre)
     #     E = s0.epoints
@@ -1603,8 +1603,8 @@ def testConstructeurs(filename) :
                       mode='rayon',
                       name='SPLINE1')
     print p
-    for point in p.qcpolygon :
-        print point
+    # for point in p.qcpolygon :
+    #     print point
     # for point in p.qdpolygon :
     #     print point
     debug(filename)
