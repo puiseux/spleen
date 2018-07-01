@@ -3,7 +3,7 @@
 #   RUNS_DIR : répertoire de stockage des projets
 #Ce fichier doit se trouver sous <ROOT_DIR>/dist/guimain
 #-------------------------------------------------------
-ROOT_DIR = /Users/puiseux/git/spleen 
-RUNS_DIR = /Users/puiseux/git/spleen/work
-VALIDATION_DIR = /Users/puiseux/git/spleen/validation
+ROOT_DIR = /Users/puiseux/git/spleen/spleen 
+RUNS_DIR = /Users/puiseux/git/spleen/spleen/work
+VALIDATION_DIR = /Users/puiseux/git/spleen/spleen/validation
 VTK_ENABLED = True

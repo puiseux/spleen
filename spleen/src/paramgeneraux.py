@@ -13,13 +13,7 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 '''
 __updated__ = "2018-07-01"
 import sys,os
-# from PyQt4.QtGui import QApplication
-try : from utilitaires.utilitaires import trace, alert, debug,rdebug
-except ImportError : from utilitaires import trace, alert, debug,rdebug
-# from PyQt4.QtCore import QString, SIGNAL
-# from PyQt4.uic import loadUiType
-from utilitaires import Path
-from config import SOURCES_DIR, DATA_DIR,VALIDATION_DIR,WORK_DIR
+from utilitaires import debug,rdebug
 
 class ProfsParamNew(object):
     u'''

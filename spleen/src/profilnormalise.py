@@ -15,7 +15,6 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 
 from pprint import pprint
 from utilitaires import Path
-from config import DATA_DIR,VALIDATION_DIR,WORK_DIR
 from profil import Profil
 from utilitaires import (debug, rdebug,dist2,dist)
 import numpy as np
@@ -274,6 +273,7 @@ class ProfilNormalise(Profil):
         return dump
 
 def testProfilNormalise():
+    from config import DATA_DIR,VALIDATION_DIR, WORK_DIR
     from matplotlib import pyplot as plt
     dump = {'classename': 'ProfilNormalise',
            'cpoints': [[1.0, 1.3552527156068805e-20],

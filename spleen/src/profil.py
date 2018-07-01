@@ -15,7 +15,7 @@ import sys,os,math,cPickle
 from path import Path
 from pprint import pprint
 from polyline import NPolyLine
-from config import DATA_DIR,VALIDATION_DIR,WORK_DIR
+from config import DATA_DIR,VALIDATION_DIR,RUNS_DIR
 # from inout.lecteurdata import LecteurData
 # from inout.writerpts import writeProfil
 from utilitaires import (stack, debug, rdebug, dist2, dist, rcercle)
@@ -32,7 +32,7 @@ from numpy import (zeros,)
 from numpy import asarray as array
 from scipy.optimize import newton
 from preferences import ProfilPrefs
-class Profil(NSplineComposee): 
+class Profil(NSplineComposee):
     prefs = None
 
     u"""
@@ -1074,8 +1074,8 @@ def testProfil(filename):
     centre=array((7,0))
     mp.hardRotate(30,centre)
     mp.hardScale((0.5,0.5),centre)
-    p.dump(Path(WORK_DIR,'profildump.pkl'))
-    f=open(Path(WORK_DIR,'profildump.pkl'),'r')
+    p.dump(Path(RUNS_DIR,'profildump.pkl'))
+    f=open(Path(RUNS_DIR,'profildump.pkl'),'r')
     d=cPickle.load(f)
     pprint(d)
     p.load(d)
@@ -1192,9 +1192,9 @@ if __name__=="__main__":
     filename = Path(VALIDATION_DIR,'simple','simple2d1.gnu')
     filename = Path(VALIDATION_DIR,'unenervure2d.gnu')
     filename = Path(VALIDATION_DIR,'simple','profil.gnu')
-    filename = Path(WORK_DIR,'profils','D2v5p2.pts')
+    filename = Path(RUNS_DIR,'profils','D2v5p2.pts')
     filename = Path(VALIDATION_DIR,'reference.pts')
-    filename = Path(WORK_DIR,'profils','P0.spl')
+    filename = Path(RUNS_DIR,'profils','P0.spl')
     testOuverture(filename)
 #     exit()
     testProfil(filename)

@@ -11,7 +11,7 @@ Description :
 __updated__="2018-07-01"
 import os, sys
 from path import Path
-
+print os.getcwd()
 if __name__ == '__main__' :
     # print os.getcwd()
-    os.system(' '.join(['python', Path('src','splinesimple.py')]))
+    os.system(' '.join(['python', Path('..','splinesimple.py')]))
