@@ -33,7 +33,7 @@ from numpy import asarray as array
 from scipy.optimize import newton
 from preferences import ProfilPrefs
 class Profil(NSplineComposee):
-    prefs = None
+    prefs = ProfilPrefs
 
     u"""
     Un profil est une NSplineComposee comportant deux NSplineSimple, l'une pour l'extrados,

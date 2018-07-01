@@ -14,22 +14,20 @@ from path import Path
 # print os.getcwd()
 from splinesimple import (NSplineSimple, placementReperesMontage,
                           elaguer, correctionReperesMontage)
-from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
-from splineabstraite import (absCurvReal, NSplineAbstract, computeSpline,
-                             distance2PointSpline)
+from utilitaires import (diff,)
+from splineabstraite import (distance2PointSpline,)
 from lecteurs import pointsFrom
 import sys,os,math
-from array import array
+# from array import array
 
 import numpy as np
-from numpy import log, linspace, asarray, sqrt, arange
+from numpy import log, linspace, asarray, sqrt
 from numpy.linalg import  norm
-import scipy as sp
+# import scipy as sp
 from config import VALIDATION_DIR, RUNS_DIR
-from scipy.optimize import newton, minimize
+# from scipy.optimize import newton, minimize
 from pprint import pprint
-from utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
-                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
+from utilitaires import (debug, rdebug,absCurv,dist2)
 import cPickle
 
 def testConstructeurs(filename) :
@@ -853,5 +851,8 @@ def mainTest():
         testElagage1(filename)
         debug('fin testElagage1')
     rdebug('fin tests')
+if __name__=='__main__':
+    mainTest()
+
     # sys.exit(app.exec_())
 #     os.system(' '.join(['python', Path('..','splinesimple.py')]))

@@ -36,8 +36,8 @@ class ProfilPrefs() :
                   -5.0  #idem intrados
                   )
     precisionaffichage = 1000 #nb de points a afficher
-#     profparamnew = (86, 43, 53, 37)#nptprof, iouvext, iouvint, iba
-
+    profparamnew = (86, 43, 53, 37)#nptprof, iouvext, iouvint, iba
+    EPS = 1.0e-5
 
 if __name__ == "__main__" :
     print u'Rien a faire'
