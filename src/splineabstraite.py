@@ -8,11 +8,7 @@ Description :
 @copyright:   2016 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-# import logging
 from numbers import Number
-# logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
-import sys,os,math
 import numpy as np
 from numpy import asarray as array
 
@@ -21,13 +17,9 @@ from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, Univari
 import cPickle
 from utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
                         absCurv,dist2, baryCentre, centreGravite, simpson)
-from lecteurs import pointsFromFile, pointsFrom
-# from inout.writerpts import writeProfil
-# from preferences import SplinePrefs, NPrefs
-# from pprint import pprint
+from lecteurs import pointsFrom
 from lecteurs import LecteurUniversel
-# from config import RUNS_DIR
-from numpy.core.defchararray import center
+# from numpy.core.defchararray import center
 from numpy import sqrt
 from scipy.integrate import quad
 
