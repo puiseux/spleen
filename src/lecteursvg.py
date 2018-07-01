@@ -16,20 +16,19 @@ import numpy as np
 from lecteur import Lecteur
 import utilitaires
 from utilitaires import (my2dPlot,Path)
-from config import VALIDATION_DIR
-from utilitaires.utilitaires import debug, rdebug, hardScale, p2a
+from utilitaires import debug, rdebug, hardScale#, p2a
 # from dxfgrabber import dxfentities
 # from geomdl import BSpline, utilities
 from matplotlib import pyplot as plt
-from model.basicobjects.splinesimple import NSplineSimple
-from model.basicobjects.polyline import NPolyLine, NPolygone
+from splinesimple import NSplineSimple
+from polyline import NPolyLine, NPolygone
 from svgpathtools import (svg2paths, svg2paths2, wsvg, kinks, smoothed_path,
                           disvg, Line, CubicBezier, QuadraticBezier, Arc,
                      )
 from svgpathtools import Path as SVGPath
 from time import sleep
-from PyQt4.QtCore import QRectF
-from gui.graphicsbase.graphicscommon import p2t
+# from PyQt4.QtCore import QRectF
+# from gui.graphicsbase.graphicscommon import p2t
 
 def continuousPathToArray(path, nbp=20):
     u"""
@@ -388,13 +387,13 @@ class LecteurSVG(Lecteur):
         dans le rectangle rect (de cotés parallèles aux axes)
         rect est un tuple (xmin, xmax, ymin, ymax) ou bien un QRectF"""
         sw, sh, sc = self.width(), self.height(), np.asarray(self.center())
-        if isinstance(rect, QRectF) :
-            w, h, c  = rect.width(), rect.height(), np.asarray(p2t(rect.center()))
-        else :
-            (xmin, xmax, ymin, ymax) = rect
-#             w, h, c  = xmax-xmin, ymax-ymin, 0.5*np.asarray([xmax+xmin, ymax-ymin])
-            qrect = QRectF(xmin, ymin, xmax-xmin, ymax-ymin)
-            return self.resizedPointsToFitInRect(qrect)
+#         if isinstance(rect, QRectF) :
+#             w, h, c  = rect.width(), rect.height(), np.asarray(p2t(rect.center()))
+#         else :
+        (xmin, xmax, ymin, ymax) = rect
+        w, h, c  = xmax-xmin, ymax-ymin, 0.5*np.asarray([xmax+xmin, ymax-ymin])
+#             qrect = QRectF(xmin, ymin, xmax-xmin, ymax-ymin)
+#             return self.resizedPointsToFitInRect(qrect)
         s = min(w/sw, h/sh)
 
         return self.resizedPoints(scale=(s,s), center=c, translate=c-sc)
@@ -464,6 +463,7 @@ if __name__=="__main__":
         points = np.asarray([[0.,0],[1,0],[1,1],[0,1]])
         print hardScale(points, [0.5,0.5], [2,1], [10,10])
         print '*******Lecteur SVG******'
+        VALIDATION_DIR = Path('../validationr')
         filename = Path(VALIDATION_DIR,'dxf','blocjonc.dxf')
         filename = Path(VALIDATION_DIR,'decorations','Bringhen_D_cmyk gross.dxf')
         filename = Path(VALIDATION_DIR,'dxf','cot_d03.DXF')
@@ -492,17 +492,17 @@ if __name__=="__main__":
 #         rect = QRectF(xm,ym,xM-xm,yM-ym)#rectangle d'encombrement svg
         sw, sh, sc = svg.width(), svg.height(), np.asarray(svg.center())
         rect = -10000, -1000, 12000, 3000
-        qrect = QRectF(*rect)#rectangle d'encombrement voile
-        rect = xm, xM, ym, yM = qrect.left(), qrect.right(), qrect.top(), qrect.bottom()
+#         qrect = QRectF(*rect)#rectangle d'encombrement voile
+#         rect = xm, xM, ym, yM = qrect.left(), qrect.right(), qrect.top(), qrect.bottom()
 
-        vw, vh, vc  = qrect.width(), qrect.height(), np.asarray(p2t(qrect.center()))
+#         vw, vh, vc  = qrect.width(), qrect.height(), np.asarray(p2t(qrect.center()))
 
         print'(sw,sh)', (sw,sh)
-        print'(vw,vh)', (vw,vh)
-        s = min(vw/sw, vh/sh)
-        plt.plot([xm, xM, xM, xm, xm],[ym, ym, yM, yM, ym], 'r.-')
-        Points = svg.resizedPoints(scale=(s,s), center=vc, translate=vc-sc)
-        Points = svg.resizedPointsToFitInRect(qrect)
+#         print'(vw,vh)', (vw,vh)
+#         s = min(vw/sw, vh/sh)
+#         plt.plot([xm, xM, xM, xm, xm],[ym, ym, yM, yM, ym], 'r.-')
+#         Points = svg.resizedPoints(scale=(s,s), center=vc, translate=vc-sc)
+        Points = svg.resizedPointsToFitInRect(rect)
         for k,P in enumerate(Points) :
             color = svg.couleur(k)
             if color == '#ffffff' : color = '#000000'

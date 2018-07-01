@@ -8,9 +8,10 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-__updated__="2018-05-21"
+__updated__="2018-07-01"
 import os, sys
 from path import Path
+
 if __name__ == '__main__' :
     # print os.getcwd()
     os.system(' '.join(['python', Path('src','splinesimple.py')]))

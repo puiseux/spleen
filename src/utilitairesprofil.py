@@ -11,10 +11,10 @@ import numpy as np
 from path import Path
 import pickle
 # from exceptions import *
-import datetime
-import scipy as sp
+# import datetime
+# import scipy as sp
 # from scipy import interpolate, sum, prod, ones
-from random import choice
+# from random import choice
 # from PyQt4 import QtGui,QtCore
 # from PyQt4.QtCore import Qt,QSize,QVariant
 # from PyQt4.QtGui import (QTableWidget,QTableWidgetItem,QPushButton,QLayout,QVBoxLayout,QHBoxLayout,QGridLayout,QSpacerItem,QSizePolicy,
@@ -23,11 +23,11 @@ from random import choice
 # from inout.format import formData
 #from PyQt4.QtCore import QPointF
 #from gui.graphicsbase.graphicscommon import pointsFromPolygon
-import math
-from scipy.interpolate import (Rbf, InterpolatedUnivariateSpline,
-                               LSQUnivariateSpline, UnivariateSpline,
-                               splrep, splev, interp1d, CubicSpline)
-from ..utilitaires import absCurv, courbure, splineInterpolation, dist2
+# import math
+# from scipy.interpolate import (Rbf, InterpolatedUnivariateSpline,
+#                                LSQUnivariateSpline, UnivariateSpline,
+#                                splrep, splev, interp1d)
+from utilitaires import absCurv, courbure, splineInterpolation, dist2
 from shapely.geometry import LineString, Polygon, Point
 # from geos import LineString
 # DEBOG=True

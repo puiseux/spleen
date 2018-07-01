@@ -9,9 +9,9 @@ from path import Path
 
 u'''
 - Le module 'config.py' EST sur le dépot central,
-- Chaque utilisateur a sa propre configuration, qui est lue sur 'configAxile.txt'
-    lequel 'configAxile.txt' N'EST PAS sur le dépot car il est propre à chaque utilisateur.
-- Un 'configAxile.txt'  minimal est le suivant :
+- Chaque utilisateur a sa propre configuration, qui est lue sur 'configSpleen.txt'
+    lequel 'configSpleen.txt' N'EST PAS sur le dépot car il est propre à chaque utilisateur.
+- Un 'configSpleen.txt'  minimal est le suivant :
 
         ####################################################################
         #Configuration des répertoires utiles à Axile :
@@ -49,11 +49,19 @@ u'''
 
 '''
 print os.getcwd()
-path = Path(".","src","confSpleen.txt")
-if not path.isfile():
-   print>>sys.stderr, "", "Le fichier de configuration \"confSpleen.txt\" est introuvable. Il devrait etre dans le repertoire \"sources\"" 
+path_ = "confSpleen.txt"
+paths = [Path("confSpleen.txt"), 
+         Path("..","confSpleen.txt"),
+         Path("..","..","confSpleen.txt"),
+         Path("..","..","..","confSpleen.txt"),
+         Path("..","..","..","..","confSpleen.txt"),
+         ]
+for path_ in paths :
+    if path_.isfile():break
+#if not path_.isfile():
+#    alert("", "Le fichier de configuration \"confAxile.txt\" est introuvable. Il devrait etre dans le repertoire \"sources\"" )
 
-with open(path) as file_:
+with open(path_) as file_:
     for line in file_:
         line = line.strip()
         if not line or line[0] == '#' : continue
@@ -65,16 +73,16 @@ with open(path) as file_:
                 RUNS_DIR = Path(words[1].strip().strip("'").strip('"'))
             if 'VTK_ENABLED' in words[0] :
                 VTK_ENABLED = eval(words[1])
-WORK_DIR       = RUNS_DIR
-SOURCES_DIR    = Path(ROOT_DIR,'sources')
-DATA_DIR       = Path(ROOT_DIR,'data')
+WORK_DIR = RUNS_DIR
+SOURCES_DIR = Path(ROOT_DIR,'sources')
+DATA_DIR = Path(ROOT_DIR,'data')
 VALIDATION_DIR = Path(ROOT_DIR,'validation')
-TRASH          = Path(RUNS_DIR,'trash')
-if 1 :
-    print 'config.py = OK'
-    print "ROOT_DIR       = '%s'"%ROOT_DIR
-    print "RUNS_DIR       = '%s'"%RUNS_DIR
-    print "SOURCES_DIR    = '%s'"%SOURCES_DIR
-    print "VALIDATION_DIR = '%s'"%VALIDATION_DIR
-    print "TRASH          = '%s'"%TRASH
-    # print "VTK_ENABLED    = '%s'"%VTK_ENABLED
+TRASH_DIR = Path(RUNS_DIR,'trash')
+print 'config.py = OK'
+print "ROOT_DIR       = '%s'"%ROOT_DIR
+print "RUNS_DIR       = '%s'"%RUNS_DIR
+print "SOURCES_DIR    = '%s'"%SOURCES_DIR
+print "DATA_DIR       = '%s'"%DATA_DIR
+print "VALIDATION_DIR = '%s'"%VALIDATION_DIR
+print "VTK_ENABLED    = '%s'"%VTK_ENABLED
+

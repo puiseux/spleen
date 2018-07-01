@@ -8,7 +8,7 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-__updated__="2018-05-21"
+__updated__="2018-07-01"
 from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
 from splineabstraite import absCurvReal
 from lecteurs import pointsFrom
@@ -19,47 +19,21 @@ import numpy as np
 from numpy import log, linspace, asarray, sqrt, arange
 from numpy.linalg import  norm
 import scipy as sp
-# from PyQt4 import QtGui
-# from PyQt4 import QtCore
-# from PyQt4.QtGui import (QApplication, QPolygonF)
-# from PyQt4.QtCore import (Qt, QPointF, QString, QObject)
 from config import VALIDATION_DIR, WORK_DIR
 from scipy.optimize import newton, minimize
 from pprint import pprint
-# from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
-#from snapper import Snapper
-# import preferences
-# import cPickle
 from utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
-                                     hardScale, absCurv,dist2,rotate,
-                                     courbure,symetrieAxe
-#                                      baryCentre,centreGravite,
-#                                      splineInterpolation, pointsDoubles,
-#                                      eliminerPointsDoublesConsecutifs, simpson
-                                     )
-# from gui.graphicsbase.graphicscommon import (p2s,
-# #                                      p2t, pointsFrom,qpolygonFrom,
-#                                      qpolygonFrom, pointsFrom, p2t)
-# from inout.writerpts import writeProfil
-# from preferences import SplinePrefs, NPrefs
+                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
 from splineabstraite import NSplineAbstract, computeSpline, distance2PointSpline
-# import pprint
-# from inout.lecteurs import LecteurUniversel
 from config import RUNS_DIR
-from math import radians
 import cPickle
-# from numpy import dtype
-# from matplotlib import pyplot as plt
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class NSplineSimple(NSplineAbstract):
     class Default():
         precision = 1000
         _methode  = ('ius',1)
         mode      = 'linear'
-        nbpe      = 30        
+        nbpe      = 30
 
     def __init__(self, **dump):# cpoints=None, name='spline', role='spline'):
         u"""

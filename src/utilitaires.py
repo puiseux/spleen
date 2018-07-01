@@ -21,24 +21,15 @@ from random import choice
 # from lecteurs import pointFromFile
 import numpy as np
 import scipy as sp
-from numpy import _distributor_init, asarray, ones, zeros
-from numpy.matlib import rand
+from numpy import asarray, ones, zeros
+# from numpy.matlib import rand
 from path import Path
 from scipy import interpolate, ones, prod, sum
+print sp.version.version
 from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
                                LSQUnivariateSpline, Rbf, UnivariateSpline,
                                interp1d, splev, splrep)
-# from config import SOURCES_DIR
-# from gui.graphicsbase.graphicscommon import qpolygonFrom
-# import logging
-# DEBOG=True
-# VERBOSITY_LEVEL=2
-# DEBOG_OUTPUT=sys.stderr
-# DEBOG_OUTPUT=sys.stdout
-# output=DEBOG_OUTPUT
 from scipy.optimize import minimize_scalar
-# from model.basicobjects.splineInterpolation import splineInterpolation
-# from model.decoration.contrainte import Contrainte
 from shapely.geometry import LinearRing, Point, Polygon
 from matplotlib import pylab
 # import logging

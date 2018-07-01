@@ -13,32 +13,16 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 
-# import sys,os,math,cPickle
-# from math import  sqrt
 from pprint import pprint
-# from PyQt4 import QtGui
-# from PyQt4 import QtCore
-# from PyQt4.QtGui import QPolygonF, QApplication
-from PyQt4.QtCore import QPointF
-# from PyQt4.Qt import SIGNAL
 from utilitaires import Path
-# from numpy import asarray as array
-# from utilitaires.utilitaires import segmentPlusProche
-# from utilitaires.utilitaires import prettystring
-# from model.basicobjects.polyline import NPolyLine
 from config import DATA_DIR,VALIDATION_DIR,WORK_DIR
 from profil import Profil
-from utilitaires.utilitaires import (
-                                     debug, rdebug,
-                                     dist2,dist)
+from utilitaires import (debug, rdebug,dist2,dist)
 import numpy as np
 # import scipy as sp
 from numpy import linspace, log
 from scipy.optimize import newton
-from gui.graphicsbase.graphicscommon import pointsFrom#, qpolygonFrom
-# from gui.graphicsbase.graphicscommon import p2s, p2t
-# from model.basicobjects.paramgeneraux import ProfsParam, ProfsParamNew
-# from model.profil.naca import naca4,naca5
+from lecteurs import pointsFrom#, qpolygonFrom
 from preferences import ProfilPrefs
 import logging
 logger = logging.getLogger(__name__)
@@ -149,7 +133,7 @@ class ProfilNormalise(Profil):
         - distance(p, BF)<1
         - xp compris entre 0 et 1
         """
-        return dist2(QPointF(1,0),p) < 1.0 and 0<p.x()<1
+        return dist2((1,0),p) < 1.0 and 0<p[0]<1
 
     def normalise(self):
         """on ne renormalise pas un profil normalisé mais

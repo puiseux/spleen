@@ -25,13 +25,13 @@ from paramgeneraux import ProfsParamNew, ProfsParam
 from naca import naca4,naca5
 # from model.basicobjects.splinesimple import NSplineSimple
 from splinecomposee import NSplineComposee
-from utilitaires import pointsFrom
+from lecteurs import pointsFrom
 from utilitairesprofil import computeCordeAndNBA
 from pprint import pprint
 from numpy import (zeros,)
 from numpy import asarray as array
 from scipy.optimize import newton
-
+from preferences import ProfilPrefs
 class Profil(NSplineComposee): 
     prefs = None
 

@@ -11,13 +11,13 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 @contact:    be@nervures.com
 @deffield    creation: 08 Jan 2013
 '''
-__updated__ = "2018-04-08"
+__updated__ = "2018-07-01"
 import sys,os
-from PyQt4.QtGui import QApplication
+# from PyQt4.QtGui import QApplication
 try : from utilitaires.utilitaires import trace, alert, debug,rdebug
 except ImportError : from utilitaires import trace, alert, debug,rdebug
-from PyQt4.QtCore import QString, SIGNAL
-from PyQt4.uic import loadUiType
+# from PyQt4.QtCore import QString, SIGNAL
+# from PyQt4.uic import loadUiType
 from utilitaires import Path
 from config import SOURCES_DIR, DATA_DIR,VALIDATION_DIR,WORK_DIR
 
@@ -64,7 +64,7 @@ class ProfsParamNew(object):
             raise TypeError('Attention, il faut probablement ecrire pp=x, au lieu de pp=ProfsParamNew(x)')
         elif isinstance(nptprof, dict) :
             raise TypeError('Attention, il faut probablement ecrire pp=ProfsParamNew(**x), au lieu de pp=ProfsParamNew(x)')
-        elif isinstance(nptprof, (str, QString, unicode)) :
+        elif isinstance(nptprof, (str,  unicode)) :
             raise TypeError('Attention, il faut probablement ecrire pp=ProfsParamNew(**x), au lieu de pp=ProfsParamNew(*x)')
         self._nptprof = nptprof
         self._iba = iba
@@ -352,54 +352,54 @@ class ParamGeneraux():
         self.nbnerv=self.nbcais+1
         self.nptprof=float()
 
-GuiProfParamClass, GuiProfParamClassType = loadUiType(Path(SOURCES_DIR,"gui","ui",'profparam.ui'))
-class GuiProfParam(GuiProfParamClassType, GuiProfParamClass):
-    """Pour modifier / consulter les profparam
-    Accessible depuis GuiProfil seulement (pour le moment)"""
-    def __init__(self, parent, profparam):
-        GuiProfParamClassType.__init__(self,parent)
-        self.setupUi(self)
-        self.parentwidget = parent
-        self.old = profparam
-        self.setState(profparam)
-        self.createConnexions()
-
-    def createConnexions(self):
-        self.connect(self.actionMiseAJour, SIGNAL('triggered()'), self._miseAJour)
-
-    def _miseAJour(self, which='new'):
-#         trace(self, )
-        if which == 'new' :
-            pp = self.profparam
-            l = self.l_infos
-        elif which == 'old':
-            pp = self.old
-            l = self.l_oldinfos
-
-        if pp.isSuspect() :
-            l.setStyleSheet('QLabel{color:red;font-family:"Liberation Mono"}')
-        elif which == 'new' :
-            l.setStyleSheet('QLabel{color:green ;font-family:"Liberation Mono"}')
-        elif which == 'old' :
-            l.setStyleSheet('QLabel{color:black ;font-family:"Liberation Mono"}')
-        info = pp.info[1:] #+ [u'nb points extrados theorique : %d'%(pp.nptexttheorique), u'nb points intrados theorique : %d'%(pp.nptinttheorique)]
-        l.setText('\n'.join([which]+info))
-
-    def setState(self, profparam):
-        self.sb_nptprof.setValue(profparam.nptprof)
-        self.sb_iba.setValue(profparam.iba)
-        self.sb_iouvext.setValue(profparam.iouvext)
-        self.sb_iouvint.setValue(profparam.iouvint)
-        self._miseAJour('old')
-        self._miseAJour('new')
-
-    @property
-    def profparam(self):
-        nptprof = self.sb_nptprof.value()
-        iba = self.sb_iba.value()
-        iouvext = self.sb_iouvext.value()
-        iouvint = self.sb_iouvint.value()
-        return ProfsParamNew(nptprof, iouvext, iouvint, iba)
+# GuiProfParamClass, GuiProfParamClassType = loadUiType(Path(SOURCES_DIR,"gui","ui",'profparam.ui'))
+# class GuiProfParam(GuiProfParamClassType, GuiProfParamClass):
+#     """Pour modifier / consulter les profparam
+#     Accessible depuis GuiProfil seulement (pour le moment)"""
+#     def __init__(self, parent, profparam):
+#         GuiProfParamClassType.__init__(self,parent)
+#         self.setupUi(self)
+#         self.parentwidget = parent
+#         self.old = profparam
+#         self.setState(profparam)
+#         self.createConnexions()
+#
+#     def createConnexions(self):
+#         self.connect(self.actionMiseAJour, SIGNAL('triggered()'), self._miseAJour)
+#
+#     def _miseAJour(self, which='new'):
+# #         trace(self, )
+#         if which == 'new' :
+#             pp = self.profparam
+#             l = self.l_infos
+#         elif which == 'old':
+#             pp = self.old
+#             l = self.l_oldinfos
+#
+#         if pp.isSuspect() :
+#             l.setStyleSheet('QLabel{color:red;font-family:"Liberation Mono"}')
+#         elif which == 'new' :
+#             l.setStyleSheet('QLabel{color:green ;font-family:"Liberation Mono"}')
+#         elif which == 'old' :
+#             l.setStyleSheet('QLabel{color:black ;font-family:"Liberation Mono"}')
+#         info = pp.info[1:] #+ [u'nb points extrados theorique : %d'%(pp.nptexttheorique), u'nb points intrados theorique : %d'%(pp.nptinttheorique)]
+#         l.setText('\n'.join([which]+info))
+#
+#     def setState(self, profparam):
+#         self.sb_nptprof.setValue(profparam.nptprof)
+#         self.sb_iba.setValue(profparam.iba)
+#         self.sb_iouvext.setValue(profparam.iouvext)
+#         self.sb_iouvint.setValue(profparam.iouvint)
+#         self._miseAJour('old')
+#         self._miseAJour('new')
+#
+#     @property
+#     def profparam(self):
+#         nptprof = self.sb_nptprof.value()
+#         iba = self.sb_iba.value()
+#         iouvext = self.sb_iouvext.value()
+#         iouvint = self.sb_iouvint.value()
+#         return ProfsParamNew(nptprof, iouvext, iouvint, iba)
 
 if __name__=='__main__' :
     pp = ProfsParamNew(nptprof=10, iouvext=4, iouvint=8, iba=5)
@@ -424,13 +424,13 @@ if __name__=='__main__' :
     print 'p==p.copy ? :', p==p.copy
     p.iouverture = 46, 80
     print p
-    app = QApplication(sys.argv)
-    gpp = GuiProfParam(parent=None, profparam=p)
-    print gpp.exec_()
-    print gpp.old
-    print '     ===>'
-    print gpp.profparam
+#     app = QApplication(sys.argv)
+#     gpp = GuiProfParam(parent=None, profparam=p)
+#     print gpp.exec_()
+#     print gpp.old
+#     print '     ===>'
+#     print gpp.profparam
 
-    sys.exit(app.exec_())
+#     sys.exit(app.exec_())
     exit()
 

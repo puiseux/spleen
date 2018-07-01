@@ -70,35 +70,6 @@ def pointsFromFile(filename):
         raise IOError(u'Je ne sais pas lire ce fichier "%s"'%filename)
         # return np.zeros((0,2))
 
-# def pointsFromFile(filename):
-#     try :
-# #         file_ = unicode(filename)
-#         file_ = Path(filename)
-#         ext = file_.ext.lower()
-#         #trace(self, "lecture sur %s"%file_)
-#         if ext in ('.dxf',) :
-#             lecteur = LecteurDXFNervures(file_)
-#             return lecteur.lire()
-#         elif ext in ('.gnu',) :
-#             lecteur = LecteurGnuplot(file_,patch=False)
-#             lecteur.dim = 2
-#             lecteur.patch = False
-#             return lecteur.lire()
-#         elif ext in ('.pts') :
-#             lecteur = LecteurNervures(file_)
-#             polygon = lecteur.lire()
-#             if lecteur.genre.lower()=='voile' :
-#                 raise IOError(u"%s n'est pas un polygon2d mais 3d (voile?, profil3d?)"%file_.name)
-#             elif lecteur.dimension == 3 :
-#                 polygon = lecteur.points[:,:-1]
-#             return polygon
-#         else :
-#             msg = 'Je ne sais pas lire ce fichier %s'%file_
-#             raise IOError(msg)
-
-#     except Exception as msg:
-#         raise IOError(msg)
-
 def pointsFrom(x):#,close_=False):
     u'''
     Paramètre x:
@@ -175,7 +146,7 @@ class LecteurUniversel(object):
             from lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
             self.lecteur=LecteurSVG(filename)
             self.lire()
-            
+
         else :
 #             self.lecteur = None
 #             self.points = []
@@ -227,7 +198,7 @@ if __name__=="__main__":
         print type(fl.lecteur).__name__
         print str(fl.lecteur)
 #     fl.lire()
-        try : 
+        try :
             print 'points.shape : ', fl.points.shape
             fl.plot()
         except Exception as msg:

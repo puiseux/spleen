@@ -10,32 +10,12 @@ Description :
 '''
 import sys,os,math
 import numpy as np
-from numpy import asarray as array
+# from numpy import asarray as array
 from path import Path
-# from PyQt4 import QtGui
-# from PyQt4 import QtCore
-# from PyQt4.QtGui import (QApplication, )#QPolygonF)
-# from PyQt4.QtCore import (Qt, QPointF,)# QString, QObject)
 from config import VALIDATION_DIR#, SOURCES_DIR
-# from scipy.optimize import newton, minimize
-# from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
-#                                UnivariateSpline)
 from splineabstraite import NSplineAbstract
 from splinesimple import NSplineSimple
-#from snapper import Snapper
-# import preferences
-# import cPickle
 from utilitaires import (segmentPlusProche,debug, rdebug)
-# from inout.writerpts import writeProfil
-# from preferences import SplinePrefs, NPrefs
-
-# import pprint
-# from inout.lecteurs import LecteurUniversel
-from config import RUNS_DIR
-
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 class NSplineComposee(NSplineAbstract):
     # prefs = preferences.SplinePrefs()

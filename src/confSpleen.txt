@@ -5,4 +5,5 @@
 #-------------------------------------------------------
 ROOT_DIR = /Users/puiseux/git/spleen 
 RUNS_DIR = /Users/puiseux/git/spleen/work
+VALIDATION_DIR = /Users/puiseux/git/spleen/validation
 VTK_ENABLED = True
