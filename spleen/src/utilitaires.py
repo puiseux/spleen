@@ -12,20 +12,24 @@ import math
 import pickle
 import string
 import sys
+# import numpy
 # from lecteurdxf import LecteurDXFNervures, LecteurDXF
 # from lecteur import LecteurGnuplot
 # from lecteurs import pointsFromFile
-from math import acos, atan, cos, sin, tan
+# from math import acos, atan, cos, sin, tan
 from pprint import pprint
-from random import choice
+# from random import choice, random
+from numpy.random import random#, choice
 # from lecteurs import pointFromFile
-import numpy as np
-import scipy as sp
-from numpy import asarray, ones, zeros
+# import numpy as np
+# import scipy as sp
+from numpy import (asarray, zeros, vstack, ndarray, matrix, absolute, copy,
+    nan, sqrt, where, sin, cos, logical_and, dot, argmin, arange, delete, inf, linspace,pi)
 # from numpy.matlib import rand
 from path import Path
 from scipy import interpolate, ones, prod, sum
-print sp.version.version
+from numpy.linalg.linalg import norm
+# print sp.version.version
 from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
                                LSQUnivariateSpline, Rbf, UnivariateSpline,
                                interp1d, splev, splrep)
@@ -51,7 +55,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
     if methode in ('periodic', 'p cubic', ) :
         if all(points[0] == points[-1]) : pass
         else : #On rajoute le premier point a la fin
-            points = np.vstack((points, points[0]))
+            points = vstack((points, points[0]))
 #             points.resize((1+len(points),2)) #moins cher que vstack mais marche pas !!
 #             points[-1] = points[0]
     if tension == 0.0 :
@@ -79,7 +83,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
             sx = sy = None
     elif methode in ('us','univariatespline') :
         try :
-            weights = np.ones(N)
+            weights = ones(N)
             W = 1000.0
             # en supposant que tous les termes erreur di^2=wi*(xi-f(ti))^2 sont egaux
             # le choix de s suivant implique
@@ -87,7 +91,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
             # abs(x1-f(t1))<eps/(N*W) et abs(xN-f(tN))<eps/(N*W)
 #             eps = 10.0**(-tension)
             weights[0] = weights[-1] = W
-            weights /= np.sum(weights)
+            weights /= sum(weights)
             s = eps/(N*W)
             sx = UnivariateSpline(T, X, w=weights, k=degre, s=s)#s=la précision de l'ajustement s=0 <=> interpolation
             sy = UnivariateSpline(T, Y, w=weights, k=degre, s=s)
@@ -112,7 +116,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
 #             trace(None)
 #             print unicode(msg)
 #             sx = sy = None
-    elif 'cubic' in methode :#or isinstance(methode, (tuple, list, np.ndarray)):
+    elif 'cubic' in methode :#or isinstance(methode, (tuple, list, ndarray)):
         if methode == 'p cubic' : bc_type='periodic'
         elif methode == 'c cubic' : bc_type='clamped'
         elif methode == 'n cubic' : bc_type='natural'
@@ -126,7 +130,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
             print unicode(msg)
             sx = sy = None
 
-    elif isinstance(methode, (tuple, list, np.ndarray)):
+    elif isinstance(methode, (tuple, list, ndarray)):
         bc_type = methode
         try :
 #             trace(None, T)
@@ -146,20 +150,20 @@ def rotate(points, alfa, centre):
     Donc on transpose tout et on ecrit Xi' = C' + (Xi'-C')*A' au lieu de
     Xi = C + A*(Xi-C), pour i= 0, 1,...
     '''
-    Ct = np.asarray(centre).reshape((1,2))
-    cosa, sina = np.cos(alfa), np.sin(alfa)
-    At = np.matrix([[cosa,-sina], [sina,cosa]]).transpose()
+    Ct = asarray(centre).reshape((1,2))
+    cosa, sina = cos(alfa), sin(alfa)
+    At = matrix([[cosa,-sina], [sina,cosa]]).transpose()
     Xt = points - Ct
     Xt = Xt*At + Ct
 #     trace('', Xt.shape)
-    return np.asarray(Xt)
+    return asarray(Xt)
 
 def symetriser(points, sym):
     u"""
     Symetrie in situ de 'points' par rapport à un des plan Oxy, Oyz ou Oxz
     Parametres:
     ----------
-        - points = np.ndarray de shape (m,n,...,3) ou (m,n,...,2)
+        - points = ndarray de shape (m,n,...,3) ou (m,n,...,2)
         - sym = un chaine de caracteres pour indiquer l'orientation.
             sym contient au plus 3 caracteres parmi {'x','y','z'}
             si sym contient 'x' les points sont transformés [x,y,z] -> [-x,y,z] (points est symétrisé par rapport au plan Oyz)
@@ -201,8 +205,8 @@ def hardScale(points, echelle, centre=None, translate=False):
     '''
 #     if centre is None :
 #         centre=[0,0]
-#     centre=np.asarray(centre).reshape((1,2))
-    points *= np.asarray([echelle[0],echelle[1]])
+#     centre=asarray(centre).reshape((1,2))
+    points *= asarray([echelle[0],echelle[1]])
     if centre is not None :
         centre = asarray(centre)
 #         debug(centre)
@@ -217,7 +221,7 @@ def aire2d(points,absolute=True):
 #        points = pointsFromPolygon(points)
     if len(points)<=2 :
         return 0.0
-    points=np.copy(points)#sinon effet de bord difficile à identifier !!!
+    points=copy(points)#sinon effet de bord difficile à identifier !!!
     S=0.0
     A=points[0]
     points-=A
@@ -236,8 +240,8 @@ def moyenneMobileClosed(points,molecule=[1.,2.,1.],nnodes=None):
     Lissage moyenne mobile pour les polygones fermés self[-1]==self[0]
     nnodes est la liste des numeros de points à lisser. On suppose que 0 n'y est pas
     '''
-    molecule=np.asarray(molecule)#np.asarray([1., 2., 1.])/4.
-    molecule/=np.sum(np.absolute(molecule))
+    molecule=asarray(molecule)#asarray([1., 2., 1.])/4.
+    molecule/=sum(absolute(molecule))
     new=points
     if nnodes is None :
         nnodes=range(len(points))
@@ -315,16 +319,16 @@ def centreGravite(points, surface=False):
     S(ti) est l'aire algébrique du triangle ti , i.e. 0.5*det(OP(i), OP(i+1))
     '''
     if len(points) == 0 :
-        if surface : return np.asarray([np.nan, np.nan]), 0.0
-        else : return np.asarray([np.nan, np.nan])
+        if surface : return asarray([nan, nan]), 0.0
+        else : return asarray([nan, nan])
     elif len(points) == 1 :
-        if surface : return np.asarray(points[0]), 0.0
-        else : return np.asarray(points[0])
+        if surface : return asarray(points[0]), 0.0
+        else : return asarray(points[0])
 
-    points=np.asarray(points)
+    points=asarray(points)
     Sa = 0.0
     xG, yG = 0.0, 0.0
-    G = np.asarray([xG, yG])
+    G = asarray([xG, yG])
     A = points[0]
     T = zip(points[:-1], points[1:])+[(points[-1],points[0])]
     for b,c in T :
@@ -335,8 +339,8 @@ def centreGravite(points, surface=False):
 #         trace(self, "pouet, a faire")
         Sa += Sat
     if Sa == 0.0 :
-        if surface :  return np.asarray((np.nan, np.nan)), 0
-        else : return np.asarray((np.nan, np.nan))
+        if surface :  return asarray((nan, nan)), 0
+        else : return asarray((nan, nan))
     else :
         if surface : return G / Sa, Sa*0.5
         else : return G / Sa
@@ -353,7 +357,7 @@ def aire(points):
     A(ti) = (1/2).OP(i)^OP(i+1) est l'aire algébrique du triangle ti=OP(i)P(i+1)
     '''
     if len(points) <= 2 : return 0.0
-    points=np.asarray(points)
+    points=asarray(points)
     a = points[0]
     aire = 0.0
     T = zip(points[:-1], points[1:])+[(points[-1],points[0])]
@@ -366,17 +370,17 @@ def baryCentre(points,masses=None):
     '''Retourne le barycentre du nuage de points 'points' affectés des masses 'masses' 2d'''
     if len(points)==0 :
         return None
-    points=np.asarray(points)
+    points=asarray(points)
 #     trace('', points.shape, len(points))
     N=len(points)
     if masses is None :
         X,Y = points[:,0], points[:,1]
 #         debug (X=X, Y=Y)
     else :
-        masses=masses/np.sum(masses)
-        X,Y=np.prod([masses,points[:,0]],axis=0),np.prod([masses,points[:,1]],axis=0)
-    bc = [[np.sum(X)/N, np.sum(Y)/N]]
-    return np.asarray(bc)
+        masses=masses/sum(masses)
+        X,Y=prod([masses,points[:,0]],axis=0),prod([masses,points[:,1]],axis=0)
+    bc = [[sum(X)/N, sum(Y)/N]]
+    return asarray(bc)
 
 
 def dist2(p1,p2,n=2):
@@ -386,7 +390,7 @@ def dist2(p1,p2,n=2):
         x2,y2=p2[0],p2[1]
         return (x2-x1)**2+(y2-y1)**2
     except TypeError : # Si p1 ou p2=None
-        return np.nan
+        return nan
 
 def dist(p1,p2,n=2):
     '''retourne la distance de p1 à p2 en norme n=2'''
@@ -507,7 +511,7 @@ def aireTriangle(a,b,c):
     r=u[2]*v[0]-u[0]*v[2]
     s=u[0]*v[1]-u[1]*v[0]
     t=u[1]*v[2]-u[2]*v[1]
-    return 0.5*np.sqrt(r*r+s*s+t*t)
+    return 0.5*sqrt(r*r+s*s+t*t)
 
 def intersectionSegments(seg1, seg2):
     u'''http://www.exaflop.org/docs/cgafaq/cga1.html :
@@ -562,7 +566,7 @@ If s<0, P is located on extension of DC
 Also note that the denominators of eqn 1 & 2 are identical.
     '''
 #     print seg1, seg2
-    A,B=seg1# np.ndarray((2,))
+    A,B=seg1# ndarray((2,))
 #     trace('',A.shape)
     u=B-A
     C,D=seg2
@@ -571,7 +575,7 @@ Also note that the denominators of eqn 1 & 2 are identical.
     w=C-A
     denominateur=u[0]*v[1]-u[1]*v[0]
     if denominateur==0.0 :
-        return np.nan,np.nan,np.asarray((np.nan,np.nan))
+        return nan,nan,asarray((nan,nan))
     else  :
         r=(w[0]*v[1]-w[1]*v[0])/denominateur
         s=(w[0]*u[1]-w[1]*u[0])/denominateur
@@ -581,8 +585,8 @@ def segmentPlusProche(points,P):
         u'''
         Paramètres:
         ----------
-            - points : np.ndarray((n,2)) est un polyligne dans lequel on cherche le segment
-            - P : np.ndarray((1,2)) est un point quelconque
+            - points : ndarray((n,2)) est un polyligne dans lequel on cherche le segment
+            - P : ndarray((1,2)) est un point quelconque
         Fonctionnement:
         --------------
             On recherche le segment S[i]=(points[i], points[i+1]) le plus proche de P au sens suivant :
@@ -640,7 +644,7 @@ Then the distance from C to P = s*L.
 
         # if isinstance(P,(QPointF, QPoint,)):
         #     P = P.x(), P.y()# Point argument
-        points = np.asarray(points)
+        points = asarray(points)
         u = -(points-P)[:-1]
         v = points[1:]-points[:-1]
 #         debug(v=v)
@@ -648,18 +652,18 @@ Then the distance from C to P = s*L.
 #         debug(points-P)
 #         debug(distances=distances)
 #         debug(P, len(points), distances)
-#         distances = np.linalg.norm(u, axis=1)
-        longueurs = np.linalg.norm(v, axis=1)
+#         distances = linalg.norm(u, axis=1)
+        longueurs = norm(v, axis=1)
 #         debug(distances_P_points=distances)
 #         debug(longueurs_segments=longueurs)
-        ps = [np.dot(ui, vi) for (ui, vi) in zip(u,v)]
+        ps = [dot(ui, vi) for (ui, vi) in zip(u,v)]
         r = ps/(longueurs*longueurs)
 #         debug(r_entre_0_et_1=r)
-#         psn = [np.dot(ui, vi)/np.dot(vi,vi) for (ui, vi) in zip(u,v)]
+#         psn = [dot(ui, vi)/dot(vi,vi) for (ui, vi) in zip(u,v)]
 #         debug(psn=psn)
 #         distances = r*longueurs
 #         debug(distances_P_Segment=distances)
-        candidats, = np.where(np.logical_and(0.0<=r,r<=1.0))
+        candidats, = where(logical_and(0.0<=r,r<=1.0))
 #         debug(len(points), len(r), len(v))
 #         if len(candidats)>0 :
 #             projetes = points[candidats]+r[candidats]*v[candidats]
@@ -681,7 +685,7 @@ Then the distance from C to P = s*L.
             if pp == len(points)-1 : pp = len(points)-2#segment p[-2], p[-1]
             return pp, None
         else :
-            winner = np.argmin(distances)
+            winner = argmin(distances)
 #             debug(winner=winner)
 #             debug(candidats_winner=candidats[winner])
             i = candidats[winner]
@@ -691,22 +695,18 @@ Then the distance from C to P = s*L.
 
 def pointLePlusProche(points,P,return_distances_array=False):
     '''
-    Parametres:
-    ----------
-
-    :param points: np.ndarray, tableau de n points 2d de shape (n,2)
+    :param points: ndarray, tableau de n points 2d de shape (n,2)
     :param P: un point 2d de type QPointF, QPoint ou tuple ou liste (x,y)
     :param return_distances_array: bool, retourne ou non le tableau des distances.
 
     :return: (i, dist) avec
-
         - i : l'indice dans 'points' du point qui réalise le min
         - dist : la distance de P à points si return_distances_array est False
         - dist : le tableau des distances de P à points si return_distances_array est True
     '''
     X,Y=P[0],P[1]
     distances=[dist(point,(X,Y)) for point in points]
-    index=np.argmin(distances)
+    index=argmin(distances)
     if return_distances_array :
         return index,distances
     else :
@@ -716,7 +716,7 @@ def pointLePlusProche3d(points,P,return_distances_array=False):
     '''
     Parametres:
     ----------
-    - points : np.ndarray, tableau de n points 3d de shape (n,3)
+    - points : ndarray, tableau de n points 3d de shape (n,3)
     - P : un point 3d de type QPointF, QPoint ou tuple ou liste (x,y)
     retourne l'indice dans points, du point le plus proche de P
     Retourne (i, distances)
@@ -726,7 +726,7 @@ def pointLePlusProche3d(points,P,return_distances_array=False):
     '''
     X,Y,Z=P[0],P[1],P[2]
     distances=[distance3(point,(X,Y,Z)) for point in points]
-    index=np.argmin(distances)
+    index=argmin(distances)
     if return_distances_array :
         return index,distances
     else :
@@ -757,7 +757,7 @@ def pointsLesPlusProches3d(pt,tab):
     return i
 
 def longueur2d(polyline):
-    P = np.asarray(polyline)
+    P = asarray(polyline)
     return sum([dist(p1,p2) for (p1, p2) in zip(P[1:], P[:-1])])
 
 def longueur2d_array(tab):
@@ -768,15 +768,15 @@ def longueur3d(tab):
 
 def encombrement(piece, dim=3):
     u"""
-    piece doit être un np.ndarray de shape (N, dim) quelconque,
+    piece doit être un ndarray de shape (N, dim) quelconque,
     retourne le parallelepipede d'encombrement du nuage de points
     """
     if isinstance(piece, (list, tuple, )) :
-        return encombrement(np.asarray(piece),dim)#recursif
-    elif isinstance(piece,(np.ndarray,)):
+        return encombrement(asarray(piece),dim)#recursif
+    elif isinstance(piece,(ndarray,)):
 #         trace("", piece_shape=piece.shape)
         points = piece
-        Max, Min = np.max, np.min #ca reste local
+        Max, Min = max, min #ca reste local
         if dim == 1 :
             return Min(points), Max(points)
         points = piece.view()
@@ -784,8 +784,8 @@ def encombrement(piece, dim=3):
         if dim == 3 :
             M = [Max(points[:,0]),Max(points[:,1]),Max(points[:,2])]
             m = [Min(points[:,0]),Min(points[:,1]),Min(points[:,2])]
-#             M = np.asarray([Max(points[:,0]),Max(points[:,1]),Max(points[:,2])])
-#             m = np.asarray([Min(points[:,0]),Min(points[:,1]),Min(points[:,2])])
+#             M = asarray([Max(points[:,0]),Max(points[:,1]),Max(points[:,2])])
+#             m = asarray([Min(points[:,0]),Min(points[:,1]),Min(points[:,2])])
             return(m,M)
         elif dim == 2 :
             M = [Max(points[:,0]),Max(points[:,1])]
@@ -797,7 +797,7 @@ def encombrement(piece, dim=3):
 def encombrement1(piece, dim=3):
     u"""retourne l'encombrement de la piece sous forme dx[,dy[,dz]]"""
     m, M = encombrement(piece, dim)
-    return np.asarray(M) - np.asarray(m)
+    return asarray(M) - asarray(m)
 
 
 def maintenant():
@@ -837,15 +837,15 @@ def doublons(points,voisinages=[],eps=1.0e-8,sym=True):
     qoints.shape=(qoints.size/3,3)
     nbp=qoints.shape[0]
     if voisinages!=[] :
-        voisinages=np.asarray(voisinages)
+        voisinages=asarray(voisinages)
 #        debog(whoami(), voisinages.shape)
         nbp=voisinages.shape[-1]
         voisinages.shape=(-1,nbp)
     else :
         if sym :
-            voisinages=np.asarray([[i]+range(i,nbp) for i in range(nbp)])
+            voisinages=asarray([[i]+range(i,nbp) for i in range(nbp)])
         else :
-            voisinages=np.asarray([[i]+range(nbp) for i in range(nbp)])
+            voisinages=asarray([[i]+range(nbp) for i in range(nbp)])
 
     doublons=[]
     for voisinage in voisinages:
@@ -853,7 +853,7 @@ def doublons(points,voisinages=[],eps=1.0e-8,sym=True):
         point=qoints[k]
         for voisin in voisins :
             if cond(voisin,k) :
-                if np.linalg.norm(point-qoints[voisin])<eps :
+                if norm(point-qoints[voisin])<eps :
                     doublons.append((k,voisin))
     return doublons
 
@@ -1197,7 +1197,7 @@ def find_names(obj):
 
 def structuredGrid(nx,ny,nz,delta=-1):
     """
-    retourne un tableau np.ndarray de shape(nx,ny,nz,3)
+    retourne un tableau ndarray de shape(nx,ny,nz,3)
 
     produit tensoriel de X=(x_1,x_2,...x_nx), Y=(y_1,y_2,...y_ny)
     et Z=(z_1,z_2,...z_nz), aléatoirement espacés, mais triés.
@@ -1206,22 +1206,22 @@ def structuredGrid(nx,ny,nz,delta=-1):
     """
 #    nx,ny,nz = shape
     if delta==-1 :
-        X=np.random.random(nx)
-        Y=np.random.random(ny)
-        Z=np.random.random(nz)
+        X=random(nx)
+        Y=random(ny)
+        Z=random(nz)
         X.sort()
         Y.sort()
         Z.sort()
     else :#TODO: delta=dx,dy,dz
         dx,dy=1.0/(nx-1),1.0/(ny-1)
-        X=np.arange(0.0,1.0+dx,dx)
-        Y=np.arange(0.0,1.0+dy,dy)
+        X=arange(0.0,1.0+dx,dx)
+        Y=arange(0.0,1.0+dy,dy)
     if nz==1 :
-        Z=np.asarray([0.0])
+        Z=asarray([0.0])
     else :
         dz=1.0/(nz-1)
-        Z=np.arange(0.0,1.0+dz,dz)
-    G=np.ndarray((nx,ny,nz,3),dtype=float)
+        Z=arange(0.0,1.0+dz,dz)
+    G=ndarray((nx,ny,nz,3),dtype=float)
     for i,x in enumerate(X) :
         for j,y in enumerate(Y) :
             for k,z in enumerate(Z) :
@@ -1262,10 +1262,10 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
         try: color=colors[k]
         except : color='b-'
         pyplot.plot(xy[:,0],xy[:,1],color)
-        xmin=min(xmin,np.min(xy[:,0]))
-        ymin=min(ymin,np.min(xy[:,1]))
-        xmax=max(xmax,np.max(xy[:,0]))
-        ymax=max(ymax,np.max(xy[:,1]))
+        xmin=min(xmin,min(xy[:,0]))
+        ymin=min(ymin,min(xy[:,1]))
+        xmax=max(xmax,max(xy[:,0]))
+        ymax=max(ymax,max(xy[:,1]))
     w,h=xmax-xmin,ymax-ymin
     # dizaine=int(math.log10(w))#10^dizaine <= w < 10^(1+dizaine)
     ax=pyplot.axes()
@@ -1313,7 +1313,7 @@ def goodName(name):
 
 # def testContraindre():
 #     import matplotlib
-#     P=np.asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
+#     P=asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
 #     P=P[::-1]
 #     S=[((0.5,0.25),(0.5,-1)),((1.5,3),(1.5,-2)),((2.5,3),(2.5,-2)),((4,3),(4,-2)),((4.5,3),(4.5,-2)),((5,3),(5.01,-1))]
 # #     S.reverse()
@@ -1321,26 +1321,26 @@ def goodName(name):
 # #     print PC
 #     Sp=[]
 #     for A,B in S : Sp+=[A,B]
-#     Sp=np.asarray(Sp)
+#     Sp=asarray(Sp)
 #     S1=dupliquerContraintes(S,3)
 #     S1p=[]
 #     for A,B in S1 : S1p+=[A,B]
-#     S1p=np.asarray(S1p)
+#     S1p=asarray(S1p)
 # #     my2dPlot((Sp,S1p, ), equal=False, cosmetic=('r-o','b-o', 'g-o', 'g*', 'r*','r^'))
 # #     return
 #     PC=contraindre(P,S)
 #     PC2=contraindre(P,S,3)
 #     PC1=contraindre(P,S1)
 #     my2dPlot((P,PC[0],PC1[0],PC2[0]),equal=False,cosmetic=('r-o','b-o','g-*','r-^','r*','r^'))
-# #     P = np.asarray([(0, -1.0),(-1,0),(1,0),(0,1)])
+# #     P = asarray([(0, -1.0),(-1,0),(1,0),(0,1)])
 
 def diff(A):
     u"""
     J'en ai marre de taper tout le temps 'dA = A[1:]-A[:-1]'
-    :param A: un tableau de points np.ndarray de shape (n, dim)
+    :param A: un tableau de points ndarray de shape (n, dim)
     :return d:les différences premières de A:
         dA[i] = A[i+1]-A[i]
-    :rtype dA: np.ndarray((n-1,dim))
+    :rtype dA: ndarray((n-1,dim))
     """
     return A[1:]-A[:-1]
 
@@ -1384,8 +1384,8 @@ def isInside(p, Q):
     """
     Paramètres:
     ==========
-        - p = (x,y) = np.ndarray((1,2), float) un point en 2d
-        - Q est un polygone = np.ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
+        - p = (x,y) = ndarray((1,2), float) un point en 2d
+        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
     Retourne :
     ========
         - vrai si p est à l'intérieur du polygone Q et
@@ -1411,8 +1411,8 @@ def isInside0(p, Q, frontiere=False):
     """
     Paramètres:
     ==========
-        - p = (x,y) = np.ndarray((1,2), float) un point en 2d
-        - Q est un quadrilatère = np.ndarray((5,2), float) avec deux cotés parallèles à l'axe des y
+        - p = (x,y) = ndarray((1,2), float) un point en 2d
+        - Q est un quadrilatère = ndarray((5,2), float) avec deux cotés parallèles à l'axe des y
             Q est supposé fermé i.e. le premier point == le dernier point,
             on n'utilise que les points 0 à 3 notés A, B, C, D
         - ATTENTION à l'ordre des points : cf dessin ci-dessous.
@@ -1454,8 +1454,8 @@ def isOn(P, segment, eps=1.0e-10, debug=False):
     Retourne True si P est sur le segment, à eps près
     Paramètres :
     ----------
-    - segment : [A,B] ou A et B de type np.ndarray((1,2),dtype=float)
-    - P : de type np.ndarray((1,2),dtype=float)
+    - segment : [A,B] ou A et B de type ndarray((1,2),dtype=float)
+    - P : de type ndarray((1,2),dtype=float)
     - eps : de type float >= 0.0
     Subject 1.02: How do I find the distance from a point to a line?
     ===============================================================
@@ -1505,8 +1505,8 @@ def isInsideOrFrontier(p, Q, eps=1.0e-6):
     u"""
     Paramètres:
     ==========
-        - p = (x,y) = np.ndarray((1,2), float) un point en 2d
-        - Q est un polygone = np.ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
+        - p = (x,y) = ndarray((1,2), float) un point en 2d
+        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
         - eps : precision
     Retourne :
     ========
@@ -1524,8 +1524,8 @@ def isInsideOrFrontierOld(p, Q, eps=1.0e-10):
     u"""
     Paramètres:
     ==========
-        - p = (x,y) = np.ndarray((1,2), float) un point en 2d
-        - Q est un polygone = np.ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
+        - p = (x,y) = ndarray((1,2), float) un point en 2d
+        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
         - eps : precision
     Retourne :
     ========
@@ -1544,7 +1544,7 @@ def isInsideOrFrontierOld(p, Q, eps=1.0e-10):
     if abs(w0) < eps :
 #        trace('', AB, Ap)
         return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-#         return True if 0.0 <= np.det(AB, Ap) <= np.det(AB, AB)  else False
+#         return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
 #    if number is 0 :
 #    trace('', '(x,y)=%s, w0=%.2g'%(str(p), w0))
     for (A, B) in zip(Q[1:-1], Q[2:]) :
@@ -1554,7 +1554,7 @@ def isInsideOrFrontierOld(p, Q, eps=1.0e-10):
 #        if w == 0.0 :
         if abs(w) < eps :
             return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-#             return True if 0.0 <= np.det(AB, Ap) <= np.det(AB, AB)  else False
+#             return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
 
 #        if number == 0 :
 #        trace('', w0, w)
@@ -1599,7 +1599,7 @@ def testEmpilementSegments():
 def pointsDoubles(points, eps=1.0e-10):
     u"""retourne la liste des numéros de points doubles CONSECUTIFS à eps pres.
     points est de shape(n,2), n>=2"""
-    if not isinstance(points, (np.ndarray,list,tuple)) :
+    if not isinstance(points, (ndarray,list,tuple)) :
         raise NotImplementedError('points doit etre de type numpy.ndarray')
     if len(points)<2 : return []
     ac = absCurv(points)
@@ -1615,7 +1615,7 @@ def pointsDoubles(points, eps=1.0e-10):
 def eliminerPointsDoublesConsecutifs(points, eps=0.0, vires=False):
     avirer = pointsDoubles(points, eps)
 #     debug(len_avirer=len(avirer))
-    if avirer : points = np.delete(points, avirer, 0)
+    if avirer : points = delete(points, avirer, 0)
     return points, avirer if vires else points
 #         msg1 = 'Les points de controle %s sont des doublons consecutifs.'%avirer
 #         msg1 += 'Suppression des doublons'
@@ -1626,7 +1626,7 @@ def eliminerPointsDoublesConsecutifs(points, eps=0.0, vires=False):
 
 def testPointsDoubles():
 #     from gui.graphicsbase.graphicscommon import qpolygonFrom
-    points=np.asarray([[0,0],[0,0],[0,0],])
+    points=asarray([[0,0],[0,0],[0,0],])
     debug('points_sales=%s'%points.tolist(), avirer=pointsDoubles(points, 0.0))
     debug(points_propres=eliminerPointsDoublesConsecutifs(points, 0, True))
     X = [1,2,3,4,4,5,5,5,6,7,7]
@@ -1634,7 +1634,7 @@ def testPointsDoubles():
     points = zip(X,Y)
     print 'points initiaux :\n',points
     print 'a virer, version Python', pointsDoubles(points)
-    points = np.asarray(points)
+    points = asarray(points)
     print 'a virer, version  numpy', pointsDoubles(points)
     print 'points nettoyé :\n', eliminerPointsDoublesConsecutifs(points, 0)
 #     points = qpolygonFrom(points)
@@ -1656,32 +1656,32 @@ def testIsInside():
     """
     print 10*'#'
     p = [-5.79201521, 0.61218603]
-    Q = np.asarray([[-5.92606363, -0.47661251],
+    Q = asarray([[-5.92606363, -0.47661251],
                     [-5.78006363, -0.51037401],
                     [-5.78006363,  0.62300842],
                     [-5.92606363,  0.49080254],
                     [-5.92606363, -0.47661251]])
     print isInsideOrFrontier(p, Q, 1.0e-9)
     # return
-    Q = np.asarray([(0.0,0.0), (1.0,0.5), (1.0,2.0), (0.0, 0.5), (0.,0.)])
-    Q = np.asarray([
+    Q = asarray([(0.0,0.0), (1.0,0.5), (1.0,2.0), (0.0, 0.5), (0.,0.)])
+    Q = asarray([
                     [-5.8630197,  -0.37438482],
                     [-5.8630197,  -0.37264027],
                     [-4.2833244,  -0.82439736],
                     [-4.2833244,  -0.82825686],
                     [-5.8630197,  -0.37438482]
                     ])
-    p = np.asarray([-5.8630197,   0.11092514])
+    p = asarray([-5.8630197,   0.11092514])
     print isInsideOrFrontier(p, Q)
-    Q = np.asarray([(0.0,0.0), (1.0,0.0), (1.0,1.0), (0.0, 1.0), (0.,0.)])
-    p = np.asarray([1.0, 1.0])
+    Q = asarray([(0.0,0.0), (1.0,0.0), (1.0,1.0), (0.0, 1.0), (0.,0.)])
+    p = asarray([1.0, 1.0])
     print isInsideOrFrontier(p, Q)
 #    alert('', 'bizarre, a verifier...')
     # return
-    p = np.asarray((0.5, 1.24999))
+    p = asarray((0.5, 1.24999))
     print isInsideOrFrontier(p, Q)
     print isInside0(p, Q)
-    p = np.asarray((0.0, 2.0))
+    p = asarray((0.0, 2.0))
     print isInsideOrFrontier(p, Q)
     print isInside(p, Q)
     print isInside0(p, Q)
@@ -1775,19 +1775,19 @@ def projSurProfil(prof,iba,pos,cote):
 
 # def rcercle(A, B, C, eps=1.0e-8):
 #     u"""retourne le rayon dun cercle passant par les 3 points A,B,C, distincts et non alignes.
-#     Si les 3 points sont presque alignés retourne np.inf
-#     si deux points sont presque confondus, retourne np.nan"""
-#     A, B, C = np.asarray(A), np.asarray(B), np.asarray(C)
+#     Si les 3 points sont presque alignés retourne inf
+#     si deux points sont presque confondus, retourne nan"""
+#     A, B, C = asarray(A), asarray(B), asarray(C)
 #     AB, BC, CA = B-A, C-B, A-C
 # #     print AB, CA
-#     c, a, b = np.sqrt(AB[0]**2 + AB[1]**2), np.sqrt(BC[0]**2 + BC[1]**2), np.sqrt(CA[0]**2 + CA[1]**2),
+#     c, a, b = sqrt(AB[0]**2 + AB[1]**2), sqrt(BC[0]**2 + BC[1]**2), sqrt(CA[0]**2 + CA[1]**2),
 #     abc = a*b*c
 #     s = abs(det(AB,CA))
 # #     print s, abc
 #     if abc < eps:#2 points presque confondus : infinité de cercles passant par deux points
-#         return np.nan
+#         return nan
 #     elif s<eps:# trois points presque alignés
-#         return np.inf
+#         return inf
 #     else :
 #         return 0.5*abc/(det(AB, CA))
 #         return 0.5*abc/abs(det(AB, CA))
@@ -1798,20 +1798,20 @@ def projSurProfil(prof,iba,pos,cote):
 
 def rcercle(A, B, C, eps=0.0):
     u"""retourne le rayon dun cercle passant par les 3 points A,B,C, distincts et non alignes.
-    Si les 3 points sont presque alignés retourne np.inf
-    si deux points sont presque confondus, retourne np.nan"""
-    A, B, C = np.asarray(A), np.asarray(B), np.asarray(C)
+    Si les 3 points sont presque alignés retourne inf
+    si deux points sont presque confondus, retourne nan"""
+    A, B, C = asarray(A), asarray(B), asarray(C)
     AB, BC, CA = B-A, C-B, A-C
 #     print AB, CA
-    c, a, b = np.sqrt(AB[0]**2 + AB[1]**2), np.sqrt(BC[0]**2 + BC[1]**2), np.sqrt(CA[0]**2 + CA[1]**2),
+    c, a, b = sqrt(AB[0]**2 + AB[1]**2), sqrt(BC[0]**2 + BC[1]**2), sqrt(CA[0]**2 + CA[1]**2),
     abc = a*b*c
     d = det(AB,CA)
     s = abs(d)
 #     print s, abc
     if abc <= eps:#2 points presque confondus : infinité de cercles passant par deux points
-        return np.nan
+        return nan
     elif s <= eps:# trois points presque alignés
-        return np.inf
+        return inf
     else :
         return 0.5*abc/d
         # return 0.5*abc/abs(det(AB, CA))
@@ -1823,7 +1823,7 @@ def rayonDeCourbure(P):
     Il y a exactement n=len(P) rayons
     """
     rayons = zeros(len(P))
-    if np.linalg.norm(P[0]-P[-1])>1.0e-9 :#debut != fin
+    if norm(P[0]-P[-1])>1.0e-9 :#debut != fin
         rayons[ 0] = rcercle(P[-1], P[0], P[1])
         rayons[-1] = rcercle(P[-2], P[-1], P[0])
     else :
@@ -1841,7 +1841,7 @@ def courbure(P):
     Il y a exactement n=len(P) valeurs de la courbure
     """
     courbature = zeros(len(P))
-    if np.linalg.norm(P[0]-P[-1])>0 :#debut != fin
+    if norm(P[0]-P[-1])>0 :#debut != fin
         courbature[ 0] = 1.0/rcercle(P[-1], P[0], P[1])
         courbature[-1] = 1.0/rcercle(P[-2], P[-1], P[0])
     else :
@@ -1861,7 +1861,7 @@ def scourbure(S, T):
     - T = [t0, t1, ...tn] : les valeurs du parametre t pour lesquels on calcule la courbure.
     retourne:
     --------
-        un np.ndarray((n,)) avec les valeurs de la courbure c(ti) aux pointx sx(ti), sy(ti), ti dans T
+        un ndarray((n,)) avec les valeurs de la courbure c(ti) aux pointx sx(ti), sy(ti), ti dans T
         La courbure est l'inverse du rayon de courbure.
         Pour un arc x(t), y(t), le rayon de courbure est r(t)=((x'^2+y'^2)^3/2)/(x'y"-y'x")
         x'=x'(t), y'=y'(t) x"=x"(t), y"=y"(t).
@@ -1871,17 +1871,17 @@ def scourbure(S, T):
     sx, sy = S
     dx,  dy  = sx(T, 1), sy(T, 1)
     d2x, d2y = sx(T, 2), sy(T, 2)
-    norm3_d2 = np.sqrt(dx**2+dy**2)**3
+    norm3_d2 = sqrt(dx**2+dy**2)**3
     # si norm_d2=0, x"(t)=y"(t)=0, c'est une droite, courbure nulle
     sc = (dx*d2y-dy*d2x)/(norm3_d2)
-    sc[np.where(norm3_d2 < 1.0e-12)] = 0.0
+    sc[where(norm3_d2 < 1.0e-12)] = 0.0
     return sc
-#     return np.abs(dx*d2y-dy*d2x)/(np.sqrt(dx**2+dy**2)**3)
+#     return abs(dx*d2y-dy*d2x)/(sqrt(dx**2+dy**2)**3)
 def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
     u"""Integrale de f sur [a,b], méthode de Simpson composite. (ordre 3)
     n DOIT être pair"""
     h = float(b-a)/n
-    T = np.linspace(a, b, n+1)
+    T = linspace(a, b, n+1)
     C = f(T)
     A1 = C[0] + C[-1]
     A2 = 2*sum(C[i] for i in range(2,n) if i%2==0)
@@ -1925,7 +1925,7 @@ def testSegmentPlusProche():
     A, B = points[idx],points[idx+1]
     debug(indice_segment=idx, projection=pj, point_a_inserer=pt)
     from matplotlib import pyplot as plt
-    points = np.asarray(points)
+    points = asarray(points)
     fig = plt.figure()
     a = fig.add_subplot(1,1,1)
     plt.plot(points[:,0], points[:,1],'b-o',label=u'polyligne')
@@ -1947,7 +1947,7 @@ def testSegmentPlusProche():
         print 'Point = ', (x,0) , ' ; segmentPlusProche =',S
 
 def testCourbure():
-    p = np.asarray([[0.0, 0.0],
+    p = asarray([[0.0, 0.0],
                     [0.0020691201283767205, -0.0042941912136635636], [0.007625888799913062, -0.011329446395562288], [0.015694418444218296, -0.019910545432815785],
                     [0.025298821490901697, -0.02884226821254368], [0.035463210369572534, -0.03692939462186559], [0.04525122291119395, -0.0430513056100728],
                     [0.05446593471151137, -0.04748301229776649], [0.06356139613433973, -0.05171627435197123], [0.07281050074621176, -0.05640916969890315],
@@ -1982,19 +1982,19 @@ def testCourbure():
                     [0.9483643315445588, -0.006736690971026247], [0.958690606297892, -0.005390827999787622], [0.9690174536763952, -0.004043981546571245],
                     [0.9793447305237761, -0.0026963974818715497], [0.9896722936837418, -0.001348321676182991], [0.9999999999999999, -3.903127820947816e-18]])
 
-    c=np.abs(courbure(p))
+    c=abs(courbure(p))
     r=rayonDeCourbure(p)
 
     print c
     print r
 
 def testSCourbure():
-    C = np.asarray([(1,0),(0,1),(-1,0),(0,-1),(1,0)])
+    C = asarray([(1,0),(0,1),(-1,0),(0,-1),(1,0)])
     ac = absCurv(C, normalise=True)
     k = 3
     sx4 = UnivariateSpline(ac, C[:,0], k=k, s=0.0)
     sy4 = UnivariateSpline(ac, C[:,1], k=k, s=0.0)
-    T = np.linspace(0,1, 10000)
+    T = linspace(0,1, 10000)
     X4, Y4 = sx4(T), sy4(T)
     curv4 = scourbure((sx4,sy4), T)-1
 
@@ -2007,13 +2007,13 @@ def testSCourbure():
     plt.show()
 
 def testRayonCercle():
-    T = np.linspace(0, 2*math.pi, 100)
+    T = linspace(0, 2*math.pi, 100)
 #     T.shape = 10,1
 #     print T,
-    R = np.random.rand()
+    R = random.rand()
     print R
-    X, Y = R*np.cos(T), R*np.sin(T)
-    P = np.asarray([(x,y) for x,y in zip(X,Y)])
+    X, Y = R*cos(T), R*sin(T)
+    P = asarray([(x,y) for x,y in zip(X,Y)])
     print P
     print rcercle(P[-1], P[0], P[1])
 
@@ -2196,7 +2196,7 @@ if __name__=="__main__":
  [  2.87236864e+00,  -6.97302358e-03],
  [  2.97370904e+00,   6.45922348e-19]]
 
-    my2dPlot([np.asarray(p),])
+    my2dPlot([asarray(p),])
 #     exit()
 #     app=QtGui.QApplication(sys.argv)
 #     testTableDataDiag()
@@ -2237,26 +2237,26 @@ if __name__=="__main__":
         [9.39723441e-01,   1.05280598e-02],
         [1.00000000e+00,   0.00000000e+00],
         ]
-#     print courbure(np.asarray(P[:-1]))
+#     print courbure(asarray(P[:-1]))
     ac = absCurv(P)
     ac /= ac[-1]
 #     print ac
-    c = courbure(np.asarray(P))
-    T, sx,sy = splineInterpolation(np.asarray(P), 'c cubic')
+    c = courbure(asarray(P))
+    T, sx,sy = splineInterpolation(asarray(P), 'c cubic')
 #     print T-ac
 #     sc = scourbure((sx,sy), T)
-#     print np.linalg.norm(c-sc)/ac[-1]
+#     print linalg.norm(c-sc)/ac[-1]
 #     print sc
     print "***cercle rayon 1"
-    T = np.linspace(0, 2*np.pi,100)#[:-1]
-#     P = np.asarray(zip(T, T))
-    P = np.asarray(zip(np.sin(T), np.cos(T)))
+    T = linspace(0, 2*pi,100)#[:-1]
+#     P = asarray(zip(T, T))
+    P = asarray(zip(sin(T), cos(T)))
 #     print P
-    Ts, sx,sy = splineInterpolation(np.asarray(P), 'c cubic')
+    Ts, sx,sy = splineInterpolation(asarray(P), 'c cubic')
     c = courbure(P)
     print c
-    T1 = np.linspace(0, 1, 20)
-    P1 = np.asarray(zip(sx(T1),sy(T1)))
+    T1 = linspace(0, 1, 20)
+    P1 = asarray(zip(sx(T1),sy(T1)))
     c1 = courbure(P1)
     print c1
     from matplotlib import pyplot
@@ -2275,7 +2275,7 @@ if __name__=="__main__":
 #     pyplot.show()
 
 #     exit()
-    points  = np.arange(1,25)
+    points  = arange(1,25)
     points.shape = 2,4,3
     points.shape = 3,4,2
     print '\n==> x\n', symetriser(points, 'x')
@@ -2295,7 +2295,7 @@ if __name__=="__main__":
 #     print goodName('name')
 #     print goodName('nâme')
 # #     exit()
-    points=np.asarray((np.arange(5),np.arange(5,10))).reshape((-1,2))
+    points=asarray((arange(5),arange(5,10))).reshape((-1,2))
     print points
     print hardScale(points, (2,0), centre=None, translate=False)
 # #     exit()
@@ -2315,12 +2315,12 @@ if __name__=="__main__":
 #     p2=[1,1]
 #     print dist2(p1,p2)
 #     #### segmentPlusProche(points, P):####
-    P=np.asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
+    P=asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
 #     print P
-#     P=np.asarray([(0,-1.0),(-1,0),(1,0),(0,1)])
+#     P=asarray([(0,-1.0),(-1,0),(1,0),(0,1)])
 #     print 'barycentre',baryCentre(P)
 #     exit()
-    a=np.asarray([2.0,0.0])
+    a=asarray([2.0,0.0])
     i=segmentPlusProche(P,a)
     a.shape=(1,2)
     my2dPlot((P,a),equal=True,cosmetic=('b-','bo','r-','ro','g*','r*','r^'))
@@ -2337,7 +2337,7 @@ if __name__=="__main__":
 #    print "relatif", _findRel(tag, lines, 100)
 #    print "absolu",find(tag, lines, 4000)
 #    print findAll(tag, lines)
-#    points = np.arange(21, dtype='float')
+#    points = arange(21, dtype='float')
 #    ppp = points
 #    points.shape = (7,3)
 #    print points
@@ -2345,7 +2345,7 @@ if __name__=="__main__":
 #    print structuredGrid(2,3,1)
 #    print 'doublons : '
 #    nbp = 10
-#    a = np.random.randint(0, 3, 3*nbp).reshape((-1,3))
+#    a = random.randint(0, 3, 3*nbp).reshape((-1,3))
 ##    voisinages = [range(i,nbp) for i in range(nbp)]#[[0,...n-1],[1,...n-1],[2,...n-1],...[n-1]]
 #    voisinages = [[i]+range(nbp) for i in range(nbp)]#[[0,0,...n-1],[1,0,...n-1],[2,0,...n-1],...[n-1, 0,...n-1]]
 ##    print a

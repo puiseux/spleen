@@ -951,17 +951,11 @@ class NSplineAbstract(object):
         """
         :param plt : une instance de pyplot, obtenue en amont par :
               >>> from matplotlib import pyplot as plt
-        :type plt : cf ci-dessus
-        :param control : affichage des points de controle True/False
-        :type control : bool
-        :param nbpd : nb points de discretisation
-        :type nbpd : int
-        :param nbpe : nb de points d'echantillonage
-        :type nbpe : int
-        :param titre : titre
-        :type plt : str ou unicode
-        :param more : [(X,Y, couleur,'nom'), ...] tracé supplementaire
-        :type more : list
+        :param control : bool, affichage des points de controle True/False
+        :param nbpd : int, nb points de discretisation
+        :param nbpe : int, nb de points d'echantillonage
+        :param titre : str ou unicode, titre
+        :param more : list, [(X,Y, couleur,'nom'), ...] tracé supplementaire
           """
         from matplotlib.widgets import CheckButtons
 #         plt.figure(numfig)

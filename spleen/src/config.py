@@ -50,7 +50,7 @@ u'''
 '''
 print os.getcwd()
 path_ = "confSpleen.txt"
-paths = [Path("confSpleen.txt"), 
+paths = [Path("confSpleen.txt"),
          Path("..","confSpleen.txt"),
          Path("..","..","confSpleen.txt"),
          Path("..","..","..","confSpleen.txt"),
@@ -75,6 +75,7 @@ with open(path_) as file_:
                 VTK_ENABLED = eval(words[1])
 WORK_DIR = RUNS_DIR
 SOURCES_DIR = Path(ROOT_DIR,'sources')
+# sys.path.append(SOURCES_DIR)
 DATA_DIR = Path(ROOT_DIR,'data')
 VALIDATION_DIR = Path(ROOT_DIR,'validation')
 TRASH_DIR = Path(RUNS_DIR,'trash')

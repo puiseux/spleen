@@ -441,6 +441,7 @@ class Profil(NSplineComposee):
 #         pp = self.profparam
         Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0], onlyT=True)
 #         debug(Text)
+        self.techext = Text
         eext = Se(Text)#points echantillon extrados
         #pour debug
 #         eint = np.zeros((pp.nptint-pp.nptret,2))
@@ -484,6 +485,7 @@ class Profil(NSplineComposee):
             rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
             raise
 #         rdebug(eouv=eouv, len_eouv=len(eouv))
+        #Tfin = les t de l'intrados tissu
         Tfin = Si.echantillonner(nbp=nbpfin, ta=tav, tb=1, mode=mode[1], onlyT=True)#echantillonnage ouverture=>BF
 #         rdebug('===> Nb points', ret=len(eret), ouv=len(eouv),efin=len(efin))
 #         debug(Tret=Tret, Touv=Touv,Tfin=Tfin)
@@ -492,9 +494,11 @@ class Profil(NSplineComposee):
         # - Touv[0]  est l'absc. curv. de l'extrémité amont de l'ouverture, elle coincide avec Tret[-1]
         # - Touv[-1] est l'absc. curv. de l'extrémité avale de l'ouverture, elle coincide avec Tfin[0]
         # Tfin contient les absc. curv. des points intrados tissu
+        # Tint = les t de l'intrados théorique
         Tint = np.hstack([Tret[1:],Touv[1:-1],Tfin])
+        self.techint = Tint
 #         debug(T_intrados=Tint)
-        eint = Si(Tint)#les points intrados echantillonnés
+        eint = Si(Tint)#les points intrados théorique echantillonnés
         self._epoints = np.vstack((eext,eint))
 #         debug(nb_points_echantillonnage=len(self._epoints))
         return self._epoints
@@ -869,7 +873,7 @@ class Profil(NSplineComposee):
         u"Bord d'attaque imposé"
         self.profparam.iba=index
 
-    def plot0(self, plt, control=True, nbpd=None, nbpe=None, titre=None):
+    def plot0(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
 #         from matplotlib import pyplot as plt
 #         from matplotlib.widgets import CheckButtons
 #         plt.figure(numfig)
@@ -897,7 +901,7 @@ class Profil(NSplineComposee):
         plt.legend()
         plt.subplots_adjust(left=0.2)
         plt.axis('equal')
-        plt.show()
+        if show : plt.show()
 #         return plt
 
     def plot(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
@@ -1068,9 +1072,9 @@ def testProfil(filename):
 #     exit()
     debug(p.points)
     debug( p)
-    filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
+#     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
     p=Profil(points=pointsFrom(filename))
-    mp=Profil(points=pointsFrom(filename))
+    mp=Profil(profil=p)
     centre=array((7,0))
     mp.hardRotate(30,centre)
     mp.hardScale((0.5,0.5),centre)
@@ -1110,11 +1114,12 @@ def testDivers(filename):
 def testSaveAndOpen(filename):
     from matplotlib import pyplot as plt
     if '.spl' in filename :
-        with open(filename,'r') as f :
-            lines = f.readlines()
-        for line in lines :
-            dump = eval(line)
-            S = Profil(**dump)
+        S = Profil(points=pointsFrom(filename))
+#         with open(filename,'r') as f :
+#             lines = f.readlines()
+#         for line in lines :
+#             dump = eval(line)
+#             S = Profil(**dump)
         print S
     else :
         S = Profil(points=pointsFrom(filename),
@@ -1194,11 +1199,11 @@ if __name__=="__main__":
     filename = Path(VALIDATION_DIR,'simple','profil.gnu')
     filename = Path(RUNS_DIR,'profils','D2v5p2.pts')
     filename = Path(VALIDATION_DIR,'reference.pts')
-    filename = Path(RUNS_DIR,'profils','P0.spl')
-    testOuverture(filename)
+    filename = Path(VALIDATION_DIR,'P0.spl')
+    if 0 : testOuverture(filename)
 #     exit()
-    testProfil(filename)
-    testEchantillonner(filename)
-    testElaguer(filename)
-    testSaveAndOpen(filename)
-    testDivers(filename)
+    if 0 : testProfil(filename)
+    if 0 : testEchantillonner(filename)
+    if 0 : testElaguer(filename)
+    if 0 : testSaveAndOpen(filename)
+    if 1 : testDivers(filename)

@@ -1,6 +1,6 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from numpy import asarray
+from numpy import asarray, abs, vstack
 u'''
 AXile -- Outil de conception/simulation de parapentes Nervures
 
@@ -14,7 +14,7 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 '''
 
 from pprint import pprint
-from utilitaires import Path
+from utilitaires import Path, pointLePlusProche
 from profil import Profil
 from utilitaires import (debug, rdebug,)
 from lecteurs import pointsFrom#, qpolygonFrom
@@ -201,12 +201,77 @@ def testDivers():
     print dump
     p = ProfilNormalise(**dump)
     print p
+    p = ProfilNormalise(points=pointsFrom(filename))
+    print p
+
+def testPinces():
+    """On bouge 4 points de l'échantillonnage du profil pour les positionner à
+        - pbai% du BA (intrados)
+        - pbfi% du BF(intrados)
+        - pbae% du BA (extrados)
+        - pbfe% du BF(extrados)
+    """
+    from matplotlib import pyplot as plt
+    filename = Path(VALIDATION_DIR,'P0.spl')
+    P = ProfilNormalise(points=pointsFrom(filename))
+#     debug(P)
+#     debug(p.epoints)
+    pbfe = 100 - 7    # pc>0 => extrados (BF)
+    pbae = 5          # pc>0 => extrados (BA)
+    pbai = -100 + 7.3 # pc<0 => intrados (BA)
+    pbfi = -5.5       # pc<0 => intrados (BF)
+    PC = pbfe, pbae, pbai, pbfi #PC=pourcentages
+    dpoints = P.dpoints
+    Xd, Yd = dpoints[:,0], dpoints[:,1]
+    epoints = P.epoints
+    techext0, techint0 = P.techext.copy(), P.techint.copy()#Pour debug
+    Xe, Ye = epoints[:,0], epoints[:,1]
+    plt.plot(Xd,Yd,'k-', label='dpoints')
+    plt.plot(Xe,Ye,'go', label='epoints')
+#     P.plot0(plt, show=False)
+#     P.splines[1].plot(plt, show=False, buttons=False)
+    for pc in PC:#[2:3] :
+        if pc >= 0 : #extrados
+            strados = P.splines[0]
+            tech = P.techext #les t échantillonnage, extrados théorique
+            shift = 0
+        else : #intrados
+            strados = P.splines[1]
+            tech = P.techint #les t échantillonnage, intrados théorique
+            shift = P.iba+1
+
+        t = P._getT(pc)         # le t du point de pince sur son trados
+        pt = strados(t)         # le point de pince, appartient à la spline
+        k = abs(tech-t).argmin()# le t echantillon actuel le plus proche de t
+        pte = epoints[k+shift]  # le point de pince actuel, appartient à la spline
+        tech[k] = t             #On modifie le t echantillonnage dans P
+#         debug(pc=pc, t=t, pt=pt, pte=pte)
+#         trados = 'extrados' if pc>=0 else 'intrados'
+#         cote = 'BA' if abs(pc)<50 else 'BF'
+#         label = 'old %s %s'%(trados, cote)
+#         plt.plot(pte[0],pte[1],'mv',label=label)
+#         label = 'new %s %s (pince %g%%)'%(trados, cote, pc)
+#         plt.plot(pt[0],pt[1],'r*',label=label)
+    P._epoints = vstack((P.splines[0](P.techext), P.splines[1](P.techint)))
+    epoints = P.epoints
+    Xe, Ye = epoints[:,0], epoints[:,1]
+    plt.plot(Xe,Ye,'r*', label='epoints-new')
+#     debug(deltaTechext=P.techext-techext0)
+#     debug(deltaTechint=P.techint-techint0)
+
+    plt.legend()
+    plt.axis('equal')
+    plt.show()
+    return
+
+
 
 def testMain():
     p=ProfilNormalise()
-    debug(p)
-    testDivers()
-    testProfilNormalise()
+    debug('constructeur vide\n',p)
+    if 1 : testPinces()
+    if 0 : testDivers()
+    if 0 : testProfilNormalise()
     print '################## FIN main #################'
 
 if __name__=="__main__":

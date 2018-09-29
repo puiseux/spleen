@@ -1,5 +1,5 @@
 #!/usr/local/bin/python2.7
-# encoding: utf-8
+#-*-coding: utf-8-*-
 '''
 Axile -- Outil de conception/simulation de parapentes Nervures
 Classe NSpline
@@ -10,7 +10,7 @@ Description :
 '''
 __updated__="2018-07-01"
 from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
-from splineabstraite import absCurvReal
+# from splineabstraite import absCurvReal
 from lecteurs import pointsFrom
 import sys,os,math
 from array import array
@@ -18,14 +18,14 @@ from array import array
 import numpy as np
 from numpy import log, linspace, asarray, sqrt, arange
 from numpy.linalg import  norm
-import scipy as sp
+# import scipy as sp
 # from config import VALIDATION_DIR, RUNS_DIR
 from scipy.optimize import newton, minimize
 from pprint import pprint
 from utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
 from splineabstraite import NSplineAbstract, computeSpline, distance2PointSpline
-import cPickle
+# import cPickle
 
 class NSplineSimple(NSplineAbstract):
     class Default():

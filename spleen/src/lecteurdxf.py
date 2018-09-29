@@ -18,7 +18,7 @@ from utilitaires import (find,findAll,_findRel,whoami,Path,trace,my2dPlot)
 from config import VALIDATION_DIR
 from utilitaires import debug
 from dxfgrabber import dxfentities
-from geomdl import BSpline, utilities
+# from geomdl import BSpline, utilities
 from matplotlib import pyplot as plot
 # from model.basicobjects.splinesimple import NSplineSimple
 TAGS=['PTSPROFIL','CLOITROU','CLOISON','BLOCK','ENDBLK','SECTION','ENTITIES','POLYLINE','VERTEX','SEQEND','POINT','ENDSEC','EOF','CIRCLE','LINE']
