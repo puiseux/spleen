@@ -224,7 +224,7 @@ def testPinces():
     dpoints = P.dpoints
     Xd, Yd = dpoints[:,0], dpoints[:,1]
     epoints = P.epoints
-    techext0, techint0 = P.techext.copy(), P.techint.copy()#Pour debug
+#     techext0, techint0 = P.techext.copy(), P.techint.copy()#Pour debug
     Xe, Ye = epoints[:,0], epoints[:,1]
     plt.plot(Xd,Yd,'k-', label='dpoints')
     plt.plot(Xe,Ye,'go', label='epoints')
@@ -232,18 +232,18 @@ def testPinces():
 #     P.splines[1].plot(plt, show=False, buttons=False)
     for pc in PC:#[2:3] :
         if pc >= 0 : #extrados
-            strados = P.splines[0]
+#             strados = P.splines[0]
             tech = P.techext #les t échantillonnage, extrados théorique
-            shift = 0
+#             shift = 0
         else : #intrados
-            strados = P.splines[1]
+#             strados = P.splines[1]
             tech = P.techint #les t échantillonnage, intrados théorique
-            shift = P.iba+1
+#             shift = P.iba+1
 
         t = P._getT(pc)         # le t du point de pince sur son trados
-        pt = strados(t)         # le point de pince, appartient à la spline
+#         pt = strados(t)         # le point de pince, appartient à la spline
         k = abs(tech-t).argmin()# le t echantillon actuel le plus proche de t
-        pte = epoints[k+shift]  # le point de pince actuel, appartient à la spline
+#         pte = epoints[k+shift]  # le point de pince actuel, appartient à la spline
         tech[k] = t             #On modifie le t echantillonnage dans P
 #         debug(pc=pc, t=t, pt=pt, pte=pte)
 #         trados = 'extrados' if pc>=0 else 'intrados'
