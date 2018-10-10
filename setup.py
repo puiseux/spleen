@@ -1,5 +1,5 @@
 #!/usr/local/bin/python2.7
-# encoding: utf-8
+#coding: utf-8
 from setuptools import setup
 
 setup(name='spleen',
