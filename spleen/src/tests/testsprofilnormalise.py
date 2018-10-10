@@ -90,6 +90,7 @@ def testProfilNormalise():
     p = ProfilNormalise(**dump)
     p.iba = 40
     p.iouverture = (50, 60)
+
     print p.name, p.epoints.shape
     pprint (p.epoints.tolist())
 #     print p
@@ -202,6 +203,16 @@ def testDivers():
     print dump
     p = ProfilNormalise(**dump)
     print p
+# <<<<<<< HEAD
+    debug(p.echantillonner().tolist())
+
+def testMain():
+    p=ProfilNormalise()
+    debug(p)
+
+    testDivers()
+    testProfilNormalise()
+=======
     p = ProfilNormalise(points=pointsFrom(filename))
     print p
 
@@ -295,6 +306,7 @@ def testMain():
     if 1 : testPinces()
     if 0 : testDivers()
     if 0 : testProfilNormalise()
+# >>>>>>> 25348b4c83ba1e7b57bcf0a9cd7f62d29ead8dec
     print '################## FIN main #################'
 
 if __name__=="__main__":

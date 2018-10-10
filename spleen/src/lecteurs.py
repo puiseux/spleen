@@ -53,6 +53,7 @@ def pointsFromFile(filename):
         # return polygon
     elif ext in ('.spl',) :
         """Une spline"""
+#         rdebug('********', filename.name)
         with open(filename,'r') as f :
             dump = eval(f.read())
 #         if len(lines)>1 :
