@@ -520,8 +520,6 @@ class Profil(NSplineComposee):
 
     @property
     def profparam(self) :
-#         pp = self._profparam
-#         debug(id_pp=id(pp))
         return self._profparam
 #
     @profparam.setter
@@ -530,12 +528,12 @@ class Profil(NSplineComposee):
         - ProfsParamNew (nptprof, iouvext, iouvint, iba)
         - ou ProfsParam(nptext, nptint, iba) => old fashion.
         Utiles uniquement pour l'échantillonnage'''
-#         stack()
         if not isinstance(profparam, (ProfsParamNew, ProfsParam)) :
             raise(TypeError,u"Une instance de ProfsParamNew est attendue,impossible d'affecter un %s : %s."%(profparam.__class__.__name__,str(profparam)))
         if hasattr(self, '_profparam') and not profparam == self._profparam :
             try : del self._epoints
             except : pass
+#         debug(profparam)
 #         try : debug(avant=self._profparam)
 #         except : debug(avant='pas de profparam')
         self._profparam=profparam.castToProfsParamNew()

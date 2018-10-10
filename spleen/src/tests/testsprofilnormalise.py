@@ -1,6 +1,7 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
 from numpy import asarray, abs, vstack
+from paramgeneraux import ProfsParamNew
 u'''
 AXile -- Outil de conception/simulation de parapentes Nervures
 
@@ -204,8 +205,12 @@ def testDivers():
     p = ProfilNormalise(points=pointsFrom(filename))
     print p
 
-def testPinces():
-    """On bouge 4 points de l'échantillonnage du profil pour les positionner à
+def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
+# def testPinces(pourcentages=(((7, 5, 7.3, 5.5),(7, 5, 7.3, 5.5)))):
+    """
+    Les couples de pourcentage concernent les % gauche et droite de
+    BF_xt, BA_ext, BA_int, BF_int
+    On bouge 4 points de l'échantillonnage du profil pour les positionner à
         - pbai% du BA (intrados)
         - pbfi% du BF(intrados)
         - pbae% du BA (extrados)
@@ -214,13 +219,11 @@ def testPinces():
     from matplotlib import pyplot as plt
     filename = Path(VALIDATION_DIR,'P0.spl')
     P = ProfilNormalise(points=pointsFrom(filename))
-#     debug(P)
-#     debug(p.epoints)
-    pbfe = 100 - 7    # pc>0 => extrados (BF)
-    pbae = 5          # pc>0 => extrados (BA)
-    pbai = -100 + 7.3 # pc<0 => intrados (BA)
-    pbfi = -5.5       # pc<0 => intrados (BF)
-    PC = pbfe, pbae, pbai, pbfi #PC=pourcentages
+    pp = ProfsParamNew(nptprof=150, iouvext=70, iouvint=76, iba=60)
+    P.profparam = pp
+    debug(pp=pp)
+    debug(P)
+#     debug(P.pouverture[1])
     dpoints = P.dpoints
     Xd, Yd = dpoints[:,0], dpoints[:,1]
     epoints = P.epoints
@@ -228,39 +231,59 @@ def testPinces():
     Xe, Ye = epoints[:,0], epoints[:,1]
     plt.plot(Xd,Yd,'k-', label='dpoints')
     plt.plot(Xe,Ye,'go', label='epoints')
-#     P.plot0(plt, show=False)
-#     P.splines[1].plot(plt, show=False, buttons=False)
-    for pc in PC:#[2:3] :
-        if pc >= 0 : #extrados
-#             strados = P.splines[0]
+    def moveOnePoint(tech, t0, forbiden=[]):
+        """
+        Dans le tableau tech (les t d'échantillonage de la spline),
+        on repère le point le plus proche de t0, son indice est k c'est l'indice ou
+        A = abs(tech[k]-t0) est minimal
+        SI on a le droit, (k n'appartient pas à forbiden) on modifie : tech[k] <- t0
+        SI on n'a le droit, (k appartient à forbiden) on prend k <- k-1 ou k <- k+1 et on modifie tech[k]"""
+#         tech = P.techext #les t échantillonnage, extrados théorique
+#         t = P._getT(pc)         # le t du point de pince sur son trados
+        A = abs(tech-t0)
+        k = A.argmin()# le t echantillon actuel le plus proche de t
+        if k in forbiden :
+            A[k] = 2*max(A)
+        k = A.argmin()
+        tech[k] = t0             #On modifie le t echantillonnage dans P
+        return k
+    numeros = []
+    for i, (pg, pd) in enumerate(pourcentages) :#pg=%gauche, pd=%droite
+        #BF si i = 0 ou 3
+        #BA si i = 1 ou 2
+        #ext si i = 0 ou 1
+        #int si i = 2 ou 3
+        if i in (0,1) : #extrados
             tech = P.techext #les t échantillonnage, extrados théorique
-#             shift = 0
+            sgn = 1
         else : #intrados
-#             strados = P.splines[1]
-            tech = P.techint #les t échantillonnage, intrados théorique
-#             shift = P.iba+1
+            tech = P.techint
+            sgn = -1
+        if i in(0,3) :#BF
+            pg = (100 - pg)*sgn
+            pd = (100 - pd)*sgn
+        else :#BA
+            pg =  (pg - P.pouverture[1])*sgn
+            pd =  (pd - P.pouverture[1])*sgn
+        tg = P._getT(pg)         # le t du point de pince sur son trados
+        k1 = moveOnePoint(tech, tg, forbiden=[])
+        if pd == pg :
+            k2 = k1
+        else :
+            td = P._getT(pd)     # le t du point de pince sur son trados
+            k2 = moveOnePoint(tech, td, forbiden=[k1])
+        numeros.append((k1,k2))
 
-        t = P._getT(pc)         # le t du point de pince sur son trados
-#         pt = strados(t)         # le point de pince, appartient à la spline
-        k = abs(tech-t).argmin()# le t echantillon actuel le plus proche de t
-#         pte = epoints[k+shift]  # le point de pince actuel, appartient à la spline
-        tech[k] = t             #On modifie le t echantillonnage dans P
-#         debug(pc=pc, t=t, pt=pt, pte=pte)
-#         trados = 'extrados' if pc>=0 else 'intrados'
-#         cote = 'BA' if abs(pc)<50 else 'BF'
-#         label = 'old %s %s'%(trados, cote)
-#         plt.plot(pte[0],pte[1],'mv',label=label)
-#         label = 'new %s %s (pince %g%%)'%(trados, cote, pc)
-#         plt.plot(pt[0],pt[1],'r*',label=label)
     P._epoints = vstack((P.splines[0](P.techext), P.splines[1](P.techint)))
     epoints = P.epoints
     Xe, Ye = epoints[:,0], epoints[:,1]
-    plt.plot(Xe,Ye,'r*', label='epoints-new')
+    plt.plot(Xe,Ye,'rx', label='epoints-new')
 #     debug(deltaTechext=P.techext-techext0)
 #     debug(deltaTechint=P.techint-techint0)
-
+    print(numeros)
     plt.legend()
     plt.axis('equal')
+#     plt.title(u"4 points de l'échantillonnage déplacés \n(BF Ext=%g%%, BA Ext=%g%%, BA Int=%g%%, BF Int%g%%)"%(pbfe,pbae,pbai,pbfi))
     plt.show()
     return
 
