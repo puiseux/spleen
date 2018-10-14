@@ -1,5 +1,5 @@
 #!/usr/local/bin/python2.7
-#-*-coding: utf-8-*-
+#-*-coding: utf-8 -*-
 '''
 Axile -- Outil de conception/simulation de parapentes Nervures
 Classe NSpline
@@ -8,7 +8,7 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-__updated__="2018-07-01"
+__updated__="2018-10-11"
 from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
 # from splineabstraite import absCurvReal
 from lecteurs import pointsFrom

@@ -203,18 +203,8 @@ def testDivers():
     print dump
     p = ProfilNormalise(**dump)
     print p
-# <<<<<<< HEAD
     debug(p.echantillonner().tolist())
 
-def testMain():
-    p=ProfilNormalise()
-    debug(p)
-
-    testDivers()
-    testProfilNormalise()
-=======
-    p = ProfilNormalise(points=pointsFrom(filename))
-    print p
 
 def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
 # def testPinces(pourcentages=(((7, 5, 7.3, 5.5),(7, 5, 7.3, 5.5)))):
@@ -289,6 +279,11 @@ def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
     epoints = P.epoints
     Xe, Ye = epoints[:,0], epoints[:,1]
     plt.plot(Xe,Ye,'rx', label='epoints-new')
+#     print 'n'.join((
+#     print 'pourcentages=%s'%str(pourcentages),
+#     print 'numeros points=%s'%str(numeros)
+#     ))
+    plt.title('pourcentages=%s'%str(pourcentages)+'\n'+'numeros points=%s'%str(numeros))
 #     debug(deltaTechext=P.techext-techext0)
 #     debug(deltaTechint=P.techint-techint0)
     print(numeros)
@@ -306,7 +301,6 @@ def testMain():
     if 1 : testPinces()
     if 0 : testDivers()
     if 0 : testProfilNormalise()
-# >>>>>>> 25348b4c83ba1e7b57bcf0a9cd7f62d29ead8dec
     print '################## FIN main #################'
 
 if __name__=="__main__":

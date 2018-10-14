@@ -428,8 +428,9 @@ class Profil(NSplineComposee):
 #         else :
 #             raise TypeError("J'attend un ProfsParamNew au lieu de %s"%type(profparam.__class_.__name__))
 #        rdebug('name=%s'%self.name,'nb_echantillonages=%d'%self.nb_,'profparam=%s'%pp)
-        Se = self.splines[0]
+        Se = self.splines[0]#extrados
 #         pp = self.profparam
+        nbpBF = 20 #je garde 10 points pour BF, pour les pinces
         Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0], onlyT=True)
 #         debug(Text)
         self.techext = Text
@@ -916,7 +917,7 @@ class Profil(NSplineComposee):
                 return
             else :
                 return
-        all, = ax.plot(AD[:,0], AD[:,1], 'g--', lw=1)
+        all_, = ax.plot(AD[:,0], AD[:,1], 'g--', lw=1)
         try :
             self.echantillonner()
         except ValueError as msg:

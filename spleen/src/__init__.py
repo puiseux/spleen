@@ -3,4 +3,4 @@
 # __all__ = [config, lecteur,lecteurdata, lecteurdxf, lecteurs,lecteursvg,
 #         polyline, splineabstraite, splinecomposee,splinesimple]
 # from profil import *
-__package__ = 'spleen'
+# __package__ = 'spleen'
