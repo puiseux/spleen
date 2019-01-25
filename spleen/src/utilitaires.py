@@ -5,6 +5,7 @@
 Created on 11 mai 2012
 
 @author: puiseux
+__updated__ = '2019-01-25'
 '''
 import datetime
 import gc  # garbage colector
@@ -40,6 +41,15 @@ from matplotlib import pylab
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)
 
+def souligne(msg, c=u'-', shift=0):
+    sl = shift*u' '+len(msg)*c
+    return shift*u' '+msg+u'\n'+sl
+
+def sursouligne(msg, c=u'-', shift=0):
+    sl = shift*u' '+len(msg)*c
+
+    return sl+u'\n'+shift*u' ' + msg+u'\n'+sl
+
 def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
     u"""
     Une paire de spline cubiques paramétriques qui interpole ou ajuste le polygone points
@@ -71,15 +81,15 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
     Y = points[:,1]
     try : methode = methode.lower()
     except AttributeError : pass
-#     trace(None, methode=methode, tension=tension, degre=degre)
+#     debug(None, methode=methode, tension=tension, degre=degre)
     if methode in ('ius','interpolatedunivariatespline') :
         try :
             sx = InterpolatedUnivariateSpline(T, X, k=degre)#s=la précision de l'ajustement s=0 <=> interpolation
             sy = InterpolatedUnivariateSpline(T, Y, k=degre)
         except Exception as msg:
-            trace(None)
+            debug(None)
             print unicode (msg)
-#             trace(None,u'Impossible de calculer la testspline (pas assez de points ?, degré trop élévé ?)')
+#             debug(None,u'Impossible de calculer la testspline (pas assez de points ?, degré trop élévé ?)')
             sx = sy = None
     elif methode in ('us','univariatespline') :
         try :
@@ -96,16 +106,16 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
             sx = UnivariateSpline(T, X, w=weights, k=degre, s=s)#s=la précision de l'ajustement s=0 <=> interpolation
             sy = UnivariateSpline(T, Y, w=weights, k=degre, s=s)
         except Exception as msg:
-            trace(None)
+            debug(None)
             print unicode(msg)
-#             trace(None,u'Impossible de calculer la testspline (pas assez de points ?, degré trop élévé ?)')
+#             debug(None,u'Impossible de calculer la testspline (pas assez de points ?, degré trop élévé ?)')
             sx = sy = None
     elif methode in ('interp1d',) :
         try :
             sx = interp1d(T, X, kind=degre)
             sy = interp1d(T, Y, kind=degre)
         except ValueError as msg:
-            trace(None)
+            debug(None)
             print unicode(msg)
             sx = sy = None
 #     elif methode in ('periodic',) :
@@ -113,17 +123,17 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
 #             sx = PeriodicSpline(T, X, k=degre, s=eps)
 #             sy = PeriodicSpline(T, Y, k=degre, s=eps)
 #         except ValueError as msg:
-#             trace(None)
+#             debug(None)
 #             print unicode(msg)
 #             sx = sy = None
-    elif 'cubic' in methode :#or isinstance(methode, (tuple, list, ndarray)):
+    elif 'cubic' in methode :#or isinstance(methode, (tuple, list, np.ndarray)):
         if methode == 'p cubic' : bc_type='periodic'
         elif methode == 'c cubic' : bc_type='clamped'
         elif methode == 'n cubic' : bc_type='natural'
         else : bc_type = 'not-a-knot'
 
         try :
-#             trace(None, T)
+#             debug(None, T)
             sx = CubicSpline(T, X, bc_type=bc_type)
             sy = CubicSpline(T, Y, bc_type=bc_type)
         except ValueError as msg:
@@ -133,7 +143,7 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
     elif isinstance(methode, (tuple, list, ndarray)):
         bc_type = methode
         try :
-#             trace(None, T)
+#             debug(None, T)
             sx = CubicSpline(T, X, bc_type=bc_type)
             sy = CubicSpline(T, Y, bc_type=bc_type)
         except ValueError as msg:
@@ -155,7 +165,6 @@ def rotate(points, alfa, centre):
     At = matrix([[cosa,-sina], [sina,cosa]]).transpose()
     Xt = points - Ct
     Xt = Xt*At + Ct
-#     trace('', Xt.shape)
     return asarray(Xt)
 
 def symetriser(points, sym):
@@ -336,7 +345,7 @@ def centreGravite(points, surface=False):
         Gt = (A + b + c)/3.0
         Sat = (b[0] - A[0])*(c[1] - A[1]) - (b[1] - A[1])*(c[0] - A[0])
         G += Sat*Gt
-#         trace(self, "pouet, a faire")
+#         debug( "pouet, a faire")
         Sa += Sat
     if Sa == 0.0 :
         if surface :  return asarray((nan, nan)), 0
@@ -348,8 +357,15 @@ def centreGravite(points, surface=False):
 def aire(points):
     '''
     Calcul de l'aire algébrique d'un polygone.
-    Si le polygone ne se recoupe pas, (intérieur connexe), alors l'aire donne le sens de rotation :
-    si elle est positive, ses points tournent dans le sens trigonométrique, sinon, le sens des aiguilles d'une montre.
+    :ATTENTION:
+    - si points est un polyligne (non fermé) il est d'abord fermé
+        l'aire d'un polyligne non fermé devrait être 0.0, ça n'est pas le cas ici
+    - l'aire est algébrique. Donc si le polyligne se recoupe (papillote) l'aire
+        peut être nulle
+    Si le polygone ne se recoupe pas, (intérieur connexe), alors l'aire donne le
+    sens de rotation :
+    si elle est positive, ses points tournent dans le sens trigonométrique, sinon,
+    le sens des aiguilles d'une montre.
     La méthode utilisée est
     - fermer le polygone : P(n)=P(0)
     - de fixer un point 'O' quelconque, ici on prend O=P[0]
@@ -383,6 +399,18 @@ def baryCentre(points,masses=None):
     return asarray(bc)
 
 
+def p2a(qpoint):
+    """
+    retourne les coord d'un QPointF sous forme de np.ndarray((1,2))
+    => [[x,y]] cf p2a2()
+    """
+#     print qpoint
+    point = asarray((qpoint.x(),qpoint.y())).reshape((1,2))
+#     trace('', point)
+    return point
+
+p2a12=p2a
+
 def dist2(p1,p2,n=2):
     '''retourne le carré de la distance de p1 à p2 en norme n=2'''
     try :
@@ -395,63 +423,6 @@ def dist2(p1,p2,n=2):
 def dist(p1,p2,n=2):
     '''retourne la distance de p1 à p2 en norme n=2'''
     return math.sqrt(dist2(p1,p2))
-
-'''vectors 3D '''
-def length3(v):
-    x,y,z = v
-    return math.sqrt(x*x + y*y + z*z)
-def vector3(b,e):
-    x,y,z = b
-    X,Y,Z = e
-    return (X-x, Y-y, Z-z)
-def unit3(v):
-    x,y,z = v
-    mag = length3(v)
-    if mag==0:
-        return v
-    else:
-        return (x/mag, y/mag, z/mag)
-def distance3(p0,p1):
-    return length3(vector3(p0,p1))
-def scale3(v,sc):
-    x,y,z = v
-    return (x * sc, y * sc, z*sc)
-def add3(v,w):
-    x,y,z = v
-    X,Y,Z = w
-    return (x+X, y+Y, z+Z)
-
-def rot3(pt,u,theta):
-    ''' 3D rotation of point pt around axis u of angle theta '''
-    matR=zeros((3,3),dtype=float)
-    ux,uy,uz=(u[0],u[1],u[2])
-    matP=[[ux**2.0,ux*uy ,ux*uz],[ux*uy,uy**2.0,uy*uz],[ux*uz,uy*uz,uz**2.0]]
-    matI=[[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]]
-    matQ=[[0.0,-uz,uy],[uz,0.0,-ux],[-uy,ux,0.0]]
-    for i in range(3):
-        for j in range(3):
-            matR[i,j]=matP[i][j]+(matI[i][j]-matP[i][j])*cos(theta)+matQ[i][j]*sin(theta)
-
-    rp=[float() for i in range(3)]
-    for i in range(3):
-        s=0.0
-        for j in range(3):
-            s=s+matR[i,j]*pt[j]
-        rp[i]=s
-
-    return rp
-
-def vect2d(u, v):
-    u"""
-    Retourne un réel, produit vectoriel de deux vecteurs (2d), u et v
-    C'est aussi le déterminant
-    """
-    return u[0]*v[1] - u[1]*v[0]
-det = vect2d
-# def sensDeRotaion(points):
-#     u"""détermine le sens de rotation d'un polygone qui de se croise pas. C'est le signe de la surface algebrique """
-#     pass
-
 
 def absCurv(points, normalise=False):
     """Abscisse curviligne des points de points, considéré comme polyligne"""
@@ -566,7 +537,7 @@ If s<0, P is located on extension of DC
 Also note that the denominators of eqn 1 & 2 are identical.
     '''
 #     print seg1, seg2
-    A,B=seg1# ndarray((2,))
+    A,B=seg1# np.ndarray((2,))
 #     trace('',A.shape)
     u=B-A
     C,D=seg2
@@ -712,93 +683,6 @@ def pointLePlusProche(points,P,return_distances_array=False):
     else :
         return index,distances[index]
 
-def pointLePlusProche3d(points,P,return_distances_array=False):
-    '''
-    Parametres:
-    ----------
-    - points : ndarray, tableau de n points 3d de shape (n,3)
-    - P : un point 3d de type QPointF, QPoint ou tuple ou liste (x,y)
-    retourne l'indice dans points, du point le plus proche de P
-    Retourne (i, distances)
-    --------
-    - i : l'indice dans 'points' du point qui réalise le min
-    - distance : la distances de P à points
-    '''
-    X,Y,Z=P[0],P[1],P[2]
-    distances=[distance3(point,(X,Y,Z)) for point in points]
-    index=argmin(distances)
-    if return_distances_array :
-        return index,distances
-    else :
-        return index,distances[index]
-
-def pointsLesPlusProches3d(pt,tab):
-    ''' Recherche de l'indice i tel que tab(i) et tab(i+1) soient les deux points les plus proches de pt
-        - on cherche le point le plus proche, d'indice i
-        - on détermine lequel des points i+1 ou i-1 est le plus proche de pt
-    '''
-    i1,dpt1 = pointLePlusProche3d(tab,pt,True)
-    if (0):
-        print 'pointsLesPlusProches3d:pt',pt
-        print 'pointsLesPlusProches3d:tab',tab
-        print 'pointsLesPlusProches3d:i1,dpt1',i1,dpt1
-    if (0<i1<(len(tab)-1)):
-        dpt1p1 = distance3(pt,tab[i1+1])
-        dpt1m1 = distance3(pt,tab[i1-1])
-        if (dpt1p1 <= dpt1m1):
-            i = i1
-        else:
-            i = i1-1
-    elif  i1==0:
-        i = i1
-    elif i1==len(tab)-1:
-        i = i1-1
-
-    return i
-
-def longueur2d(polyline):
-    P = asarray(polyline)
-    return sum([dist(p1,p2) for (p1, p2) in zip(P[1:], P[:-1])])
-
-def longueur2d_array(tab):
-    return sum([dist(p1,p2) for (p1, p2) in zip(tab[1:], tab[:-1])])
-
-def longueur3d(tab):
-    return sum([distance3(p1,p2) for (p1, p2) in zip(tab[1:], tab[:-1])])
-
-def encombrement(piece, dim=3):
-    u"""
-    piece doit être un ndarray de shape (N, dim) quelconque,
-    retourne le parallelepipede d'encombrement du nuage de points
-    """
-    if isinstance(piece, (list, tuple, )) :
-        return encombrement(asarray(piece),dim)#recursif
-    elif isinstance(piece,(ndarray,)):
-#         trace("", piece_shape=piece.shape)
-        points = piece
-        Max, Min = max, min #ca reste local
-        if dim == 1 :
-            return Min(points), Max(points)
-        points = piece.view()
-        points.shape = -1, dim
-        if dim == 3 :
-            M = [Max(points[:,0]),Max(points[:,1]),Max(points[:,2])]
-            m = [Min(points[:,0]),Min(points[:,1]),Min(points[:,2])]
-#             M = asarray([Max(points[:,0]),Max(points[:,1]),Max(points[:,2])])
-#             m = asarray([Min(points[:,0]),Min(points[:,1]),Min(points[:,2])])
-            return(m,M)
-        elif dim == 2 :
-            M = [Max(points[:,0]),Max(points[:,1])]
-            m = [Min(points[:,0]),Min(points[:,1])]
-            return(m,M)
-    else :
-        raise NotImplementedError
-
-def encombrement1(piece, dim=3):
-    u"""retourne l'encombrement de la piece sous forme dx[,dy[,dz]]"""
-    m, M = encombrement(piece, dim)
-    return asarray(M) - asarray(m)
-
 
 def maintenant():
     u'''La date et l'heure formatées "human readable"'''
@@ -806,12 +690,10 @@ def maintenant():
 
 def doublons(points,voisinages=[],eps=1.0e-8,sym=True):
     u"""
-    Verifier qu'il n'y a pas de point double.
-    Paramètres :
-    ----------
-    - points : ndarray(nbp,3) nbp points 3d. nbp peut être une
+    Verifier qu'il n'y a pas de point double dans points.
+    :param points : ndarray(nbp,3) nbp points 3d. nbp peut être une
         shape (nl, nc, 3) et dans ce cas nbp = nl*nc
-    - voisinages ndarray(shape=(np,1+nv), dtype=int) np numéros de points,
+    :param voisinages : ndarray(shape=(np,1+nv), dtype=int) np numéros de points,
         faisant référence au tableau 'points', chacun des np points à
         vérifier possède nv voisins. voisinage est donc de la forme
         [
@@ -821,13 +703,11 @@ def doublons(points,voisinages=[],eps=1.0e-8,sym=True):
          [k_np, v_np_1, v_np_2, ..., v_np_nv]
         ]
         les valeurs k_i, v_i_j sont des entiers entre 0 et nbp-1
-    - eps : réel. deux points p,q sont considérée comme confondus si dist(p,q)<eps
-    - sym : booleen. True si i voisin de j <==> j voisin de i. Divise par deux
+    :param eps : réel. deux points p,q sont considérée comme confondus si dist(p,q)<eps
+    :param sym : bool. True si i voisin de j <==> j voisin de i. Divise par deux
         le travail.
 
-    Retourne :
-    --------
-    une liste de doublons (d_0,dd_0), ... (d_n, dd_n)
+    :return : une liste de doublons (d_0,dd_0), ... (d_n, dd_n)
     """
     def cond(v,k):
         if sym : return v>k
@@ -857,16 +737,15 @@ def doublons(points,voisinages=[],eps=1.0e-8,sym=True):
                     doublons.append((k,voisin))
     return doublons
 
-u"""
-Quelques fonctions de débogage qui ont évolué au cours du temps.
+u"""Quelques fonctions de débogage qui ont évolué au cours du temps.
 
 Ecriture dans le fichier log 'AXile.log'
 ----------------------------------------
 
 1- trace et alert
 
-    >>> trace(x, y=yzt) écrit dans le fichier log niveau INFO
-    >>> alert(x, y=yzt) écrit dans le fichier log niveau WARNING
+    >>> debug(x, y=yzt) écrit dans le fichier log niveau INFO
+    >>> rdebug(x, y=yzt) écrit dans le fichier log niveau WARNING
 
     par exemple supposant que nums est une variable valant (1,2,3)
     pour l'appel suivant,
@@ -882,8 +761,8 @@ Ecriture dans le fichier log 'AXile.log'
 
 2- strace et salert
 
-    >>> strace(x, y='toto') écrit dans le fichier log niveau INFO
-    >>> salert(x, y='toto') écrit dans le fichier log niveau WARNING
+    >>> debug(x, y='toto') écrit dans le fichier log niveau INFO
+    >>> rdebug(x, y='toto') écrit dans le fichier log niveau WARNING
 
     la sortie est analogue à trace et alert, un peu remaniée,
     sans le nom de classe et ressemble à ceci :
@@ -943,6 +822,25 @@ def explore(objet):
         else :
             d[key]='%s'%(type(value).__name__)
     return d
+
+def className(obj):
+    try : return obj.__class__.__name__
+    except : return 'Inconnu'
+
+# def phrase():
+#     from config import DATA_DIR
+# #     try :
+#     f=open(Path(DATA_DIR,'dico'))
+# #     except IOError:
+# #         return
+#     words=qui,quoi,comment=[],[],[]
+#     n=0
+#     for line in f.readlines():
+#         line=line.strip()
+#         if line : words[n].append(line)
+#         else : n+=1
+#     return ' '.join((3*'*',choice(qui),choice(quoi),choice(comment)))
+
 '''Ecriture dans fichiers log'''
 def trace(*args,**kargs):
     return _trace(sys.stdout, *args, **kargs)
@@ -963,44 +861,17 @@ def _trace(output, *args,**kargs) :
     msg0 = u'\n'+unicode(msg + fcode.co_name+u' [%s, line %d] '%(filename, frame.f_lineno))+' : \n    '
     lmsg = [unicode(arg) for arg in args[1:]]+\
            [unicode(key)+u' = '+unicode(value) for key,value in kargs.iteritems()]
-    # if output is sys.stdout :
+    if output is sys.stdout :
+        print msg0 + u' ; '.join(lmsg)
     #     logger.info(msg0 + u' ; '.join(lmsg))
-    # elif output is sys.stderr :
+    elif output is sys.stderr :
     #     logger.warning(msg0+u' ; '.join(lmsg))
-    try : print>>output, msg0, u' ; '.join(lmsg)
-    except UnicodeEncodeError: print msg0, lmsg
+        print>>sys.stderr, msg0 + u' ; '.join(lmsg)
 
 def rstack(commentaire=''):
     _stack(sys.stderr, commentaire)
 def stack(commentaire='') :
     _stack(sys.stdout, commentaire)
-
-def _stackOld(output, commentaire=''):
-    u"""Impression de la pile des appels sur output"""
-    print>>output,u"========================"
-    print>>output,u"=== Pile des appels ===="
-#     k = 2
-#     frame = sys._getframe(2)
-#     fcode = frame.f_code
-#     fonction = fcode.co_name
-#     filename = Path(fcode.co_filename)#.name
-#     toclick = clickableLink(filename, frame.f_lineno)#, fcode.co_name)
-#
-#     print>>output,u'[%s] '%fonction + toclick
-    k = 2
-    if commentaire :
-        print>>output, commentaire
-    while 1 :
-        try :
-            frame = sys._getframe(k)
-            filename = Path(frame.f_code.co_filename).name
-            k += 1
-            print>>output, u" ['%s':%d, (%s)] "%(filename, frame.f_lineno, frame.f_code.co_name)
-        except :
-            break
-    print>>output,u"======  Fin pile  ======"
-    print>>output,u"========================"
-    return
 
 def _stack(output, commentaire=''):
     u"""Impression de la pile des appels sur output"""
@@ -1042,22 +913,34 @@ def _strace(*args,**kargs) :
     fcode = frame.f_code
     fonction = fcode.co_name
     filename = Path(fcode.co_filename)#.name
-#     filename = u'./source/gui/'+filename.name
-#     msg0 = u"\n'+unicode(u" [%s:%d, (%s)] '%(filename, frame.f_lineno, fcode.co_name))#+u" : \n    '
-#     msg0 = unicode(u'File "%s", line %d, (%s)]'%(filename, frame.f_lineno, fcode.co_name))#+u" : \n    '
-#     msg0 = unicode(u'File "%s", line %d\n[%s]'%(filename, frame.f_lineno, fcode.co_name))#+u" : \n    '
-    toclick = clickableLink(filename, frame.f_lineno)#, fcode.co_name)
+    toclick = clickableLink(filename, frame.f_lineno)
     output = args[0]
     args = args[1:]
+    try :
+        titre = sursouligne(kargs.pop(u'titre'),u'=')
+    except KeyError :
+        titre = None
+    try :
+        paragraphe = souligne(kargs.pop(u'paragraphe'),u'-',shift=4)
+    except KeyError :
+        paragraphe = None
+
     lmsg = [unicode(arg) for arg in args]+\
            [unicode(key)+u" = "+unicode(value) for key,value in kargs.iteritems()]
-    msg = u'[%s] '%fonction + toclick + u'\n    ' + u" ; ".join(lmsg)
-    # if output in (logger.info, logger.warning):
-    #     output(msg)
-    # else :
-    print>>output, msg
-#     try : print>>output, msg0, u" ; '.join(lmsg)
-#     except UnicodeEncodeError: print msg0, lmsg
+    msg = u'[%s] '%fonction + toclick
+    b, l, s = u'    ', u'\n', u' ; '#blanc, saut de ligne, separateur
+    if titre and paragraphe :
+        msg = msg + 2*l + titre + l + paragraphe
+    elif paragraphe :#pas de titre
+        msg = msg + 2*l + paragraphe
+    elif titre :
+        msg = msg + l + titre + l
+    msg = msg + l + s.join(lmsg)
+    if 0:#output in (logger.info, logger.warning):
+        output(msg)
+    else :
+        print>>output, msg
+
 def debug(*args,**kargs):
     u"""trace simplifié, stdout, identique à strace"""
     _strace(sys.stdout, *args, **kargs)
@@ -1071,8 +954,8 @@ def rdebug(*args, **kargs):
 # def strace(*args,**kargs) :
 #     u"""trace simplifié, sur logger.info"""
 #     _strace(logger.info, *args, **kargs)
-
-
+#
+#
 # def salert(*args,**kargs) :
 #     u"""alert simplifié, sur logger.warning"""
 #     _strace(logger.warning, *args, **kargs)
@@ -1236,7 +1119,6 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
     comporte n points en 2d ou 3d. seules les deux premieres coord de chaque point sont prises en compte.
     '''
 
-    # import math,pylab
     from matplotlib import pyplot
 #    matplotlib.use('MacOSX')
     nbcourbes=len(XYs)
@@ -1291,6 +1173,7 @@ def my2dPlot(XYs,legends=[],equal=False,cosmetic=[], title='No title'):
     pyplot.show()
 
 def load(filinname):
+    """pickle => python"""
     try :
         filin=open(filinname,'r')
         return pickle.load(filin)
@@ -1311,29 +1194,6 @@ def goodName(name):
             return False
     return True
 
-# def testContraindre():
-#     import matplotlib
-#     P=asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
-#     P=P[::-1]
-#     S=[((0.5,0.25),(0.5,-1)),((1.5,3),(1.5,-2)),((2.5,3),(2.5,-2)),((4,3),(4,-2)),((4.5,3),(4.5,-2)),((5,3),(5.01,-1))]
-# #     S.reverse()
-# #     print PC[0].shape
-# #     print PC
-#     Sp=[]
-#     for A,B in S : Sp+=[A,B]
-#     Sp=asarray(Sp)
-#     S1=dupliquerContraintes(S,3)
-#     S1p=[]
-#     for A,B in S1 : S1p+=[A,B]
-#     S1p=asarray(S1p)
-# #     my2dPlot((Sp,S1p, ), equal=False, cosmetic=('r-o','b-o', 'g-o', 'g*', 'r*','r^'))
-# #     return
-#     PC=contraindre(P,S)
-#     PC2=contraindre(P,S,3)
-#     PC1=contraindre(P,S1)
-#     my2dPlot((P,PC[0],PC1[0],PC2[0]),equal=False,cosmetic=('r-o','b-o','g-*','r-^','r*','r^'))
-# #     P = asarray([(0, -1.0),(-1,0),(1,0),(0,1)])
-
 def diff(A):
     u"""
     J'en ai marre de taper tout le temps 'dA = A[1:]-A[:-1]'
@@ -1344,6 +1204,13 @@ def diff(A):
     """
     return A[1:]-A[:-1]
 
+def XY(xy):
+    u"""
+    J'en ai marre de taper tout le temps (pour le graphique) 'X,Y = xy[:,0],xy[:,1]'
+    :param A: un tableau de points ndarray de shape (n, 2)
+    :return (X, Y) : (ndarray((n,1)), ndarray((n,1))) les deux colonnes de A
+    """
+    return xy[:,0],xy[:,1]
 
 def rayCross(polygon, point):
     u""" détermine si point est à l'intérieur ou a l'extérieur du polygône
@@ -1379,222 +1246,18 @@ def rayCross(polygon, point):
     """
     print 'todo...'
 
-
-def isInside(p, Q):
-    """
-    Paramètres:
-    ==========
-        - p = (x,y) = ndarray((1,2), float) un point en 2d
-        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
-    Retourne :
-    ========
-        - vrai si p est à l'intérieur du polygone Q et
-        - faux s'il est à l'extérieur ou frontiere
-    Fonctionnement :
-    ==============
-    p est intérieur, si et seulement si les produits vectoriels AB^Ap ont tous le même signe.
-    (on note A=Q[i], B=Q[i+1], 0<= i < n )
-    """
-#    trace('', p,Q)
-    # (x, y) = p
-#    trace('', x,y)
-    w0 = vect2d(Q[1]-Q[0], p-Q[0])
-    for (A, B) in zip(Q[:-1], Q[1:]) :
-        #[A,B] parcourt les segments de Q
-        w =  vect2d(B-A, p-A)
-#        trace('', w0, w)
-        if w*w0 <= 0 : return False
-
-    return True
-
-def isInside0(p, Q, frontiere=False):
-    """
-    Paramètres:
-    ==========
-        - p = (x,y) = ndarray((1,2), float) un point en 2d
-        - Q est un quadrilatère = ndarray((5,2), float) avec deux cotés parallèles à l'axe des y
-            Q est supposé fermé i.e. le premier point == le dernier point,
-            on n'utilise que les points 0 à 3 notés A, B, C, D
-        - ATTENTION à l'ordre des points : cf dessin ci-dessous.
-          A x¨ ¨ - - _ _
-            |            ¨ ¨ -x B
-            |                 |
-            |      . p        |
-            |                 |
-            |         _ _ --  x C
-          D x - - ¨ ¨
-        - TODO : frontiere=False pour indiquer qu'un point frontière est considéré comme extérieur.
-    Retourne :
-    ========
-        - vrai si p est à l'intérieur du quadrilatere Q = ABCDA et
-        - faux s'il est à l'extérieur.
-    Fonctionnement :
-    ==============
-    pour être intérieur, p doit vérifier les conditions suivantes :
-        - xA < x <xB
-        - les deux produits vectoriels AB^Ap et CD^Cp  ont même signe.
-    """
-#    trace('', p,Q)
-    (x, _) = p
-#    trace('', x,y)
-    A, B, C, D = Q[0], Q[1], Q[2], Q[3]
-#    trace('', A,B,C,D)
-    if x <= A[0] or x >= B[0] :
-#        print '****x'
-        return False
-
-    wa = vect2d(B-A, p-A)
-    wf = vect2d(D-C, p-C)
-#    print wa, wf
-    if wa*wf > 0 : return True# meme signe  => point interieur
-    return False
-
-def isOn(P, segment, eps=1.0e-10, debug=False):
-    u'''
-    Retourne True si P est sur le segment, à eps près
-    Paramètres :
-    ----------
-    - segment : [A,B] ou A et B de type ndarray((1,2),dtype=float)
-    - P : de type ndarray((1,2),dtype=float)
-    - eps : de type float >= 0.0
-    Subject 1.02: How do I find the distance from a point to a line?
-    ===============================================================
-    Projection orthogonale d'un point sur un segment
-
-    Let the point be C (Cx,Cy) and the line be AB (Ax,Ay) to (Bx,By).
-    Let P be the point of perpendicular projection of C on AB.  The parameter
-    r, which indicates P's position along AB, is computed by the dot product
-    of AC and AB divided by the square of the length of AB:
-
-    (1)     AC dot AB
-        r = ---------
-            ||AB||^2
-
-    r has the following meaning:
-
-        r=0      P = A
-        r=1      P = B
-        r<0      P is on the backward extension of AB
-        r>1      P is on the forward extension of AB
-        0<r<1    P is interior to AB
-
-    The length of a line segment AB is computed by:
-        L = sqrt( (Bx-Ax)^2 + (By-Ay)^2 )
-    and the dot product of two vectors , U dot V is computed:
-        D = (Ux * Vx) + (Uy * Vy)
-    So (1) expands to:
-            (Cx-Ax)(Bx-Ax) + (Cy-Ay)(By-Ay)
-        r = -------------------------------
-                          L^2
-
-    The point P can then be found:
-
-        Px = Ax + r(Bx-Ax)
-        Py = Ay + r(By-Ay)
-    '''
-    A, B = segment[0], segment[1]
-    x, y = P - A
-    u, v = B - A
-    det_, dot_ = abs(u*y - v*x), (x*u + y*v)/(u*u + v*v)
-    val = det_ < eps and -eps <= dot_ <= 1.0 + eps
-#    if debug : return val, det_, dot_
-#    else :
-    return val
-
 def isInsideOrFrontier(p, Q, eps=1.0e-6):
     u"""
-    Paramètres:
-    ==========
-        - p = (x,y) = ndarray((1,2), float) un point en 2d
-        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
-        - eps : precision
-    Retourne :
-    ========
-        - vrai si p est à l'intérieur du polygone Q ou sur la frontiere (bande de largeur eps) et
-        - faux s'il est à l'extérieur.
+        :param p : (x,y) = ndarray((1,2), float) un point en 2d
+        :param Q : est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
+        :param eps : float = precision
+        :return :
+            True si p est à l'intérieur du polygone Q ou sur la frontiere (bande de largeur eps) et
+            False s'il est à l'extérieur.
     """
     P = Polygon(Q)
     p = Point(p)
-    #trace('', p=Point(p), lr=lr)
-#     trace('', distance=P.distance(p) - p.distance(P))
-    return P.distance(Point(p))<eps
-
-
-def isInsideOrFrontierOld(p, Q, eps=1.0e-10):
-    u"""
-    Paramètres:
-    ==========
-        - p = (x,y) = ndarray((1,2), float) un point en 2d
-        - Q est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
-        - eps : precision
-    Retourne :
-    ========
-        - vrai si p est à l'intérieur du polygone Q ou sur la frontiere (bande de largeur eps) et
-        - faux s'il est à l'extérieur.
-    Fonctionnement :
-    ==============
-    p est intérieur, si et seulement si les produits vectoriels AB^Ap ont tous le même signe.
-    (on note A=Q[i], B=Q[i+1], 0 <= i < n )
-    TODO : optimiser avec raytracing car très consommateur de cpu.
-    """
-    A, B = Q[0], Q[1]
-    AB, Ap = B-A, p-A
-    w0 = vect2d(AB, Ap)
-#    if w0 == 0.0 :
-    if abs(w0) < eps :
-#        trace('', AB, Ap)
-        return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-#         return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-#    if number is 0 :
-#    trace('', '(x,y)=%s, w0=%.2g'%(str(p), w0))
-    for (A, B) in zip(Q[1:-1], Q[2:]) :
-        #[A,B] parcourt les segments de Q
-        AB, Ap = B-A, p-A
-        w =  vect2d(AB, Ap)
-#        if w == 0.0 :
-        if abs(w) < eps :
-            return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-#             return True if 0.0 <= det(AB, Ap) <= det(AB, AB)  else False
-
-#        if number == 0 :
-#        trace('', w0, w)
-        if w*w0 < 0 : return False
-
-    return True
-
-def testEmpilementSegments():
-    """
-    _____1_____________________________________________
-    |          |       4    |            |            |
-    0          |            |   6        |            8
-    |          2    3       5            |            |
-    |          |            |            7            |
-    |          |            |            |            |
-    |          |            |            |            |
-    |          |            |            |            |
-    |          |            |            |            |
-    |          |            |            |            |
-    |          |           12            |    10      9
-    |          13           |            |            |
-    |          |            |           11            |
-    14         |            |            |            |
-    |          |            |            |            |
-    ---------------------------------------------------
-    [(0,1,2),(13,14)], [(2,3,4,5),(12,13)], [(),()], [(),()], [(),()]
-
-
-    """
-#def eliminerPointsDoubles0(points, eps=0.0):
-#    '''
-#    Marche bien pour un tableau de points python (liste de points)
-#    Ne marche pas pour ndarray
-#    '''
-#    i = 0
-#    while i<len(points)-1 :
-#        if dist(points[i], points[i+1])<=eps :
-#            points.remove(points[i+1])
-#        else : i+=1
-#    return points
+    return P.distance(p)<eps
 
 def pointsDoubles(points, eps=1.0e-10):
     u"""retourne la liste des numéros de points doubles CONSECUTIFS à eps pres.
@@ -1623,91 +1286,6 @@ def eliminerPointsDoublesConsecutifs(points, eps=0.0, vires=False):
 #                 rdebug(avirer=avirer, delta_abscurv=dac.tolist(), controle=sum(dac))
 #         for k in reversed(avirer) :
 #             self.removePoint(k, update=False)
-
-def testPointsDoubles():
-#     from gui.graphicsbase.graphicscommon import qpolygonFrom
-    points=asarray([[0,0],[0,0],[0,0],])
-    debug('points_sales=%s'%points.tolist(), avirer=pointsDoubles(points, 0.0))
-    debug(points_propres=eliminerPointsDoublesConsecutifs(points, 0, True))
-    X = [1,2,3,4,4,5,5,5,6,7,7]
-    Y = [1,2,3,4,4,5,5,5,6,7,7]
-    points = zip(X,Y)
-    print 'points initiaux :\n',points
-    print 'a virer, version Python', pointsDoubles(points)
-    points = asarray(points)
-    print 'a virer, version  numpy', pointsDoubles(points)
-    print 'points nettoyé :\n', eliminerPointsDoublesConsecutifs(points, 0)
-#     points = qpolygonFrom(points)
-#     print 'avirer, version Qt', pointsDoubles(points)
-
-def testIsInside():
-    """
-    str::isInsideOrFrontier ; (x,y)=[-5.8630197   0.11092514], w0=0.77
-    str::isInsideOrFrontier ; 0.766641878852 ; 3.56936145336
-    str::isInsideOrFrontier ; 0.766641878852 ; 0.846764334388
-    str::isInsideOrFrontier ; 0.766641878852 ; 0.0
-    Caisson::maille ; 0 ; maille ;
-    [[-5.8630197  -0.37438482]
-     [-5.8630197  -0.37264027]
-     [-4.2833244  -0.82439736]
-     [-4.2833244  -0.82825686]
-     [-5.8630197  -0.37438482]]
-    Caisson::maille ; inside
-    """
-    print 10*'#'
-    p = [-5.79201521, 0.61218603]
-    Q = asarray([[-5.92606363, -0.47661251],
-                    [-5.78006363, -0.51037401],
-                    [-5.78006363,  0.62300842],
-                    [-5.92606363,  0.49080254],
-                    [-5.92606363, -0.47661251]])
-    print isInsideOrFrontier(p, Q, 1.0e-9)
-    # return
-    Q = asarray([(0.0,0.0), (1.0,0.5), (1.0,2.0), (0.0, 0.5), (0.,0.)])
-    Q = asarray([
-                    [-5.8630197,  -0.37438482],
-                    [-5.8630197,  -0.37264027],
-                    [-4.2833244,  -0.82439736],
-                    [-4.2833244,  -0.82825686],
-                    [-5.8630197,  -0.37438482]
-                    ])
-    p = asarray([-5.8630197,   0.11092514])
-    print isInsideOrFrontier(p, Q)
-    Q = asarray([(0.0,0.0), (1.0,0.0), (1.0,1.0), (0.0, 1.0), (0.,0.)])
-    p = asarray([1.0, 1.0])
-    print isInsideOrFrontier(p, Q)
-#    alert('', 'bizarre, a verifier...')
-    # return
-    p = asarray((0.5, 1.24999))
-    print isInsideOrFrontier(p, Q)
-    print isInside0(p, Q)
-    p = asarray((0.0, 2.0))
-    print isInsideOrFrontier(p, Q)
-    print isInside(p, Q)
-    print isInside0(p, Q)
-
-def addActions(menu, actions):
-    '''
-    Pour inserer les actions de la liste 'actions' dans 'menu', avec None qui sert de séparateur dans 'actions',
-    et eviter un message d'alerte 'QWidget::insertAction: Attempt to insert null action'
-    menu peut etre un QMenu ou bien une QToolBar
-    '''
-    for action in actions :
-        if action is None :
-            menu.addSeparator()
-        else :
-            menu.addAction(action)
-
-def clearLayout(layout):
-    ''' Purge d'un layout '''
-    if layout is not None:
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-            else:
-                clearLayout(item.layout())
 
 def projSurProfil(prof,iba,pos,cote):
     ''' Calcul des caractéristiques d'un point projeté sur un profil (à l'échelle ou non) à partir :
@@ -1773,28 +1351,14 @@ def projSurProfil(prof,iba,pos,cote):
 
     return i,t,ptout
 
-# def rcercle(A, B, C, eps=1.0e-8):
-#     u"""retourne le rayon dun cercle passant par les 3 points A,B,C, distincts et non alignes.
-#     Si les 3 points sont presque alignés retourne inf
-#     si deux points sont presque confondus, retourne nan"""
-#     A, B, C = asarray(A), asarray(B), asarray(C)
-#     AB, BC, CA = B-A, C-B, A-C
-# #     print AB, CA
-#     c, a, b = sqrt(AB[0]**2 + AB[1]**2), sqrt(BC[0]**2 + BC[1]**2), sqrt(CA[0]**2 + CA[1]**2),
-#     abc = a*b*c
-#     s = abs(det(AB,CA))
-# #     print s, abc
-#     if abc < eps:#2 points presque confondus : infinité de cercles passant par deux points
-#         return nan
-#     elif s<eps:# trois points presque alignés
-#         return inf
-#     else :
-#         return 0.5*abc/(det(AB, CA))
-#         return 0.5*abc/abs(det(AB, CA))
+def vect2d(u, v):
+    u"""
+    Retourne un réel, produit vectoriel de deux vecteurs (2d), u et v
+    C'est aussi le déterminant
+    """
+    return u[0]*v[1] - u[1]*v[0]
 
-
-
-
+det = vect2d
 
 def rcercle(A, B, C, eps=0.0):
     u"""retourne le rayon dun cercle passant par les 3 points A,B,C, distincts et non alignes.
@@ -1814,7 +1378,6 @@ def rcercle(A, B, C, eps=0.0):
         return inf
     else :
         return 0.5*abc/d
-        # return 0.5*abc/abs(det(AB, CA))
 
 def rayonDeCourbure(P):
     u"""
@@ -1876,10 +1439,12 @@ def scourbure(S, T):
     sc = (dx*d2y-dy*d2x)/(norm3_d2)
     sc[where(norm3_d2 < 1.0e-12)] = 0.0
     return sc
-#     return abs(dx*d2y-dy*d2x)/(sqrt(dx**2+dy**2)**3)
+
 def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
-    u"""Integrale de f sur [a,b], méthode de Simpson composite. (ordre 3)
-    n DOIT être pair"""
+    u"""
+    Integrale de f sur [a,b], méthode de Simpson composite. (ordre 3)
+    n DOIT être pair, on découpe le segment d'integration en n sous segments
+    On applique la méthode de Simpson sur chaque sous segment"""
     h = float(b-a)/n
     T = linspace(a, b, n+1)
     C = f(T)
@@ -1889,477 +1454,5 @@ def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
 #         debug (h, A1, A2, A4, (h/3)*(A1 + A2 + A4))
     return (h/3)*(A1 + A2 + A4)
 
-def testSimpson():
-    def f0(T): return ones(len(T))
-    def f1(T): return T
-    def f2(T): return T*T
-    def f3(T): return T*T*T
-    def f4(T): return T*T*T*T
-    debug(simpson(f0, 0, 1, 1000))
-    debug(simpson(f1, 0, 1, 1000))
-    debug(simpson(f2, 0, 1))
-    debug(simpson(f3, 0, 1))
-    debug(simpson(f4, 0, 1))
-
-def testSegmentPlusProche():
-
-    points = [[1.00000000e+02, 0.00000000e+00],
-            [2.38750710e+01, 1.12195000e+01],
-            [2.06107410e+01, 1.11545910e+01],#Le plus proche
-            [1.75275990e+01, 1.09294100e+01],
-            [1.20666720e+01, -5.76084900e+00],
-            [1.46258840e+01, -5.92738400e+00],
-            [1.77233340e+01, -6.10722700e+00],#trouvé...
-            [2.07627560e+01, -6.22899600e+00],
-            [2.41177090e+01, -6.36394300e+00],
-            [1.00000000e+02, 0.00000000e+00]]
-    pt = (20.,20.0)
-    points = [[ 0., 0. ], [ 1., -1. ],[ 3., -0.5],[ 5., 0. ],[ 2.0, 0.5 ]]#, [ 0., 0. ]]
-    pt = (0.0,0.0)
-    pt = [ 1., -1. ]
-    pt = [ 1.8, 0.5 ]
-    pt = (5.20,-0.20)
-    pt = (2.0,-1.0)
-#     pt1 = 21,11
-    idx, pj = segmentPlusProche(points, pt)
-    A, B = points[idx],points[idx+1]
-    debug(indice_segment=idx, projection=pj, point_a_inserer=pt)
-    from matplotlib import pyplot as plt
-    points = asarray(points)
-    fig = plt.figure()
-    a = fig.add_subplot(1,1,1)
-    plt.plot(points[:,0], points[:,1],'b-o',label=u'polyligne')
-    plt.plot([A[0],B[0]], [A[1],B[1]],'r-',label=u'segment %d : winner'%idx)
-    if pj is not None :
-        plt.plot([pt[0],pj[0]],[pt[1],pj[1]],'g-o',label=u'projection')
-    else :
-        plt.plot([pt[0]],[pt[1]],'r-o',label='??')
-    plt.plot()
-    a.set_aspect(1)
-#     plt.plot([pt[0],pt1[0]],[pt[1],pt1[1]],'r-o',label='winner')
-    plt.legend()
-    plt.show()
-    # return
-    # p7 = 7,0#None, None
-    # p2 = 2,0#(1, array([ 2.17647059, -0.70588235]))
-    for x in range(7) :
-        S = segmentPlusProche(points, (x,0))
-        print 'Point = ', (x,0) , ' ; segmentPlusProche =',S
-
-def testCourbure():
-    p = asarray([[0.0, 0.0],
-                    [0.0020691201283767205, -0.0042941912136635636], [0.007625888799913062, -0.011329446395562288], [0.015694418444218296, -0.019910545432815785],
-                    [0.025298821490901697, -0.02884226821254368], [0.035463210369572534, -0.03692939462186559], [0.04525122291119395, -0.0430513056100728],
-                    [0.05446593471151137, -0.04748301229776649], [0.06356139613433973, -0.05171627435197123], [0.07281050074621176, -0.05640916969890315],
-                    [0.08221422031141906, -0.06105196236599214], [0.0917576221148263, -0.06524123911924189], [0.10143185809958596, -0.06895424232522496],
-                    [0.1112288171535668, -0.07221431753663529], [0.12114038816463749, -0.07504481030616675], [0.1311584600206667, -0.07746906618651322],
-                    [0.1412749216095232, -0.0795104307303686], [0.15148166181907566, -0.0811922494904268], [0.1617705695371927, -0.0825378680193817],
-                    [0.17213353365174314, -0.0835706318699272], [0.18256244305059566, -0.08431388659475722], [0.19304918662161893, -0.0847909777465656],
-                    [0.20358565325268163, -0.08502525087804626], [0.2141637318316525, -0.08504005154189312], [0.2247753112464002, -0.08485872529080002],
-                    [0.2354122803847935, -0.08450461767746092], [0.24606652813470106, -0.08400107425456962], [0.2567299433839916, -0.08337144057482014],
-                    [0.26739441502053374, -0.0826390621909063], [0.2780518319321962, -0.08182728465552197], [0.28869408300684785, -0.08095945352136108],
-                    [0.2993130571323571, -0.08005891434111753], [0.30990192473004063, -0.07914582201669142], [0.3204600849636786, -0.07822482366739393],
-                    [0.33098882667127716, -0.0772958616655942], [0.34148943911682783, -0.0763588773230801], [0.35196321156432236, -0.07541381195163939],
-                    [0.3624114332777522, -0.07446060686305987], [0.372835393521109, -0.07349920336912937], [0.38323638155838424, -0.07252954278163569],
-                    [0.39361568665356955, -0.07155156641236664], [0.4039745980706565, -0.07056521557311002], [0.4143144050736366, -0.06957043157565367],
-                    [0.42463639692650157, -0.06856715573178536], [0.43494186289324277, -0.06755532935329289], [0.445232092237852, -0.0665348937519641],
-                    [0.45550837422432056, -0.06550579023958679], [0.4657719981166402, -0.06446796012794875], [0.4760242531788025, -0.06342134472883781],
-                    [0.48626642867479897, -0.06236588535404178], [0.49649981386862113, -0.061301523315348445], [0.5067256980242607, -0.06022819992454561],
-                    [0.5169453704057091, -0.059145856493421106], [0.5271601202769579, -0.058054434333762735], [0.537371236901999, -0.056953874757358296],
-                    [0.5475800095448234, -0.0558441190759956], [0.5577877274694232, -0.05472510860146246], [0.5679956799397896, -0.05359678464554667],
-                    [0.5782051562199142, -0.05245908852003607], [0.588417445573789, -0.051311961536718416], [0.5986338372654051, -0.050155345007381565],
-                    [0.6088554653393123, -0.048989213246300733], [0.6190825327819455, -0.04781373852770645], [0.6293148970074011, -0.046629166600818006],
-                    [0.6395524148593865, -0.04543574333612987], [0.6497949431816094, -0.04423371460413647], [0.660042338817777, -0.04302332627533221],
-                    [0.670294458611597, -0.04180482422021157], [0.6805511594067771, -0.040578454309268965], [0.6908122980470244, -0.03934446241299885],
-                    [0.7010777313760468, -0.03810309440189562], [0.7113473162375514, -0.03685459614645376], [0.7216209094752458, -0.035599213517167674],
-                    [0.7318983679328378, -0.034337192384531805], [0.7421795484540348, -0.03306877861904061], [0.7524643078825441, -0.031794218091188486],
-                    [0.7627525030620732, -0.030513756671469904], [0.7730439908363299, -0.029227640230379295], [0.7833386280490214, -0.02793611463841107],
-                    [0.7936362715438553, -0.026639425766059696], [0.8039367781645393, -0.025337819483819583], [0.8142400047547806, -0.024031541662185196],
-                    [0.824545808158287, -0.02272083817165094], [0.8348540452187656, -0.02140595488271128], [0.8451645727799243, -0.020087137665860646],
-                    [0.8554772476854705, -0.018764632391593452], [0.8657919267791115, -0.017438684930404163], [0.8761084669045551, -0.016109541152787184],
-                    [0.8864267249055084, -0.014777446929236986], [0.8967465576256795, -0.01344264813024797], [0.9070678219087754, -0.012105390626314615],
-                    [0.9173903745985037, -0.010765920287931328], [0.9277140725385721, -0.00942448298559254], [0.938038772572688, -0.008081324589792714],
-                    [0.9483643315445588, -0.006736690971026247], [0.958690606297892, -0.005390827999787622], [0.9690174536763952, -0.004043981546571245],
-                    [0.9793447305237761, -0.0026963974818715497], [0.9896722936837418, -0.001348321676182991], [0.9999999999999999, -3.903127820947816e-18]])
-
-    c=abs(courbure(p))
-    r=rayonDeCourbure(p)
-
-    print c
-    print r
-
-def testSCourbure():
-    C = asarray([(1,0),(0,1),(-1,0),(0,-1),(1,0)])
-    ac = absCurv(C, normalise=True)
-    k = 3
-    sx4 = UnivariateSpline(ac, C[:,0], k=k, s=0.0)
-    sy4 = UnivariateSpline(ac, C[:,1], k=k, s=0.0)
-    T = linspace(0,1, 10000)
-    X4, Y4 = sx4(T), sy4(T)
-    curv4 = scourbure((sx4,sy4), T)-1
-
-    pprint(curv4)
-    from matplotlib import pyplot as plt
-    plt.plot(T, sx4(T), T, sy4(T))
-    plt.show()
-    plt.plot(T, curv4)
-    plt.plot(X4,Y4)
-    plt.show()
-
-def testRayonCercle():
-    T = linspace(0, 2*math.pi, 100)
-#     T.shape = 10,1
-#     print T,
-    R = random.rand()
-    print R
-    X, Y = R*cos(T), R*sin(T)
-    P = asarray([(x,y) for x,y in zip(X,Y)])
-    print P
-    print rcercle(P[-1], P[0], P[1])
-
-
 if __name__=="__main__":
-    testPointsDoubles()
-#     exit()
-    testSegmentPlusProche()
-
-    p = [[2.97370904e+00, 6.44820360e-19],
-        [2.62290948e+00, 6.02959508e-02],
-        [2.24308167e+00, 1.23744268e-01],
-        [1.87452472e+00, 1.83613921e-01],
-        [1.50115462e+00, 2.42394363e-01],
-        [1.22747086e+00, 2.84350243e-01],
-        [1.12399937e+00, 2.98561198e-01],
-        [1.00689675e+00, 3.12871734e-01],
-        [9.34115493e-01, 3.20342559e-01],
-        [8.67134243e-01, 3.25454296e-01],
-        [7.98757537e-01, 3.28922015e-01],
-        [7.32512484e-01, 3.30579575e-01],
-        [6.69915006e-01, 3.30470431e-01],
-        [6.12428610e-01, 3.28699942e-01],
-        [5.58750286e-01, 3.25359730e-01],
-        [5.07959735e-01, 3.20500775e-01],
-        [4.60353384e-01, 3.14257943e-01],
-        [4.15956345e-01, 3.06735929e-01],
-        [3.73947713e-01, 2.97892075e-01],
-        [3.33827496e-01, 2.87700041e-01],
-        [2.96006551e-01, 2.76350898e-01],
-        [2.61205671e-01, 2.64151008e-01],
-        [2.28902585e-01, 2.51027363e-01],
-        [1.98298707e-01, 2.36743322e-01],
-        [1.69361638e-01, 2.21350097e-01],
-        [1.43241296e-01, 2.05567685e-01],
-        [1.19840851e-01, 1.89463177e-01],
-        [9.85093007e-02, 1.72704901e-01],
-        [7.88006468e-02, 1.55037597e-01],
-        [6.12129425e-02, 1.37020921e-01],
-        [4.64766811e-02, 1.19548694e-01],
-        [3.41003061e-02, 1.02253781e-01],
-        [2.37764244e-02, 8.49053918e-02],
-        [1.55363360e-02, 6.77601586e-02],
-        [8.82760258e-03, 4.97397618e-02],
-        [3.45630886e-03, 3.02145976e-02],
-        [7.77361884e-04, 1.51843334e-02],
-        [7.55648859e-21, 0.00000000e+00],
-        [9.68226599e-04, -1.28975276e-02],
-        [3.25212510e-03, -2.40215827e-02],
-        [7.46226482e-03, -3.44277207e-02],
-        [1.25640953e-02, -4.28441260e-02],
-        [1.91184423e-02, -4.98146745e-02],
-        [2.97370904e-02, -5.77199739e-02],
-        [4.47227984e-02, -6.73131096e-02],
-        [5.61194425e-02, -7.43857830e-02],
-        [6.90344014e-02, -8.20925698e-02],
-        [8.52837290e-02, -9.14662261e-02],
-        [1.16833061e-01, -1.09259597e-01],
-        [1.35057261e-01, -1.19683057e-01],
-        [1.48685452e-01, -1.27730648e-01],
-        [1.65211057e-01, -1.37333205e-01],
-        [1.79501219e-01, -1.43984114e-01],
-        [1.95710381e-01, -1.50032156e-01],
-        [2.14137505e-01, -1.55449459e-01],
-        [2.35700604e-01, -1.60332396e-01],
-        [2.61869977e-01, -1.64782729e-01],
-        [2.95823959e-01, -1.69070402e-01],
-        [3.40834223e-01, -1.73219635e-01],
-        [4.17064411e-01, -1.78399785e-01],
-        [5.26630638e-01, -1.84648210e-01],
-        [6.52240905e-01, -1.89484615e-01],
-        [7.74966197e-01, -1.94548433e-01],
-        [8.45738690e-01, -1.96600587e-01],
-        [9.22197728e-01, -1.97437555e-01],
-        [1.03117425e+00, -1.97001292e-01],
-        [1.12509145e+00, -1.95546293e-01],
-        [1.20976462e+00, -1.92949955e-01],
-        [1.30714611e+00, -1.88476358e-01],
-        [1.42330517e+00, -1.81902516e-01],
-        [1.50908393e+00, -1.75841562e-01],
-        [1.59606381e+00, -1.68363291e-01],
-        [1.70815592e+00, -1.57186925e-01],
-        [1.79449328e+00, -1.47547612e-01],
-        [1.91366126e+00, -1.32171863e-01],
-        [2.01694955e+00, -1.18217320e-01],
-        [2.08412098e+00, -1.07736892e-01],
-        [2.19909217e+00, -8.79476287e-02],
-        [2.27284129e+00, -7.59140432e-02],
-        [2.37543690e+00, -6.09027024e-02],
-        [2.47881269e+00, -4.69689912e-02],
-        [2.57710869e+00, -3.50125893e-02],
-        [2.67456383e+00, -2.44616999e-02],
-        [2.77305513e+00, -1.51044063e-02],
-        [2.87236864e+00, -6.97302358e-03],
-        [2.97370904e+00, 6.22623175e-19]]
-    p=[[  2.97370904e+00,   6.44820360e-19],
- [  2.62290948e+00,   6.02959508e-02],
- [  2.24308167e+00,   1.23744268e-01],
- [  1.87452472e+00,   1.83613921e-01],
- [  1.50115462e+00,   2.42394363e-01],
- [  1.22747086e+00,   2.84350243e-01],
- [  1.12399937e+00,   2.98561198e-01],
- [  1.00689675e+00,   3.12871734e-01],
- [  9.34115493e-01,   3.20342559e-01],
- [  8.67134243e-01,   3.25454296e-01],
- [  7.98757537e-01,   3.28922015e-01],
- [  7.32512484e-01,   3.30579575e-01],
- [  6.69915006e-01,   3.30470431e-01],
- [  6.12428610e-01,   3.28699942e-01],
- [  5.58750286e-01,   3.25359730e-01],
- [  5.07959735e-01,   3.20500775e-01],
- [  4.60353384e-01,   3.14257943e-01],
- [  4.15956345e-01,   3.06735929e-01],
- [  3.73947713e-01,   2.97892075e-01],
- [  3.33827496e-01,   2.87700041e-01],
- [  2.96006551e-01,   2.76350898e-01],
- [  2.61205671e-01,   2.64151008e-01],
- [  2.28902585e-01,   2.51027363e-01],
- [  1.98298707e-01,   2.36743322e-01],
- [  1.69361638e-01,   2.21350097e-01],
- [  1.43241296e-01,   2.05567685e-01],
- [  1.19840851e-01,   1.89463177e-01],
- [  9.85093007e-02,   1.72704901e-01],
- [  7.88006468e-02,   1.55037597e-01],
- [  6.12129425e-02,   1.37020921e-01],
- [  4.64766811e-02,   1.19548694e-01],
- [  3.41003061e-02,   1.02253781e-01],
- [  2.37764244e-02,   8.49053918e-02],
- [  1.55363360e-02,   6.77601586e-02],
- [  8.82760258e-03,   4.97397618e-02],
- [  3.45630886e-03,   3.02145976e-02],
- [  7.77361884e-04,   1.51843334e-02],
- [  8.81590336e-21,   6.44820360e-19],
- [  9.68226599e-04,  -1.28975276e-02],
- [  3.25212510e-03,  -2.40215827e-02],
- [  7.46226482e-03,  -3.44277207e-02],
- [  1.25640953e-02,  -4.28441260e-02],
- [  1.91184423e-02,  -4.98146745e-02],
- [  2.97370904e-02,  -5.77199739e-02],
- [  4.47227984e-02,  -6.73131096e-02],
- [  5.61194425e-02,  -7.43857830e-02],
- [  6.90344014e-02,  -8.20925698e-02],
- [  8.52837290e-02,  -9.14662261e-02],
- [  1.16833061e-01,  -1.09259597e-01],
- [  1.35057261e-01,  -1.19683057e-01],
- [  1.48685452e-01,  -1.27730648e-01],
- [  1.65211057e-01,  -1.37333205e-01],
- [  1.79501219e-01,  -1.43984114e-01],
- [  1.95710381e-01,  -1.50032156e-01],
- [  2.14137505e-01,  -1.55449459e-01],
- [  2.35700604e-01,  -1.60332396e-01],
- [  2.61869977e-01,  -1.64782729e-01],
- [  2.95823959e-01,  -1.69070402e-01],
- [  3.40834223e-01,  -1.73219635e-01],
- [  4.17064411e-01,  -1.78399785e-01],
- [  5.26630638e-01,  -1.84648210e-01],
- [  6.52240905e-01,  -1.89484615e-01],
- [  7.74966197e-01,  -1.94548433e-01],
- [  8.45738690e-01,  -1.96600587e-01],
- [  9.22197728e-01,  -1.97437555e-01],
- [  1.03117425e+00,  -1.97001292e-01],
- [  1.12509145e+00,  -1.95546293e-01],
- [  1.20976462e+00,  -1.92949955e-01],
- [  1.30714611e+00,  -1.88476358e-01],
- [  1.42330517e+00,  -1.81902516e-01],
- [  1.50908393e+00,  -1.75841562e-01],
- [  1.59606381e+00,  -1.68363291e-01],
- [  1.70815592e+00,  -1.57186925e-01],
- [  1.79449328e+00,  -1.47547612e-01],
- [  1.91366126e+00,  -1.32171863e-01],
- [  2.01694955e+00,  -1.18217320e-01],
- [  2.08412098e+00,  -1.07736892e-01],
- [  2.19909217e+00,  -8.79476287e-02],
- [  2.27284129e+00,  -7.59140432e-02],
- [  2.37543690e+00,  -6.09027024e-02],
- [  2.47881269e+00,  -4.69689912e-02],
- [  2.57710869e+00,  -3.50125893e-02],
- [  2.67456383e+00,  -2.44616999e-02],
- [  2.77305513e+00,  -1.51044063e-02],
- [  2.87236864e+00,  -6.97302358e-03],
- [  2.97370904e+00,   6.45922348e-19]]
-
-    my2dPlot([asarray(p),])
-#     exit()
-#     app=QtGui.QApplication(sys.argv)
-#     testTableDataDiag()
-# #     tde = TableDataEditor()
-#     sys.exit(app.exec_())
-
-#     testRayonCercle()
-#     exit()
-#     testSCourbure()
-#     testCourbure()
-#     exit()
-#     testSegmentPlusProche()
-#     exit()
-    testIsInside()
-#     exit()
-    A, B, C = [0,     0], [1,     0], [0,      1]
-    print rcercle(A, B, C)
-    A, B, C = [0.0, 0.0], [-1.0, 0.0], [1.01, 1.0]
-    print rcercle(A, B, C)
-    print '***'
-    P = [[1.00000000e+00,   0.00000000e+00],
-        [9.37800919e-01,  -4.53983927e-03],
-        [8.35970247e-01,  -1.52885157e-02],
-        [6.92659143e-01,  -3.72445481e-02],
-        [5.04164573e-01,  -5.87701128e-02],
-        [3.13878806e-01,  -6.54986341e-02],
-        [1.46258259e-01,  -5.92691821e-02],
-        [6.34134460e-02,  -4.84279108e-02],
-        [1.19604073e-02,  -1.94216706e-02],
-        [2.22044605e-16,   0.00000000e+00],
-#         [2.22044605e-16,   0.00000000e+00],
-        [3.80610473e-02,   6.31931730e-02],
-        [1.46449137e-01,   1.05380236e-01],
-        [3.08658678e-01,   1.09106172e-01],
-        [5.00560799e-01,   8.28268707e-02],
-        [6.91521129e-01,   5.22806851e-02],
-        [8.53153837e-01,   2.53405643e-02],
-        [9.39723441e-01,   1.05280598e-02],
-        [1.00000000e+00,   0.00000000e+00],
-        ]
-#     print courbure(asarray(P[:-1]))
-    ac = absCurv(P)
-    ac /= ac[-1]
-#     print ac
-    c = courbure(asarray(P))
-    T, sx,sy = splineInterpolation(asarray(P), 'c cubic')
-#     print T-ac
-#     sc = scourbure((sx,sy), T)
-#     print linalg.norm(c-sc)/ac[-1]
-#     print sc
-    print "***cercle rayon 1"
-    T = linspace(0, 2*pi,100)#[:-1]
-#     P = asarray(zip(T, T))
-    P = asarray(zip(sin(T), cos(T)))
-#     print P
-    Ts, sx,sy = splineInterpolation(asarray(P), 'c cubic')
-    c = courbure(P)
-    print c
-    T1 = linspace(0, 1, 20)
-    P1 = asarray(zip(sx(T1),sy(T1)))
-    c1 = courbure(P1)
-    print c1
-    from matplotlib import pyplot
-    print len(Ts), len(c), Ts[-1]
-    print len(T1), len(c1)
-    pyplot.plot(Ts, c,'r.',T1, c1,'b.')
-    pyplot.show()
-#     pyplot.plot(sx(Ts,2),'r.', sy(Ts,2),'b.')
-#     pyplot.show()
-#     pyplot.plot(sx(Ts,2), sy(Ts,2),'.', )
-#     pyplot.show()
-#     pyplot.plot(sc ,'.')
-#     pyplot.show()
-#     pyplot.axes().set_aspect('equal')
-#     pyplot.plot(P[:,0], P[:,1] ,'r.', sx(Ts) ,sy(Ts),'-', )
-#     pyplot.show()
-
-#     exit()
-    points  = arange(1,25)
-    points.shape = 2,4,3
-    points.shape = 3,4,2
-    print '\n==> x\n', symetriser(points, 'x')
-    print '\n==> y\n', symetriser(points, 'y')
-    print '\n==> z\n', symetriser(points, 'z')
-#     exit()
-
-#     help()
-#     testPointsDoubles()
-#     testIsInside()
-#     exit()
-#     testPretty()
-    import matplotlib
-#     testContraindre()
-#     testCurv()
-#     exit()
-#     print goodName('name')
-#     print goodName('nâme')
-# #     exit()
-    points=asarray((arange(5),arange(5,10))).reshape((-1,2))
-    print points
-    print hardScale(points, (2,0), centre=None, translate=False)
-# #     exit()
-#     dico=dict(locals())
-#     for key,value in  dico.iteritems():
-#         if type(value).__name__ in ('function',) :
-#             print "%s:\n"%(key)+len(key)*'='+"\n%s"%value.__doc__
-#     print phrase()
-#     from config import VALIDATION_DIR
-#     filename=Path(VALIDATION_DIR,'dxf','cot_d03.DXF')
-#     lines=open(filename).readlines()
-#     print findAll('LINE',lines)
-#     p1=QPointF(1,0)
-#     p2=QPointF(1,1)
-#     print dist2(p1,p2)
-#     p1=[1,0.]
-#     p2=[1,1]
-#     print dist2(p1,p2)
-#     #### segmentPlusProche(points, P):####
-    P=asarray([(3.0,-1.0),(2,-1),(0,0),(2,2),(3,2),(5,2),(10,0)])
-#     print P
-#     P=asarray([(0,-1.0),(-1,0),(1,0),(0,1)])
-#     print 'barycentre',baryCentre(P)
-#     exit()
-    a=asarray([2.0,0.0])
-    i=segmentPlusProche(P,a)
-    a.shape=(1,2)
-    my2dPlot((P,a),equal=True,cosmetic=('b-','bo','r-','ro','g*','r*','r^'))
-#     print P[i],P[i+1]
-#    exit()
-#    print rreplace("kze,$$$$$l$$$izefh","$$","$")
-#    datadir = '/Users/puiseux/Documents/workspace/pyglide/test'
-#    filename = Path(datadir, 'simple.OUT')
-#    lines =  open(filename).readlines()
-#    print find('yyy', lines)
-#    print findAll('xxxxxx', lines)
-#    tag = 'TIME STEP'
-#    deb = _findRel(tag, lines)
-#    print "relatif", _findRel(tag, lines, 100)
-#    print "absolu",find(tag, lines, 4000)
-#    print findAll(tag, lines)
-#    points = arange(21, dtype='float')
-#    ppp = points
-#    points.shape = (7,3)
-#    print points
-#    print find_names(points)
-#    print structuredGrid(2,3,1)
-#    print 'doublons : '
-#    nbp = 10
-#    a = random.randint(0, 3, 3*nbp).reshape((-1,3))
-##    voisinages = [range(i,nbp) for i in range(nbp)]#[[0,...n-1],[1,...n-1],[2,...n-1],...[n-1]]
-#    voisinages = [[i]+range(nbp) for i in range(nbp)]#[[0,0,...n-1],[1,0,...n-1],[2,0,...n-1],...[n-1, 0,...n-1]]
-##    print a
-#    for k0,k1 in doublons(a, voisinages=voisinages, sym=False) :
-#        print k0, k1
-#        print a[k0],a[k1]
-#
-
-#    print encombrement(points)
-
-#    a = 100.0
-#    points = [(-a,-a),(a,-a),(a,a),(-a,a)]
-#    print encombrement(points)
-#    tags = ['zozo','TIME STEP','COMPONENT COORDINATE SYSTEMS','AERODYNAMIC DATA FOR PATCH','UNIT NORMAL VECTORS AND PANEL AREAS FOR PATCH']
-#
-#    print mark(tags, lines)????
-#     sys.exit(app.exec_())
+    pass

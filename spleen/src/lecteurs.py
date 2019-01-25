@@ -23,6 +23,7 @@ from lecteurdxf import LecteurDXF,LecteurDXFNervures,LecteurDXF0, LecteurDXF1
 from utilitaires import (Path,trace,my2dPlot)
 from config import VALIDATION_DIR
 from utilitaires import rdebug, debug
+from pprint import pprint
 
 
 def pointsFromFile(filename):
@@ -53,19 +54,17 @@ def pointsFromFile(filename):
         # return polygon
     elif ext in ('.spl',) :
         """Une spline"""
-#         rdebug('********', filename.name)
         with open(filename,'r') as f :
             dump = eval(f.read())
-#         if len(lines)>1 :
-#             line = ' '.join([l.strip() for l in lines])
-#         else :
-#             line = lines[0]
-#         dump = eval(line)
-#         debug(dump=dump)
-        try :
-            return np.asarray(dump['cpoints'])
-        except :
-            raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
+        if isinstance(dump, dict):
+            if dump.has_key('cpoints') :
+                return np.asarray(dump['cpoints'])
+            elif dump.has_key('dmodel') :
+                return np.asarray(dump['dmodel']['cpoints'])
+            else : 
+                raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
+        else :
+            raise IOError(u"%s est un fichier '.spl' ; il devrait contenir un dictionnaire (dict Python) bien constitue."%filename.name)
     else :
 #         rdebug()
         raise IOError(u'Je ne sais pas lire ce fichier "%s"'%filename)
@@ -84,7 +83,7 @@ def pointsFrom(x):#,close_=False):
     # debug(x)
     if x is None :
         return np.zeros((0,2))
-    elif isinstance(x,Path):
+    elif isinstance(x,(Path,str)):
         return pointsFromFile(x)#Fichier
     elif isinstance(x, (str, unicode)) :
         return pointsFrom(eval(x))#chaine de caracteres p.ex.'[1,2,5,12]'

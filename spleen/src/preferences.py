@@ -11,7 +11,7 @@ Description :
 @contact:    be@nervures.com, pierre@puiseux.name
 @deffield    creation: 19 janv. 2013
 '''
-__updated__="2018-07-01"
+__updated__="2019-01-22"
 VERSION = 'v1-'+__updated__
 NAME = 'AXile'
 TEMPLATE = 'temp'
@@ -19,7 +19,7 @@ import math
 from utilitaires import trace
 #from config import LOG_FILES
 #from config import NB_BACKUP
-class SplinePrefs() :
+class SplinePrefs(object) :
     precision = 1000#nb points affichage
     tension = 5.0
     poids = 1.0#le poids des noeuds par defaut
@@ -30,7 +30,7 @@ class SplinePrefs() :
     mode = modes[4]
     elagage = 1.0#precision elagage, en mm/m
 
-class ProfilPrefs() :
+class ProfilPrefs(object) :
     pouverture = (
                   -1.0, # extrados : position de l'ouverture en %de corde, si <0, ouvext sur l'intrados
                   -5.0  #idem intrados

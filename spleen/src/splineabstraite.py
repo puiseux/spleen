@@ -174,12 +174,14 @@ def computeSpline(cpoints, methode):
 #     debug(methode=(type_,parametres),shape=cpoints.shape)
 
     if len(cpoints)<2 :#moins de deux points de controle
+        #TODO les knots devraient être de shape (0,)??
         _knots, sx, sy = np.zeros((2,)), None, None
         return _knots, sx, sy
 
     if type_ == 'cubic' :
         if parametres in ('periodic', 'per', 'periodique') :
-            #il faut au moins 3 points, avec P[0]==P[-1] et un des points intermediaires P[k]!=P[0]
+            #il faut au moins 3 points, avec P[0]==P[-1] 
+            #et un des points intermediaires P[k]!=P[0]
             if len(cpoints)<3 :
                 _knots, sx, sy = np.zeros((2,)), None, None
                 return _knots, sx, sy
@@ -319,7 +321,7 @@ class NSplineAbstract(object):
         super(NSplineAbstract, self).__init__()
         self.nbupdate = 0
         self.gparent = parent
-        self.sx = self.sy = lambda x, k : None
+#         self._sx = self._sy = lambda x, k : None
         self.setDefaultValues()
         self.load(dump)
 #         self._update()Doit etre appelé explicitement par les héritiers au bon moment
@@ -532,6 +534,7 @@ class NSplineAbstract(object):
             return self._longueur
         except AttributeError :
             self._longueur = self.abscurv(1)#absCurvReal(self,1.0)[0]
+#             self._longueur = self.knots[-1]#absCurvReal(self,1.0)[0]
         return self._longueur
 
     @property
@@ -556,6 +559,7 @@ class NSplineAbstract(object):
                 return self._height
             except (TypeError, AttributeError, ValueError) :
                 return 0.0
+    hauteur = height
     @property
     def width(self):
         try :
@@ -566,7 +570,7 @@ class NSplineAbstract(object):
                 return self._width
             except (TypeError, AttributeError, ValueError) :
                 return 0.0
-
+    largeur = width
     def __str__(self):
         return '\n ==> '.join(self.info)
 
@@ -688,6 +692,8 @@ class NSplineAbstract(object):
             elif ext=='.pkl':
                 #seulement les points échantillonnés
                 cPickle.dump(self.toDump('old'),open(filename,'w'))
+            elif ext=='.npkl':
+                cPickle.dump(self.toDump('new'),open(filename,'w'))
             elif ext=='.spl':
                 #Spline complète, dict
                 with open(filename,'w') as f :
@@ -708,7 +714,7 @@ class NSplineAbstract(object):
         elif ext==".pts":
             dump = self.toDump()
             dump['cpoints'] = LecteurUniversel(filename).points
-        elif ext=='.pkl':
+        elif ext in ('.pkl', '.npkl'):
             dump = cPickle.load(open(filename,'r'))
             for key in ('points', 'cpoints') :
                 if dump.has_key(key) :
@@ -799,7 +805,7 @@ class NSplineAbstract(object):
 #             return self._eabscurv
 
 
-    def abscurv(self, T=None):
+    def abscurv(self, T):
 #         raise NotImplementedError(self.msg)
         u"""
         :return :
@@ -810,23 +816,23 @@ class NSplineAbstract(object):
         :TODO: remplacer les appels à self.abscurv() par self.knots et
             supprimer la valeur par defaut T=None
         """
-        if T is not None :
-            return absCurvReal(self, T)[0]#plus cher, plus précis ?
-            ##############################################################
-            #return absCurv(self(T), normalise=False)
-            #Faux la vraie abscisse curviligne est absCurvReal(self, T)[0]
-            ##############################################################
-        else :
-            ##############################################################
-            # Ci dessous, _knots est exactement self.knot.
-            # Inutile de le recalculer
-            ##############################################################
-            if hasattr(self, '_knots') and hasattr(self, 'sx'):
-                #normalement s'il y a l'un il y a l'autre
-                return self._knots
-            else :
-                self._knots = absCurv(self.cpoints, normalise=True)
-                return self._knots
+#         if T is not None :
+        return absCurvReal(self, T)[0]#plus cher, plus précis ?
+#             ##############################################################
+#             #return absCurv(self(T), normalise=False)
+#             #Faux la vraie abscisse curviligne est absCurvReal(self, T)[0]
+#             ##############################################################
+#         else :
+#         ##############################################################
+#         # Ci dessous, _knots est exactement self.knot.
+#         # Inutile de le recalculer
+#         ##############################################################
+#         if hasattr(self, '_knots') and hasattr(self, '_sx'):
+#             #normalement s'il y a l'un il y a l'autre
+#             return self._knots
+#         else :
+#             self._knots = absCurv(self.cpoints, normalise=True)
+#             return self._knots
     @property
     def knots(self):
         u"""retourne les knots de la spline, c'est a dire les T tesls que S(T) = self.cpoints"""
@@ -930,21 +936,6 @@ class NSplineAbstract(object):
         except AttributeError : pass
         try : del self._longueur
         except AttributeError : pass
-
-        try : #ne pas supprimer, on teste si sx existe dans abscurv
-            del self.sx,
-            del self.sy
-        except AttributeError :
-            pass
-        try :
-#             #debug(methode=self.methode)
-            self.computeSpline(self.methode)
-        except TypeError as msg :
-#             rdebug(self.name, msg)
-            raise(msg)
-        except AttributeError as msg :
-#             rdebug(self.name, msg)
-            raise(msg)
 
     def plot(self, plt, control=True, nbpd=None, nbpe=None, mode=None,
              titre=None, more=[], show=True, buttons=True):

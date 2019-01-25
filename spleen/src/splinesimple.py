@@ -8,8 +8,9 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-__updated__="2018-10-11"
-from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff)
+__updated__="2019-01-25"
+from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff,
+    className)
 # from splineabstraite import absCurvReal
 from lecteurs import pointsFrom
 import sys,os,math
@@ -28,7 +29,7 @@ from splineabstraite import NSplineAbstract, computeSpline, distance2PointSpline
 # import cPickle
 
 class NSplineSimple(NSplineAbstract):
-    class Default():
+    class Default(object):
         precision = 1000
         _methode  = ('ius',1)
         mode      = 'linear'
@@ -60,11 +61,6 @@ class NSplineSimple(NSplineAbstract):
     def load(self, dump):
         u"""Ce qui est commun à toutes les splines."""
         super(NSplineSimple, self).load(dump)
-#         msg = [
-#             "Attention, le load (le dump ?) ne se fait pas bien, les derivees ne sont pas a jour",
-#             "Peut etre la mise a jour des vecteurs derivees aux extremites lors d'une rotation ou symetrie... TODO"
-#             ]
-#         rdebug('\n'.join(msg))
         u"""
         Attention, la cle est 'points'  dans les anciens projets, et 'cpoints' dans les nouveaux.
         OUI=>On affecte _cpoints directement qui évite l'appel au setter de cpoints (qui appelle _update()).
@@ -131,7 +127,7 @@ class NSplineSimple(NSplineAbstract):
                 self._dpoints = self.cpoints#Pas de spline, on retourne les points de contrôle
         return self._dpoints
 
-    def abscurv(self, T=None):
+    def abscurv(self,T):
         u"""
         Ne fait qu'appeler le abscurv de NSplineAbstract.
         Toute la première partie est un ensemble de vérifications pour debogage
@@ -141,39 +137,31 @@ class NSplineSimple(NSplineAbstract):
         - CubicSpline (cubic): T = self.sx.x = self.sy.x
         - UnivariateSpline (us) et InterpolatedUnivariateSpline (ius):
             T = self.sx.get_knots() = self.sy.get_knots()
-        :FIXME: pour ('cubic','periodic'), len(self) != len(self.sx.x) => je crois que c'est bon maintenant
+        :FIXME: pour ('cubic','periodic'), len(self) != len(self.sx.x)
             probablement self.cpoints n'est pas fermée self[0] != self[-1]
+            => je crois que c'est bon maintenant
         :TODO AVEC PRÉCAUTIONS :
             - remplacer les appels à self.abscurv() par self.knots
             - et supprimer la valeur par defaut self.abscurv(T=None) => self.abscurv(T)
             - veiller à ce que self.abscurv retourne la vrai abscisse curviligne (absCurvReal)
         """
+#         return self.knots*self.longueur
+
         verif = True
         if not verif :
             return super(NSplineSimple, self).abscurv(T)
         ##################################################################
         #  En production, virer cette verification.
         ##################################################################
-        if not hasattr(self, 'sx') : #verification, : a-t-on loupé un update ?
-            msg = u"A-t-on loupe un _update ?"
-            msg += u"\nEn production, virer cette verification if hasattr(self, 'sx'):..."
-            rdebug(msg)
-            rstack()
-            pass
+        if not hasattr(self, '_sx') or self._sx is None : #verification, : a-t-on loupé un update ?
+            msg = u"pas de _sx, on le calcule ?"
+            self.computeSpline()
         else :
             W = absCurv(self.cpoints, normalise=True)
             K = self.knots
             if len(K) != len(self) :
-#                 rdebug(u'\n'+30*u'!'+u'\n    pour debogage de "%s"'%self.name,u'\n'+30*u'!')
                 rdebug(u"BUG : je fais un _update de la spline %s car len(K)=%d != %d=len(self)"%(len(self.knots), self.name, len(self.cpoints)))
                 self._update()
-#             if self.methode[0] in ('ius', 'us', 'cubic') :
-#                 k = self.methode[1]-1
-#                 debug(delta=self.knots-W)
-#                 ns = np.linalg.norm(W-self.knots, np.inf)
-#             elif self.methode[0] == 'cubic' :
-#                 if len(self.sx.x) != len(self) :
-#                     self._update()
             else :
                 ns = np.linalg.norm(W-self.knots, np.inf)
 #             else :
@@ -199,7 +187,7 @@ class NSplineSimple(NSplineAbstract):
         self._cpoints  = np.zeros((1,2))
 #         self._qcpolygon = QPolygonF([QPointF(0,0)])
         self.role       = self.classname
-        self.name      = self.classname#+'(%d)'%(id(self))
+        self.name       = self.classname#+'(%d)'%(id(self))
 #         self.qpolygon   = np.zeros((1,2))
         #debug("FIN")
 
@@ -218,19 +206,16 @@ class NSplineSimple(NSplineAbstract):
 
     @property
     def cpoints(self):
-        u"""points de contrôle, sous forme np.ndarray((n,2)),
-        [re-assemblé à chaque fois => NON]"""
-#         try :
+        u"""
+        points de contrôle, sous forme np.ndarray((n,2)), None si non initialisé
+        """
         return self._cpoints
-#         except AttributeError :
-#             self._cpoints = pointsFrom(self.qcpolygon)
-#             return self._cpoints
+
     @cpoints.setter
     def cpoints(self, points):
         u"""points de contrôle, sous forme np.ndarray((n,2))
         - points est un np.ndarray((n,2)) et ne doit pas avoir de points doubles consécutifs."""
-#         p = eliminerPointsDoublesConsecutifs(pointsFrom(points))
-#         p = points
+#         stack('points=%s'%points)
         if points is None or len(points)<1 :
             self._cpoints = np.zeros((0,2))
         else :
@@ -238,28 +223,66 @@ class NSplineSimple(NSplineAbstract):
         self._update()
 
     @property
+    def sx(self):
+        u"""La spline en x, recalculée si _sx n'existe pas"""
+        if not hasattr(self, '_sx') or self._sx is None:
+            if len(self._cpoints)>=2 :
+                _, self._sx, self._sy = computeSpline(self.cpoints, self.methode)
+            else : self._sx, self._sy = None, None
+        return self._sx
+
+    @property
+    def sy(self):
+        u"""La spline en y, recalculée si _sy n'existe pas"""
+        if not hasattr(self, '_sy') or self._sy is None:
+            if len(self._cpoints)>=2 :
+                _, self._sx, self._sy = computeSpline(self.cpoints, self.methode)
+            else : self._sx, self._sy = None, None
+        return self._sy
+
+
+    @property
     def knots(self):
-        if hasattr(self, 'sx') and hasattr(self, 'sy'):#Normalement ac, sx.x, sy.y sont identiques. Ce sont les knots
-#             debug(self.sx.__dict__)
-            try :
-                return self.sx._data[0]
-                # return self.sx.get_coeffs()#si methode=('ius',k)
+#         if hasattr(self, '_sx') and hasattr(self, '_sy') and self._sx is not None and self._sy is not None:
+#             debug(className(self._sx))
+            #Normalement ac, sx.x, sy.x sont identiques. Ce sont les knots
+            try : return self.sx.x#si methode = (cubic','xx')
+            except AttributeError as msg1:
+                debug(str(msg1))
+                try :return self.sx._data[0]
+                except AttributeError as msg2 :
+                    debug(str(msg2))
+                    try : return self.sx.get_knots()
+                    except AttributeError as msg3 :
+                        debug(str(msg3))
+#                         debug(str(msg1)+str(msg2)+str(msg3))
+                        return None
 
-            except AttributeError :
-                return self.sx.x#si methode = (cubic','xx')
-        else :
-            return None
-
-#             if len(ac) != len(sxx) or norm(ac-sxx) != 0.0 :
-#                 self._update()
-#                 return self.knots#recursif...
-#             else :
-#                 return sxx
-#         ac = self.abscurv()
-#         if len(ac) <= 1 : #sx n'esiste pas
-#             return ac
 #         else :
-#             return ac
+#             return None
+
+    def _update(self):
+        u"""
+        Suppression de tous les attributs self._xxx volatiles, ils sont
+            recalculés à la demande i.e. quand on appelle self.xxx
+        """
+        super(NSplineSimple, self)._update()# Suppression de tous les self._xxx
+        #ne pas supprimer, on teste si sx existe dans abscurv
+        try : del self._sx
+        except AttributeError : pass
+        try : del self._sy
+        except AttributeError : pass
+        # On ne recalcule pas les splines
+        #ce sera fait automatiquement en cas d'appel à self.sx, self.sy
+#         try :
+# #             #debug(methode=self.methode)
+#             self.computeSpline(self.methode)
+#         except TypeError as msg :
+# #             rdebug(self.name, msg)
+#             raise(msg)
+#         except AttributeError as msg :
+# #             rdebug(self.name, msg)
+#             raise(msg)
 
     def echantillonner(self, nbp=0, mode='linear', ta=0, tb=1, onlyT=False):
 #     def echantillonner(self, nbp=0, mode='segment', ta=0, tb=1, onlyT=False):
@@ -334,7 +357,7 @@ class NSplineSimple(NSplineAbstract):
             #On retourne les cpoints, simplement.
             #Utile pour conserver les shapes des anciens pj sans modification
             #Utile pour les Polylines et Polygones
-            T = self.abscurv()
+            T = self.knots
             self._epoints = np.copy(self.cpoints)
             if onlyT :
                 return T
@@ -500,7 +523,7 @@ class NSplineSimple(NSplineAbstract):
         try :
 #             debug('Avant computeSpline', self)
 #             pprint(self.toDump())
-            self._knots, self.sx, self.sy = computeSpline(self.cpoints, methode)
+            self._knots, self._sx, self._sy = computeSpline(self.cpoints, methode)
 #             rdebug('computeSpline:OK?')
 #             debug('Apres computeSpline', self.name)
             try : #On regarde si sx et sy existent. Sinon, on remonte l'exception
@@ -533,25 +556,6 @@ class NSplineSimple(NSplineAbstract):
                 rdebug(avirer=avirer, classename=self.classname, name=self.name, role=role)
                 self._cpoints = cpoints
                 self.computeSpline(methode)
-            # Ca fait le _update et ca rappelle self.computeSpline()
-#             ac = self.abscurv()
-#             dac = ac[1:]-ac[:-1]
-#             avirer = []
-#             for k, d in enumerate(dac) :
-#                 if abs(d)<=1.0e-10 :
-#                     avirer.append(k)
-# #                     self.removePoint(k)
-#             if avirer :
-#                 msg1 = 'Les points de controle %s sont des doublons consecutifs.'%avirer
-#                 msg1 += 'Suppression des doublons'
-#                 rdebug(msg1,'')
-# #                 rdebug(avirer=avirer, delta_abscurv=dac.tolist(), controle=sum(dac))
-#                 for k in reversed(avirer) :
-#                     self.removePoint(k, update=False)
-# #                 rdebug('apres nettoyage : ', cpoints = self.cpoints)
-#                 self.computeSpline(methode)
-# #                 #le cpoint.setter appele _update() qui rappelle computeSpline()
-# #                 self.cpoints = eliminerPointsDoublesConsecutifs(self.cpoints)
 
         except RuntimeWarning as msg :
 #             rdebug(msg)
@@ -573,7 +577,7 @@ class NSplineSimple(NSplineAbstract):
         """Localise t dans self.abscurv:retourne les deux entiers
         k1,k2  tels que k1 < t <= k2"""
         if t<0 or t>1 : return np.nan, np.nan
-        T = self.abscurv()
+        T = self.knots
         k = 0
         while T[k]<t : k+=1
         if T[k] == t : return k,k
@@ -839,7 +843,7 @@ class NSplineSimple(NSplineAbstract):
             s1.cpoints = c1
         s0 = self
         Td = linspace(0,1,1000)
-        T0 = self.abscurv()
+        T0 = self.knots
         c0 = s0.cpoints.copy()
         # d0 = asarray(s0(Td))
 
@@ -914,23 +918,21 @@ class NSplineSimple(NSplineAbstract):
             - n0, n1 = nb de points de contrôle avant et après élagage
 
         """
-#         eps = self.pourMille(eps)
-#         debug(eps=eps)
         if len(self) < 10 :
             rdebug(u"Élagage inutile, %d points de contrôle seulement"%len(self))
             return self, self.pourMille(0),(len(self),len(self))
-#         from matplotlib import pyplot as plt
         s0 = self
         nd = 5000
         Td = linspace(0,1,nd)
-        T0 = self.abscurv()
+#         T0 = self.abscurv()
+        T0 = self.knots
+        debug (knots=self.knots)
         c0 = s0.cpoints.copy()
         d0 = asarray(s0(Td))
         t, m = self.methode
         if t == 'cubic' and m == 'periodic' :#il faut au moins 3 points et c[0] = c[-1]
             init = (c0[0], self(0.33), self(0.66), c0[0])
             init = (c0[0], self(0.25), self(0.5), self(0.75), c0[0])
-#             A, B, C, D = c0[0], c0[1], c0[-2], c0[0]
             c1 = pointsFrom(init)
         elif dist2(c0[0], c0[-1]) < 1.0e-6 :
             c1 = pointsFrom((c0[0], self(0.5), c0[0]))
@@ -942,37 +944,23 @@ class NSplineSimple(NSplineAbstract):
                            name='%s-elaguee'%s0.name,
                            mode=s0.mode)
         d1 = asarray(s1(Td))
-#         rdebug(s1.longueur)
         for k in range(len(c0)) :
             ld2 = asarray([distance2PointSpline(c0[i], s1, t0=t).fun for i, t in enumerate(T0)])
             ld2[0] = ld2[-1] = 0.0
             imaxd = (ld2 == max(ld2)).nonzero()#indices du-des point-s ou la distance entre les deux splines est max
             idx = imaxd[0][0]
-#             debug(imaxd=imaxd)
             d = np.sqrt(max(ld2))
             d = self.pourMille(d)
             pos0 = c0[idx]#position(x,y)
-#             debug(u'idx=%d, t=%.4f, d=%.2g ‰'%(idx, t, d))#, self.pourMille(d)))
-#             print(u'd%d = np.asarray(%s)'%(k, str(np.sqrt(ld2).tolist())))
-#             print(u'd0%d = np.asarray(%s)'%(k, str(d0.tolist())))
-#             print(u'd1%d = np.asarray(%s)'%(k, str(d1.tolist())))
-#             print(u'insert_pos=%s'%pos0)
             try :
                 s1.insertPoint(pos0)
-#                 debug(res_insert=res)
-#                 s1.plot(plt)
             except ValueError as msg :#Impossible d'inserer le point (point double ?)
                 debug(u'je tente autre chose', msg, pos0=pos0)
-#                 debug(s0=s0.cpoints)
-#                 debug(s1=s1.cpoints)
-#                 rdebug()
-#                 nd += 10
                 Td = linspace(0,1,nd)
                 d0 = asarray(s0(Td))
                 d1 = asarray(s1(Td))
                 ad = norm(d0-d1, 2, axis=1)#[1:-1]#ecart point à point des deux splines discrétisées
                 mad = (ad == max(ad)).nonzero()#indice des points ou la distance entre les deux splines est max
-    #             debug(mad=len(mad), dist=ad[mad])
                 idx = mad[0]
                 t = Td[idx][0]
                 pos0 = d0[idx][0]
@@ -1046,7 +1034,7 @@ class NSplineSimple(NSplineAbstract):
 #         debug(eps=eps)
         s0 = self
         Td = linspace(0,1,1000)
-        T0 = self.abscurv()
+        T0 = self.knots
         c0 = s0.cpoints.copy()
         d0 = asarray(s0(Td))
         t, m = self.methode
@@ -1201,69 +1189,23 @@ def elaguer(p0, eps=1.0e-3):
         if nbiter%100 == 0 : print 'iteration %d : %.2g'%(nbiter, norm)
         return norm
 
-#     def fold(C, T):
-#         u"""Fonction à minimiser : distance de la spline S0 à la spline d'interpolation de C.
-#         C = famille de points de R^2 = np.ndarray((2*n)), mis a plat (avec np.ravel(C))"""
-# #         print T
-#         global nbiter
-#         nbiter += 1
-#         oldshape = C.shape#tableau a plat (np.ravel(C))
-#         C.shape = (len(C)/2,2)
-# #         Ts, Sx, Sy = splineInterpolation(C, 'c cubic')#la spline d'interpolation de C
-#
-#         S = NSplineSimple(cpoints=C, methode=methode)
-# #         print Ts
-#         C.shape = oldshape
-#         D = S(T)#discretisation de la spline S
-# #         D = asarray(zip(Sx(T), Sy(T)))
-# #         return np.sqrt(np.linalg.norm(D0-D))
-#         norm = np.linalg.norm(D0-D)
-#         if nbiter%10 == 0 : print 'iteration %d : %.2g'%(nbiter, norm)
-#         return norm
-
     def numPointsToKeep(C, lref, genre='shark'):
-#         T = absCurv(C)
-#         T, sx, sy = splineInterpolation(C, 'c cubic')
-#         S = NSplineSimple(cpoints=C)
-#         T = S.sx
-#         T/=T[-1]
-#         curv = scourbure((sx,sy), T)
         curv = courbure(C)*lref
         dcurv = np.abs(curv[:-1]-curv[1:])
-#         debug(dcurv=dcurv)
         tokeep = dcurv>0.1#pour sharknose : 0.12
 #         tokeep = dcurv>0.15#sans sharknose : 0.15
         #Dans tous les cas on en supprime un peu moins que la moitié
         nptk = set([idx for idx, tk in enumerate(tokeep) if tk])
         nptkp = set([idx+1 for idx in tokeep if idx+1 < len(curv)]) - nptk
         nptkm = set([idx-1 for idx in tokeep if idx-1 >= 0 ]) - nptk
-#         debug(tokeep=nptk)
-#         debug(nptkm=nptkm, nptkp=nptkp)
         nptk = nptk.union(nptkp.union(nptkm))
         return sorted(list(nptk))
 #
-#         encore = True
-#         while (encore) :
-#             encore = False
-#             for k1, k2 in zip(nptk[:-1], nptk[1:]) :
-#                 if np.linalg.norm(C[k1]-C[k2]) > 0.2 or k2-k1 > 10 :
-#                     encore = True
-#                     nptk.append((k1+k2)/2)
-#             nptk.sort()
-#             debug(nptk=nptk)
-#
-#         return nptk
-#     n = 2 # On garde 1 point sur n
-#     nba = len(C0)-1
     A = C0[ 0]
     B = C0[-1]
     corde = np.linalg.norm(B-A)
-#     debug(corde)
-#     numeros = list(set(range(0, len(p0), n) + [nba, len(p0)-1,]))
     numeros = list(set(numPointsToKeep(C0, corde) + [0,len(p0)-1,]))
     numeros.sort()
-#     nnba = numeros.index(nba)#On conserve l'emplacement du BA pour le modifier apres optimisation.
-#     numeros.remove(nba)
     fuera = list(set(range(len(p0))) - set(numeros))
     fuera.sort()
     print u'numeros des points conservé=%s'%str(numeros)
