@@ -15,7 +15,7 @@ from path import Path
 from config import VALIDATION_DIR#, SOURCES_DIR
 from splineabstraite import NSplineAbstract
 from splinesimple import NSplineSimple
-from utilitaires import (segmentPlusProche,debug, rdebug)
+from utilitaires.utilitaires import (segmentPlusProche,debug, rdebug)
 
 class NSplineComposee(NSplineAbstract):
     # prefs = preferences.SplinePrefs()

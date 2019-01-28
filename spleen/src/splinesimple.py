@@ -7,12 +7,12 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
+__updated__="2019-01-28"
 '''
-__updated__="2019-01-25"
-from utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff,
+from utilitaires.utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff,
     className)
 # from splineabstraite import absCurvReal
-from lecteurs import pointsFrom
+from utilitaires.lecteurs import pointsFrom
 import sys,os,math
 from array import array
 #
@@ -23,17 +23,17 @@ from numpy.linalg import  norm
 # from config import VALIDATION_DIR, RUNS_DIR
 from scipy.optimize import newton, minimize
 from pprint import pprint
-from utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
+from utilitaires.utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
 from splineabstraite import NSplineAbstract, computeSpline, distance2PointSpline
 # import cPickle
 
 class NSplineSimple(NSplineAbstract):
     class Default(object):
-        precision = 1000
+#         precision = 1000
         _methode  = ('ius',1)
-        mode      = 'linear'
-        nbpe      = 30
+#         mode      = 'linear'
+#         nbpe      = 30
 
     def __init__(self, **dump):# cpoints=None, name='spline', role='spline'):
         u"""
@@ -50,22 +50,34 @@ class NSplineSimple(NSplineAbstract):
             - 'name' : str ou unicode pour affecter un nom
             - 'role' : str ou unicode pour affecter un role...
         """
-#         debug(dump)
         #appel de setDefaultValues() puis de load(dump)
         super(NSplineSimple,self).__init__(**dump)
-        if self.mode in ('rayon', 'courbure') :
-            if self.methode == ('ius',1) :
-                raise ValueError(u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode )
+#         if self.mode in ('rayon', 'courbure') :
+#             if self.methode == ('ius',1) :
+#                 raise ValueError(u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode )
         self._update()#non appelé par SplineAbstract
 
     def load(self, dump):
         u"""Ce qui est commun à toutes les splines."""
-        super(NSplineSimple, self).load(dump)
+#         super(NSplineSimple, self).load(dump)
         u"""
         Attention, la cle est 'points'  dans les anciens projets, et 'cpoints' dans les nouveaux.
         OUI=>On affecte _cpoints directement qui évite l'appel au setter de cpoints (qui appelle _update()).
         cpoints DOIT être liste, tuple, array ou np.ndarray, sans points doubles consécutifs
         """
+        try :self.name = dump.pop('name')
+        except KeyError : pass
+
+        try :self.gparent = dump.pop('gparent')
+        except KeyError : pass
+
+        try : self.role = dump.pop('role')
+        except KeyError : pass
+        try :
+            self._methode = dump.pop('methode')
+        except KeyError :
+            pass
+
         for key in ('points', 'cpoints') :#la cle 'cpoints' est prioritaire, en cas
             if dump.has_key(key):
                 cpoints = dump.pop(key)
@@ -89,22 +101,15 @@ class NSplineSimple(NSplineAbstract):
         except AttributeError :
             pass
 
-
-    # @property
-    # def qcpolygon(self):
-    #     try :
-    #         return self._qcpolygon
-    #     except AttributeError :
-    #         self._qcpolygon = qpolygonFrom(self.cpoints)
-    #         return self._qcpolygon
-    # @property
-    # def qepolygon(self):
-    #     try :
-    #         return self._qepolygon
-    #     except AttributeError :
-    #         self._qepolygon = qpolygonFrom(self.epoints)
-    #         return self._qepolygon
-#     qpolygon = qepolygon
+    def toDump(self):
+        u"""Ce qui est commun à toutes les splines"""
+        return {
+                'classename' : className(self),#besoin de savoir quel type de spline.
+                'cpoints'    : self.cpoints.tolist(),
+                'role'       : self.role,
+                'name'       : self.name,
+                'methode'    : self.methode,
+                }
 
     @property
     def dpoints(self):
@@ -180,14 +185,13 @@ class NSplineSimple(NSplineAbstract):
 
     def setDefaultValues(self):
         """Valeurs par defaut:"""
-        self.precision = self.Default.precision
+#         self.precision = self.Default.precision
         self._methode  = self.Default._methode
-        self.mode      = self.Default.mode
-        self.nbpe      = self.Default.nbpe
+#         self.mode      = self.Default.mode
+#         self.nbpe      = self.Default.nbpe
         self._cpoints  = np.zeros((1,2))
-#         self._qcpolygon = QPolygonF([QPointF(0,0)])
-        self.role       = self.classname
-        self.name       = self.classname#+'(%d)'%(id(self))
+        self.role       = className(self)
+        self.name       = className(self)
 #         self.qpolygon   = np.zeros((1,2))
         #debug("FIN")
 
@@ -553,7 +557,7 @@ class NSplineSimple(NSplineAbstract):
             if len(cpoints) < len(self._cpoints) :#sinon ca boucle
                 try : role=self.role
                 except : role='pas de role'
-                rdebug(avirer=avirer, classename=self.classname, name=self.name, role=role)
+                rdebug(avirer=avirer, classename=className(self), name=self.name, role=role)
                 self._cpoints = cpoints
                 self.computeSpline(methode)
 

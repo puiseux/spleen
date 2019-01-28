@@ -13,12 +13,12 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 '''
 import sys,os,math,cPickle
 from path import Path
-from utilitaires import (stack, debug, rdebug, dist2, dist, rcercle)
+from utilitaires.utilitaires import (stack, debug, rdebug, dist2, dist, rcercle)
 import numpy as np
 from paramgeneraux import ProfsParamNew, ProfsParam
-from naca import naca4,naca5
+from profil.naca import naca4,naca5
 from splinecomposee import NSplineComposee
-from utilitairesprofil import computeCordeAndNBA
+from utilitaires.utilitairesprofil import computeCordeAndNBA
 from numpy import (zeros,)
 from numpy import asarray as array
 from scipy.optimize import newton

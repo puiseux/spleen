@@ -14,14 +14,14 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 '''
 
 from pprint import pprint
-from utilitaires import Path
-from profil import Profil
-from utilitaires import (debug, rdebug,dist2,dist)
+from utilitaires.utilitaires import Path
+from profil.profil import Profil
+from utilitaires.utilitaires import (debug, rdebug,dist2,dist)
 import numpy as np
 # import scipy as sp
 from numpy import linspace, log
 from scipy.optimize import newton
-from lecteurs import pointsFrom#, qpolygonFrom
+from utilitaires.utilitaires.lecteurs import pointsFrom#, qpolygonFrom
 from preferences import ProfilPrefs
 
 class ProfilNormalise(Profil):

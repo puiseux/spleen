@@ -61,7 +61,7 @@ def pointsFromFile(filename):
                 return np.asarray(dump['cpoints'])
             elif dump.has_key('dmodel') :
                 return np.asarray(dump['dmodel']['cpoints'])
-            else : 
+            else :
                 raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
         else :
             raise IOError(u"%s est un fichier '.spl' ; il devrait contenir un dictionnaire (dict Python) bien constitue."%filename.name)
@@ -143,7 +143,7 @@ class LecteurUniversel(object):
             self.lecteur=LecteurMatlab(filename)
             self.lire()
         elif 'svg' in ext:
-            from lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
+            from utilitaires.utilitaires.lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
             self.lecteur=LecteurSVG(filename)
             self.lire()
 

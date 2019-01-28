@@ -13,10 +13,10 @@ Description :
 '''
 import sys
 import numpy as np
-from lecteur import Lecteur
-import utilitaires
-from utilitaires import (my2dPlot,Path)
-from utilitaires import debug, rdebug, hardScale#, p2a
+from utilitaires.utilitaires.lecteur import Lecteur
+from utilitaires import utilitaires
+from utilitaires.utilitaires import (my2dPlot,Path)
+from utilitaires.utilitaires import debug, rdebug, hardScale#, p2a
 # from dxfgrabber import dxfentities
 # from geomdl import BSpline, utilities
 from matplotlib import pyplot as plt

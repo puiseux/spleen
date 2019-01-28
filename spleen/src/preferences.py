@@ -16,7 +16,7 @@ VERSION = 'v1-'+__updated__
 NAME = 'AXile'
 TEMPLATE = 'temp'
 import math
-from utilitaires import trace
+from utilitaires.utilitaires import trace
 #from config import LOG_FILES
 #from config import NB_BACKUP
 class SplinePrefs(object) :

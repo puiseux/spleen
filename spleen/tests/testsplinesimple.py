@@ -10,15 +10,15 @@ Description :
 '''
 from difflib import context_diff
 from collections import OrderedDict
-__updated__="2019-01-25"
+__updated__="2019-01-28"
 import os, sys
 from path import Path
 # print os.getcwd()
 from splinesimple import (NSplineSimple, placementReperesMontage,
                           elaguer, correctionReperesMontage)
-from utilitaires import (diff,)
+from utilitaires.utilitaires import (diff,)
 from splineabstraite import (distance2PointSpline,)
-from lecteurs import pointsFrom
+from utilitaires.lecteurs import pointsFrom
 import sys,os,math
 # from array import array
 
@@ -29,7 +29,7 @@ from numpy.linalg import  norm
 from config import VALIDATION_DIR, RUNS_DIR
 # from scipy.optimize import newton, minimize
 from pprint import pprint
-from utilitaires import (debug, debug,absCurv,dist2)
+from utilitaires.utilitaires import (debug, debug,absCurv,dist2)
 import cPickle
 def mesures(S0) :
     def fmt(r):return int(1000*r)/1000.0
@@ -858,6 +858,7 @@ def mainTest(show=True):
         if 1:
             testConstructeurs(filename, show=show)
             debug(titre='fin testConstructeurs %s'%filename.name)
+            exit()
         if 1:
             testSaveRead(filename, show=show)
             debug('fin testSaveRead %s'%filename.name)

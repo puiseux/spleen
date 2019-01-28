@@ -15,14 +15,13 @@ from numpy import asarray as array
 from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
 import cPickle
-from utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
+from utilitaires.utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
                         absCurv,dist2, baryCentre, centreGravite, simpson)
-from lecteurs import pointsFrom
-from lecteurs import LecteurUniversel
+from utilitaires.lecteurs import pointsFrom
+from utilitaires.lecteurs import LecteurUniversel
 # from numpy.core.defchararray import center
 from numpy import sqrt
 from scipy.integrate import quad
-
 
 def absCurvReal(S, T):
     u"""
@@ -62,8 +61,6 @@ def absCurvReal(S, T):
         res = array([absCurvReal(S, t) for t in T])
 #         res = asarray([quad(lambda s : sqrt(S.sx(s,1)**2+S.sy(s,1)**2), 0.0, t) for t in T])
         return res[:,0],  res[:,1]
-
-
 
 def distance2PointSpline(p, S, t0=0.5, tol=1.0e-9):
     u"""
@@ -253,7 +250,6 @@ def computeSpline(cpoints, methode):
     return T, sx, sy
 
 class NSplineAbstract(object):
-#NSplineAbstract a besoin d'heriter de QObject pour pouvoir emettre un SIGNAL
     u"""
     TODO :
     - l'echantillonnage ne doit plus être fixé à l'__init__ (suppression de nbpe, mode)
@@ -316,15 +312,11 @@ class NSplineAbstract(object):
     # defaultprefs = SplinePrefs()
     SUPPORTED_FILES = ('*.gnu', '*.dxf', '*.pts', '*.pkl','*.spl','*.npkl')
     def __init__(self, **dump):
-        try : parent = dump.pop('parent')
-        except KeyError : parent = None
         super(NSplineAbstract, self).__init__()
-        self.nbupdate = 0
-        self.gparent = parent
-#         self._sx = self._sy = lambda x, k : None
         self.setDefaultValues()
         self.load(dump)
 #         self._update()Doit etre appelé explicitement par les héritiers au bon moment
+
     def __call__(self, T, diff=0):
         u"""
         # Paramètre :
@@ -362,7 +354,12 @@ class NSplineAbstract(object):
 
     u"""methodes virtuelles pures"""
 ################################################################
+
     def setDefaultValues(self):
+        u"""Valeurs par defaut:"""
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
+    
+    def load(self):
         u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
@@ -372,541 +369,6 @@ class NSplineAbstract(object):
 
     def echantillonner(self, *args, **kargs):
         raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    @property
-    def dpoints(self):
-        raise NotImplementedError(u"la property %s doit etre implemente"%(whoami(self)[:-2]))
-
-    @property
-    def cpoints(self):
-        u"""points de contrôle, sous forme np.ndarray((n,2))"""
-        raise NotImplementedError(u"la property %s doit etre implemente"%(whoami(self)[:-2]))
-
-    @cpoints.setter
-    def cpoints(self, points):
-        u"""points de contrôle, sous forme np.ndarray((n,2))"""
-        raise NotImplementedError(u"la property %s doit etre implemente"%(whoami(self)[:-2]))
-
-    @property
-    def qcpolygon(self):
-        raise NotImplementedError(u"la property %s doit etre implemente"%(whoami(self)[:-2]))
-
-    @property
-    def qepolygon(self):
-        raise NotImplementedError(u"la property %s doit etre implemente"%(whoami(self)[:-2]))
-#
-    def hardRotate(self, alfa, centre=None):
-        u'''Rotation in-situ, self est modifié'''
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def hardScale(self, scale, centre=None):
-        u'''
-        Modif de la spline in-situ, i.e.self est modifié.
-        Mise à l'échelle scale, centrée sur centre. (en fait, une homothétie)
-        C'est à dire
-        >>> self[i] = centre + scale*(self[i]-centre)
-        si centre == None on prend l'isobarycentre
-        '''
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def symetriser(self, axe, centre=None):
-        u'''
-        Modif de la spline elle meme. self est modifié.
-        C'est à dire
-        >>> self[i,axe] = 2*centre -self[i,axe]
-        si centre == None on prend l'isobarycentre[axe]
-        '''
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def translate(self,vecteur):
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def appendPoint(self,pos):
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-#
-    def insertPoint(self, pos,k=None):
-        u"""Calcule dans quel segment il est raisonable d'insérer le point si k=None
-        ou bien insère le point en position k"""
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def removePoint(self, pnum):
-        u"""Suppression du point pnum de cpoints"""
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def copy(self):
-        u"""retourne une copie de self"""
-        dump = self.toDump()
-        return type(self)(**dump)
-#         raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def distance2To(self, p):
-        u"""
-        Calcule et retourne la distance de la spline self à un point p
-        :param p: tuple, liste ou QPointF le point
-        :return res le résultat, de type scipy.optimize.OptimizeResult
-        voir https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html
-            en particulier :
-
-        - res.nfev : int, nb evaluation de
-            phi(t)  = (a-x(t))**2 + (b-y(t))**2
-                    = (norme(self(t)-p))**2
-        - res.x : float, valeur de t réalisant cette distance
-        - res.fun : float, est le carré de la distance euclidienne trouvée
-            i.e. phi(t)
-        """
-        res = distance2PointSpline(p, self, t0=0.5, tol=1.0e-9)
-        return res
-################################################################
-    @property
-    def msg(self):
-        return u"%s doit etre implementer la methode %s"%(self.classname, whoami(self))
-    @property
-    def classname(self):
-        return self.__class__.__name__
-#     @property
-#     def methode(self):
-#         return self._methode
-#     @methode.setter
-#     def methode(self, newmethode):
-#         u"""Interdiction de changer de méthode (cubic, us, ius),
-#         On peut changer les paramètres de la méthode (clamped, not-a-knot,...)
-#         Pour changer de méthode, quand même, on peut faire :
-#         >>> S = SplineSimple(points=..., methode=meth1)
-#         >>> dump = S.toDump()
-#         >>> dump['methode'] = newmethode
-#         >>> S.load(dump)"""
-#         if newmethode[0] == self.methode[0] :
-#             self._methode = newmethode
-#             self._update()
-#         else :
-#             raise RuntimeError("Interdiction de changer de méthode")
-    @property
-    def precision(self):
-        return self._precision
-    @precision.setter
-    def precision(self, prec):
-        self._precision = prec
-        try : self._dpoints = self(np.linspace(0,1,prec))
-        except (AttributeError, TypeError) :
-#             rdebug(u'ouuuups!')#, len=len(self._cpoints))
-            pass
-#     @property
-#     def cpoints(self):
-#         u"""points de contrôle, sous forme np.ndarray((n,2)),
-#         [re-assemblé à chaque fois => NON]"""
-#         try :
-#             return self._cpoints
-#         except AttributeError :
-#             self._cpoints = pointsFrom(self.qcpolygon)
-#             return self._cpoints
-    @property
-    def epoints(self):
-        u"""points échantillonnés, sous forme np.ndarray((n,2))"""
-        try :
-            return self._epoints
-        except AttributeError :
-#             debug('*****')
-#             rdebug("*** (%s) Pas de _epoints, il faut echantillonner"%(self.name))#,self.nbpe,self.mode))
-#             raise ValueError
-#             rstack()
-            if len(self)<=1 :#pas encore de cpoints, ou une longueur nulle
-                self._epoints = np.zeros((1,2))
-                return self._epoints
-            try :
-                self.echantillonner()#nbp=self.nbpe, mode=self.mode)
-            except TypeError as msg :
-                rdebug(u'TypeError, Échantillonnage impossible', msg)
-                self._epoints = np.zeros((1,2))
-            except ValueError as msg :
-                rdebug(u'ValueError', msg)
-                self._epoints = np.zeros((1,2))
-#             rdebug("***fin echantillonner")
-            return self.epoints#recursif
-
-    # @property
-    # def qcontrol(self):#alias
-    #     u"""le QPolygonF des points de contrôle"""
-    #     return self.qcpolygon
-    @property
-    def longueur(self):
-        u"""Longueur vraie de la spline défini par self.sx, self.sy"""
-        try :
-            return self._longueur
-        except AttributeError :
-            self._longueur = self.abscurv(1)#absCurvReal(self,1.0)[0]
-#             self._longueur = self.knots[-1]#absCurvReal(self,1.0)[0]
-        return self._longueur
-
-    @property
-    def clongueur(self):
-        u"""Longueur du polyligne défini par les points de contrôle"""
-        return absCurv(self.cpoints)[-1]
-    @property
-    def dlongueur(self):
-        u"""Longueur du polyligne défini par les points de discrétistion"""
-        return absCurv(self.dpoints)[-1]
-    @property
-    def elongueur(self):
-        u"""Longueur du polyligne défini par les points échantillonés"""
-        return absCurv(self.epoints)[-1]
-    @property
-    def height(self):
-        try :
-            return self._height
-        except AttributeError :
-            try :
-                self._height = max(self.dpoints[:,1]) - min(self.dpoints[:,1])
-                return self._height
-            except (TypeError, AttributeError, ValueError) :
-                return 0.0
-    hauteur = height
-    @property
-    def width(self):
-        try :
-            return self._width
-        except AttributeError :
-            try :
-                self._width = max(self.dpoints[:,0]) - min(self.dpoints[:,0])
-                return self._width
-            except (TypeError, AttributeError, ValueError) :
-                return 0.0
-    largeur = width
-    def __str__(self):
-        return '\n ==> '.join(self.info)
-
-    __repr__ = __str__
-    
-    @property
-    def methode(self):
-        return self._methode
-
-    @property
-    def info(self):
-        infos=[
-                u"<%s>"%self.classname,
-                u'%20s = '%u'name'+u'%s'%self.name,
-                u'%20s = '%u'role'+u'%s'%self.role,
-                u'%20s = '%u'closed'+u'%s'%self.isClosed(),
-                u'%20s = '%u'nb pts controle'+u"%d"%len(self.cpoints),
-                u'%20s = '%u'methode'+u"%s"%str(self.methode),
-#                 u'%20s = '%'precision affichage'+"%s"%str(self.precision),
-                u'%20s = '%u'mode echantillonage'+u"%s"%self.mode,
-                u'%20s = '%u'nb pts echantillon'+u"%s"%self.nbpe,
-                u'%20s = '%u'nb updates'+u"%s"%self.nbupdate,
-                ]
-        i = u'largeur, hauteur'
-        try :
-            i1 = u"%g, %g"%(self.width, self.height)
-        except Exception as msg :
-            i1 = u"? (%s, %s)"%(self.classname, msg)
-        infos.append(u'%20s = '%i+i1)
-
-        i = u'position cg'
-        try :
-            i1 = u"%g, %g"%(self.centre[0], self.centre[1])
-        except Exception as msg :
-            i1 = u"? (%s, %s)"%(self.classname, msg)
-        infos.append(u'%20s = '%i+i1)
-
-        i = u'longueur'
-        try :
-            i1 = u"%g"%(self.dlongueur)
-        except Exception as msg :
-            i1 = u"? (%s, %s)"%(self.classname, msg)
-        infos.append(u'%20s = '%i+i1)
-
-        return infos
-
-#     def fromFile(self, filename):
-#         u"""Destructif, charge une spline depuis un fichier
-#         >>> spl = NSplineSimple()
-#         >>> spl.fromFile('toto.spl')"""
-#         with open(filename,'r') as f :
-#             dump = eval(f.read())
-#         self.load(dump)
-
-    def load(self, dump):
-        u"""
-        :param dump: un dictionnaire
-        Ce qui est commun à toutes les splines"""
-        try :self.name = dump.pop('name')
-        except KeyError : pass
-
-        try :self.gparent = dump.pop('gparent')
-        except KeyError : pass
-
-        try : self.role = dump.pop('role')
-        except KeyError : pass
-        try :
-            self._methode = dump.pop('methode')
-        except KeyError :
-            pass
-        try :
-            self.precision = dump.pop('precision')
-        except KeyError :
-            pass
-        try :
-            self.nbpe = dump.pop('nbpe')
-        except KeyError :
-            pass
-        try :
-            self.mode = dump.pop('mode')
-        except KeyError :
-            pass
-
-    def toDump(self, format_='new'):
-        u"""Ce qui est commun à toutes les splines"""
-#         raise NotImplementedError(u"la methode %s() doit etre implemente"%(whoami(self)[:-2]))
-        if format_=='new':
-            return {
-                    'classename' : self.classname,#besoin de savoir quel type de spline.
-                    'cpoints'    : self.cpoints.tolist(),
-                    'role'       : self.role,
-                    'name'       : self.name,
-                    'methode'    : self.methode,
-                    'precision'  : self.precision,
-                    'mode'       : self.mode,
-                    'nbpe'       : self.nbpe
-                    }
-        elif format_=='old' :
-            #pour compatibilité ascendante
-            return {
-                    'points'     : self.epoints.tolist(),
-                    'name'       : self.name,
-                    }
-
-    def save(self, filename):
-        filename = Path(filename)
-        ext = filename.ext
-#         debug(filename=filename, ext=ext)
-        try :
-            if ext in (".gnu", '.txt'):
-                #seulement les points échantillonnés
-                np.savetxt(filename, self.epoints)
-            # elif ext==".pts":
-            #     #seulement les points échantillonnés
-            #     writeProfil(filename, self.epoints)
-            # elif ext=='.npkl':
-                #Spline complète, pickle
-                cPickle.dump(self.toDump('new'),open(filename,'w'))
-            elif ext=='.pkl':
-                #seulement les points échantillonnés
-                cPickle.dump(self.toDump('old'),open(filename,'w'))
-            elif ext=='.npkl':
-                cPickle.dump(self.toDump('new'),open(filename,'w'))
-            elif ext=='.spl':
-                #Spline complète, dict
-                with open(filename,'w') as f :
-                    f.write(str(self.toDump()))
-            elif ext=='.dxf':
-                raise NotImplementedError('Format dxf')
-            debug('Sauvegarde %s : OK'%filename)
-        except Exception as msg:
-            rdebug(msg, 'Sauvegarde %s : impossible'%filename)
-
-    def open(self, filename):
-        filename = Path(filename)
-        ext = filename.ext
-        #debug(filename=filename)
-        if ext in (".gnu", '.txt'):
-            dump = self.toDump()
-            dump['cpoints'] = np.loadtxt(filename)
-        elif ext==".pts":
-            dump = self.toDump()
-            dump['cpoints'] = LecteurUniversel(filename).points
-        elif ext in ('.pkl', '.npkl'):
-            dump = cPickle.load(open(filename,'r'))
-            for key in ('points', 'cpoints') :
-                if dump.has_key(key) :
-                    dump[key] = pointsFrom(dump.pop(key))
-#         #debug(dump=dump)
-        self.load(dump)
-
-    def close_(self) :
-        u'''Si le qcpolygon est EXACTEMENT fermé (eps=0.0), on ne rajoute pas de point.'''
-#        self.isclosed = True
-        if self.isClosed(0.0) :
-            return False
-        else :
-            self.appendPoint(self[0])
-            return True
-
-    def isClosed(self,eps=1.0e-8):
-        u'''self[0] == self[-1] a eps près'''
-        cp = self.cpoints
-        if len(cp)>0 : return len(self)>1 and dist2(cp[0],cp[-1])<=eps*eps# np.all(self.cpoints[0] == points[-1]):
-
-    def __len__(self):
-        return len(self.cpoints)
-#         return len(self.epoints)
-
-#     def __call__(self,k):
-#         u"""
-#         Pour accéder aux points du polygone echantillonné (en lecture)
-#         ne traite pas les slices
-#         Retourne un tuple (x,y)
-#         >>> S = NSplineSimple(points=....)
-#         >>> S[3]
-#         [10.0,3.14] le point points[3]
-#         ne gère pas les slices
-#         >>> S[1:3]
-#         ... AttributeError: 'QPolygonF' object has no attribute 'x'
-#         """
-#         return self.epoints[k]
-
-    def __getitem__(self,k):
-        u"""
-        Pour accéder aux points du polygone de controle (en lecture)
-        ne traite pas les slices
-        Retourne un tuple (x,y)
-        >>> S = NSplineSimple(points=....)
-        >>> S[3]
-        [10.0,3.14] le point points[3]
-        ne gère pas les slices
-        >>> S[1:3]
-        ... AttributeError: 'QPolygonF' object has no attribute 'x'
-        """
-        return self.cpoints[k]
-#         return self.qcpolygon[k].x(),self.qcpolygon[k].y()
-
-    def __setitem__(self,k,value):
-        u"""
-        mise à jour du polygone de contrôle et du polygone seulement
-        Typiquement, on pourra ecrire
-        >>> S = NSplineSimple(cpoints=[(1,1),(2,2),(3,3)])
-        >>> S[1] = 20,30
-        >>> print S[1]
-        [20.0, 30.0]
-        """
-        if np.all(self._cpoints[k]==value) : #inutile de déclencher un _update()
-            return
-        self.cpoints[k] = value
-        self._update()#indispensable pour mettre à jour self.cpoints et dpoints
-
-#
-#
-#     @property
-#     def width(self):
-#         return self.qcpolygon.boundingRect().width()
-#
-#     @property
-#     def height(self):
-#         return self.qcpolygon.boundingRect().height()
-
-#     def eabscurv(self):
-#         u"""Les abscisses curvilignes normalisées des points échantillonnés,
-#         entre 0 et 1.
-#             recalculées si besoin. Ce sont aussi les paramètres t de la spline sx et sy
-#         """
-#         if hasattr(self, '_eabscurv') and hasattr(self, 'sx'): #normalement s'il y a l'un il y a l'autre
-#             return self._eabscurv
-#         else :
-#             self._eabscurv = absCurv(self.epoints, normalise=True)
-#             return self._eabscurv
-
-
-    def abscurv(self, T):
-#         raise NotImplementedError(self.msg)
-        u"""
-        :return :
-
-        - si T != None les abscisses curvilignes NON NORMALISÉES  des points S(T)
-        - si T == None, les abscisses curvilignes NORMALISÉES (entre 0 et 1) des points de contrôle,
-            recalculées si besoin. Ce sont aussi les knots sx.x et sy.y des deux splines sx et sy
-        :TODO: remplacer les appels à self.abscurv() par self.knots et
-            supprimer la valeur par defaut T=None
-        """
-#         if T is not None :
-        return absCurvReal(self, T)[0]#plus cher, plus précis ?
-#             ##############################################################
-#             #return absCurv(self(T), normalise=False)
-#             #Faux la vraie abscisse curviligne est absCurvReal(self, T)[0]
-#             ##############################################################
-#         else :
-#         ##############################################################
-#         # Ci dessous, _knots est exactement self.knot.
-#         # Inutile de le recalculer
-#         ##############################################################
-#         if hasattr(self, '_knots') and hasattr(self, '_sx'):
-#             #normalement s'il y a l'un il y a l'autre
-#             return self._knots
-#         else :
-#             self._knots = absCurv(self.cpoints, normalise=True)
-#             return self._knots
-    @property
-    def knots(self):
-        u"""retourne les knots de la spline, c'est a dire les T tesls que S(T) = self.cpoints"""
-        raise NotImplementedError(u"la methode %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def courbure(self, T) :
-        dx,  dy  = self.sx(T, 1), self.sy(T, 1)
-        d2x, d2y = self.sx(T, 2), self.sy(T, 2)
-        norm3_d2 = np.sqrt(dx**2+dy**2)**3
-        sc = (dx*d2y-dy*d2x)/(norm3_d2)
-        # si norm_d2=0, x"(t)=y"(t)=0, c'est une droite, courbure nulle
-#         sc[np.where(norm3_d2 < 1.0e-12)] = 0.0
-        return sc
-
-    def integraleCourbure(self, a=0, b=1, n=100):
-        """Integrale de la valeur absolue de la courbure, caractérise la régularité de la courbe"""
-# def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
-#     u"""Integrale de f sur [a,b], méthode de Simpson composite. (ordre 3)
-#     n DOIT être pair"""
-        h = float(b-a)/n
-        T = np.linspace(a, b, n+1)
-        C = abs(self.courbure(T))
-        A1 = C[0] + C[-1]
-        A2 = 2*sum(C[i] for i in range(2,n) if i%2==0)
-        A4 = 4*sum(C[i] for i in range(1,n) if i%2==1)
-    #         debug (h, A1, A2, A4, (h/3)*(A1 + A2 + A4))
-        return (h/3)*(A1 + A2 + A4)
-
-
-
-    @property
-    def center(self):
-        '''isoBayrcentre'''
-        if self.isClosed() :
-            return baryCentre(self.cpoints[:-1]).flatten()
-        else :
-            return baryCentre(self.cpoints).flatten()
-    centre=center
-
-    @property
-    def role(self):
-        return self._role
-    @role.setter
-    def role(self,role):
-        self._role=role
-
-    @property
-    def shape(self):
-        u"""La shape au sens NumPy"""
-        return self.cpoints.shape
-
-#     @property
-#     def qdpolygon(self):
-#         u"""Les points discrétisés de la spline"""
-# #         #debug ()
-#         return qpolygonFrom(self.dpoints)
-
-    def boundingRect(self):
-        dpts = self.dpoints
-        xM, xm, yM, ym = dpts[:,0].max(), dpts[:,0].min(), dpts[:,1].max(), dpts[:,1].min()
-        return xm,ym,xM,yM
-
-    # def controlBoundingRect(self):
-    #     return self.qcpolygon.boundingRect()
-
-    @property
-    def gravitycenter(self):
-        u"""Le centre de gravité de la surface délimitée par le polygone fermé."""
-        return centreGravite(self.dpoints)
-
-    @property
-    def barycentre(self):
-        u"""Le centre de gravité de la surface délimitée par le polygone fermé."""
-        return baryCentre(self.cpoints)
 
     def _update(self):
         u'''
@@ -918,7 +380,7 @@ class NSplineAbstract(object):
         ultra privée, ne pas l'appeler de l'extérieur.
         Supprime et recalcule tout, en particulier les splines sx et sy
         '''
-        self.nbupdate +=1
+#         self.nbupdate +=1
 #         debug(nbupdate=self.nbupdate)
         try : del self._qcpolygon
         except AttributeError : pass

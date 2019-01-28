@@ -13,7 +13,7 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 '''
 __updated__ = "2018-07-01"
 import sys,os
-from utilitaires import debug,rdebug
+from utilitaires.utilitaires import debug,rdebug
 
 class ProfsParamNew(object):
     u'''
