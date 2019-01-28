@@ -1,0 +1,6 @@
+README.md
+spleen.egg-info/PKG-INFO
+spleen.egg-info/SOURCES.txt
+spleen.egg-info/dependency_links.txt
+spleen.egg-info/not-zip-safe
+spleen.egg-info/top_level.txt
