@@ -47,7 +47,7 @@ def testNSplineComposee():
     filename=Path(VALIDATION_DIR,'simple','demi-cercle.gnu')
     filename=Path(VALIDATION_DIR,'simple','profil.gnu')
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
-    filename=Path(VALIDATION_DIR,'reference.pts')
+#     filename=Path(VALIDATION_DIR,'reference.pts')
 
     k=0
     for methode in (
@@ -191,7 +191,7 @@ def testNSplineComposee():
 
 
 def debugNSplineComposee():
-    from lecteurs import pointsFrom
+#     from lecteurs import pointsFrom
     S0 = NSplineComposee()
     print S0
 #     return
@@ -213,9 +213,9 @@ def debugNSplineComposee():
     filename=Path(VALIDATION_DIR,'simple','anguleux.gnu')
     filename=Path(VALIDATION_DIR,'simple','extrados.gnu')
     filename=Path(VALIDATION_DIR,'simple','demi-cercle.gnu')
-    filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
+#     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
     filename=Path(VALIDATION_DIR,'simple','profil.gnu')
-    filename=Path(VALIDATION_DIR,'reference0.pts')
+#     filename=Path(VALIDATION_DIR,'reference0.pts')
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
 
     k=0
@@ -326,7 +326,7 @@ def debugNSplineComposee():
         S.plot(plt, titre='insertPoint(%s)'%str(pt))
     except ValueError as msg :
         print msg
-    debug(points=S.cpoints.totxt())
+    debug(points=S.cpoints.tolist())
     i = len(S)/2
     S.insertPoint(pt,i)
     S.plot(plt, titre='insertPoint(%s,%d)'%(pt,i))
