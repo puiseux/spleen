@@ -10,7 +10,7 @@ Description :
 '''
 from numbers import Number
 import numpy as np
-from numpy import asarray as array
+from numpy import asarray as array, linspace
 
 from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
@@ -22,6 +22,7 @@ from utilitaires.lecteurs import LecteurUniversel
 # from numpy.core.defchararray import center
 from numpy import sqrt
 from scipy.integrate import quad
+from scipy.interpolate.fitpack2 import LSQUnivariateSpline
 
 def absCurvReal(S, T):
     u"""
@@ -177,7 +178,7 @@ def computeSpline(cpoints, methode):
 
     if type_ == 'cubic' :
         if parametres in ('periodic', 'per', 'periodique') :
-            #il faut au moins 3 points, avec P[0]==P[-1] 
+            #il faut au moins 3 points, avec P[0]==P[-1]
             #et un des points intermediaires P[k]!=P[0]
             if len(cpoints)<3 :
                 _knots, sx, sy = np.zeros((2,)), None, None
@@ -219,6 +220,8 @@ def computeSpline(cpoints, methode):
 #             sx = sy = None
 
     elif type_ == 'us' :
+        #UnivariateSpline(x, y, w=None, bbox=[None, None], k=3,
+        #                 s=None, ext=0,check_finite=False)
         weights = np.ones(N)
         W = 1000.0
         # eps = 1.0e-5#NPrefs.EPS
@@ -228,10 +231,42 @@ def computeSpline(cpoints, methode):
         # abs(x1-f(t1))<eps/(N*W) et abs(xN-f(tN))<eps/(N*W)
         weights[0] = weights[-1] = W
         weights /= np.sum(weights)
+
         # s = eps/(N*W)
 #         debug(len(T), parametres)
-        sx = UnivariateSpline(T, X, **parametres)#s=la précision de l'ajustement s=0 <=> interpolation
-        sy = UnivariateSpline(T, Y, **parametres)
+        sx = UnivariateSpline(T, X, k=parametres, w=None, s=1.0e-10)#s=la précision de l'ajustement s=0 <=> interpolation
+        sy = UnivariateSpline(T, Y, k=parametres, w=None, s=1.0e-10)
+#         sx = UnivariateSpline(T, X, w=weights, k=parametres, s=s)#s=la précision de l'ajustement s=0 <=> interpolation
+#         sy = UnivariateSpline(T, Y, w=weights, k=parametres, s=s)
+#         weights = np.ones(N)
+#         W = 1000.0
+#         eps = NPrefs.EPS
+#         # en supposant que tous les termes erreur di^2=wi*(xi-f(ti))^2 sont egaux
+#         # le choix de s suivant implique
+#         # abs(xi-f(ti))<eps et
+#         # abs(x1-f(t1))<eps/(N*W) et abs(xN-f(tN))<eps/(N*W)
+#         weights[0] = weights[-1] = W
+#         weights /= np.sum(weights)
+#         s = eps/(N*W)
+#
+#         sx = UnivariateSpline(T, X, w=weights, k=parametres, s=s)#s=la précision de l'ajustement s=0 <=> interpolation
+#         sy = UnivariateSpline(T, Y, w=weights, k=parametres, s=s)
+    elif type_ == 'lsqus' :
+        raise NotImplementedError ('LSQUnivariateSpline non implemente')
+        #LSQUnivariateSpline(x, y, t, w=None, bbox=[None, None], k=3, ext=0,
+        #                       check_finite=False)
+        weights = np.ones(N)
+        W = 1000.0
+        # eps = 1.0e-5#NPrefs.EPS
+        # en supposant que tous les termes erreur di^2=wi*(xi-f(ti))^2 sont egaux
+        # le choix de s suivant implique
+        # abs(xi-f(ti))<eps et
+        # abs(x1-f(t1))<eps/(N*W) et abs(xN-f(tN))<eps/(N*W)
+        weights[0] = weights[-1] = W
+        weights /= np.sum(weights)
+        knots = linspace(0,1,20)
+        sx = LSQUnivariateSpline(T, X, knots, k=parametres, w=None)#s=la précision de l'ajustement s=0 <=> interpolation
+        sy = LSQUnivariateSpline(T, Y, knots, k=parametres, w=None)
 #         sx = UnivariateSpline(T, X, w=weights, k=parametres, s=s)#s=la précision de l'ajustement s=0 <=> interpolation
 #         sy = UnivariateSpline(T, Y, w=weights, k=parametres, s=s)
 #         weights = np.ones(N)
@@ -267,7 +302,7 @@ class NSplineAbstract(object):
     ========================================================================
     Une NSpline est constitué de
     - self.cpoint (property) les points de contrôle sous forme np.ndarray((n,2))
-        C'est lui qui fait référence 
+        C'est lui qui fait référence
     - self.cpoints(points) = le setter de self.cpoints, appelle self._update()
     - self.sx, self.sy : une spline parametrique d'interpolation calculées par scipy
     - self.dpoints (property) les points de la spline discrétisée pour visualisation,
@@ -279,7 +314,7 @@ class NSplineAbstract(object):
     - self.nbpe : nb points d'echantillonnage.
     - self.name : le nom de la spline
     - self.role : chaine de caractères, le rôle.
-    
+
     Méthodes :
     --------
     - self.abscurv() : recalcule les abscisses curvilignes des cpoints, stocké dans _knots.
@@ -358,7 +393,7 @@ class NSplineAbstract(object):
     def setDefaultValues(self):
         u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
-    
+
     def load(self):
         u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))

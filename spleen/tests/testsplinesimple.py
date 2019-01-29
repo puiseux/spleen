@@ -8,22 +8,24 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
+from matplotlib import pyplot as plt
 from difflib import context_diff
 from collections import OrderedDict
-__updated__="2019-01-28"
+from scipy.interpolate import dfitpack
+__updated__="2019-01-29"
 import os, sys
 from path import Path
 # print os.getcwd()
 from splinesimple import (NSplineSimple, placementReperesMontage,
                           elaguer, correctionReperesMontage)
-from utilitaires.utilitaires import (diff,)
+from utilitaires.utilitaires import (diff,XY)
 from splineabstraite import (distance2PointSpline,)
 from utilitaires.lecteurs import pointsFrom
 import sys,os,math
 # from array import array
 
 import numpy as np
-from numpy import log, linspace, asarray, sqrt
+from numpy import log, linspace, asarray, sqrt, zeros
 from numpy.linalg import  norm
 # import scipy as sp
 from config import VALIDATION_DIR, RUNS_DIR
@@ -48,12 +50,132 @@ def mesures(S0) :
          'sinuosite':fmt(s)}
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
 
-def testConstructeurs(filename, show=True) :
+def testSequenceBasique(filename, show=True):
+    """Une séquence basique d'utilisation de spline"""
+    debug(titre='testSequenceBasique %s'%filename.name)
+    debug(paragraphe='0. NSplineSimple() ')
+    S = NSplineSimple()
+    debug(S=S)
+
+    c, d, knots = S.cpoints, S.dpoints, S.knots
+    print 'cpoints =', c, type(c), c.shape
+    print 'dpoints =', d, type(d), d.shape
+    print '  knots =', knots, type(knots), knots.shape
+    debug(titre='differentes methodes %s'%filename.name)
+    for k, methode in enumerate((
+                                ('us',1),#'linear'),
+#                                 ('us',2),#'linear'),
+                                ('us',3),#'courbure'),
+#                                 ('us',4),#'courbure'),
+#                                 ('us',7),#'courbure'),
+                                ('ius',1),#'courbure'),
+                                ('ius',3),#'courbure'),
+#                                 ('lsqus',1),#'linear'),
+#                                 ('lsqus',2),#'linear'),
+#                                 ('lsqus',3),#'courbure'),
+#                                 ('lsqus',4),#'courbure'),
+                                ('cubic','not-a-knot'),
+                                ('cubic','periodic'),
+                                ('cubic','natural'),
+                                ('cubic',((1, 0, -5), (1, 0, -5))),
+                                ('cubic',((2, 0, 0), (1, 0, -5))), #extrados
+                                ('cubic',((1, 0, -5), (2, 0, 0))), #intrados
+#                                 ('ius',7),#'courbure'),
+                                )):
+        debug(paragraphe='1. methode-%d=%s (fichier %s)'%(k, str(methode),filename.name))
+        S = NSplineSimple(cpoints=pointsFrom(filename), methode=methode, name=str(methode))
+        debug(S)
+        try : debug(S._dpoints.shape)
+        except AttributeError as msg:debug(u'    Normal pas de S._dpoints : %s'%str(msg))
+        except Exception as msg : debug(str(msg))
+        try : debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
+        except Exception as msg : debug(str(msg))
+        debug(paragraphe='2. S._update() methode-%d=%s  (fichier %s)'%(k, str(methode),filename.name))
+        S._update()
+        try :debug(S._dpoints)
+        except AttributeError as msg:debug(u'    Normal pas de S._dpoints : %s'%str(msg))
+        try : debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
+        except Exception as msg : debug(str(msg))
+        debug(S)
+        if show :
+            try : S.plot(plt, show=True)
+            except Exception as msg :
+                debug(str(msg))
+                plt.plot(title=str(msg))
+                plt.title(str(msg)+'\n'+str(methode))
+                plt.show()
+        debug('    Longueurs (c,d)=(%.5g,%.5g) ; nspline=%d'%(S.longueur('c'),S.longueur('d'), S.nbspline))
+#         debug('Longueurs (c,d,e)=(%.5g,%.5g,%.5g)'%(S.longueur('c'),S.longueur('d'),S.longueur('e')))
+
+        i, p = len(S)/2, S.centregravite
+        debug(paragraphe='3. S[%d]=[%.3g, %.3g], methode-%d=%s  (fichier %s)'%(i, p[0], p[1], k, str(methode),filename.name))
+        oldp = S[i].copy()
+        S[i] = p
+        debug(S[i],oldp=oldp)
+        debug('    Longueurs (c,d)=(%.5g,%.5g) ; nspline=%d'%(S.longueur('c'),S.longueur('d'), S.nbspline))
+        debug('    S(1)=%s'%S(1.0))#ne donne pas tout a fait cpoints[-1]
+        ac = absCurv(S._cpoints, normalise=True)
+        print '    abscurv=',ac.shape, 'knots=',S.knots.shape, 'cpoints=',S._cpoints.shape
+        print '    norm(S(ac)-S._cpoints)=',norm(S(ac)-S._cpoints)
+        print '    norm(ac-S.knots)',norm(ac-S.knots)
+        if show : S.plot(plt,show=True, titre='%s : modif S[%d]=[%.3g, %.3g]'%(filename.name, i, p[0], p[1]))
+        debug(S[i],oldp=oldp)
+        S[i] = oldp
+        debug(paragraphe='4. echantillonnage methode-%d=%s  (fichier %s)'%(k, str(methode),filename.name))
+        S.nbpe = 120
+        print 'mode=',S.mode, ', epoints=',S.epoints.shape
+        e0, mode0 = S.epoints, S.mode
+        print 'mode=',S.mode, ', epoints=',e0.shape
+        print 'T = %s'%S.tech.tolist()
+        S.mode = 'cos'#efface tech et epoints
+        e1, mode1 = S.epoints, S.mode
+        print 'mode=',S.mode, ', epoints=',e0.shape
+        print 'T = %s'%S.tech.tolist()
+        #on regarde si ca se recalcule bien apres suppression epoints et tech
+        del S._epoints, S._tech
+        e2, mode2 = S.epoints, S.mode
+        print 'mode=',S.mode, ', epoints=',e2.shape
+        print 'T = %s'%S.tech.tolist()
+        print 'epoints norme(e1-e2)=%.3g'%norm(e1-e2)
+        S.mode = 'x3'#efface tech et epoints
+        e2, mode2 = S.epoints, S.mode
+        print 'mode=',S.mode, ', epoints=',e2.shape
+        print 'T = %s'%S.tech.tolist()
+        S.mode = 'courbure'#efface tech et epoints
+        mode3 = S.mode
+        try :
+            e3, mode3 = S.epoints, S.mode
+            print 'mode=',S.mode, ', epoints=',e3.shape
+            print 'T = %s'%S.tech.tolist()
+            X3, Y3 = XY(e3)
+        except ValueError as msg :
+            print 'methode %s, mode echantillonnage = %s : %s'%(str(S.methode), str(S.mode), str(msg))
+            X3,Y3 = zeros((0,)), zeros((0,))
+        X0, Y0 = XY(e0)
+        X1, Y1 = XY(e1)
+        X2, Y2 = XY(e2)
+#         if show : S.plot(plt,show=True)
+        if show :
+#             plt.plot(X0,Y0,'r.-',label='%s : mode=%s'%(S.name,mode0))
+            plt.plot(X1,Y1,'b.-',label='%s : mode=%s'%(S.name,mode1))
+#             plt.plot(X2,Y2,'k.-',label='%s : mode=%s'%(S.name,mode2))
+            plt.plot(X3,Y3,'m.-',label='%s : mode=%s'%(S.name,mode3))
+            plt.legend()
+            plt.axis('equal')
+            plt.show()
+
+
+
+
+
+
+def testConstructeurs(filename, show=False) :
     debug(titre='testConstructeurs %s'%filename.name)
     from matplotlib import pyplot as plt
     p = NSplineSimple()
     debug(paragraphe='1. constructeur vide')
-    print p
+    debug(show=show)
+    debug(p=p)
     p = NSplineSimple(cpoints=np.zeros((0,2)),
                       parent=None,
                       methode=('cubic','periodic'),
@@ -68,17 +190,31 @@ def testConstructeurs(filename, show=True) :
     debug(paragraphe='3. p vide => p.cpoints=points de %s'%filename.name)
     points = pointsFrom(filename)
     p.cpoints = points
-#     debug(points)
     if show : p.plot(plt, titre='cpoints=pointsFrom()')
 
     S0 = NSplineSimple(points=pointsFrom(filename),
                        methode=('cubic','periodic'),
-                       mode='courbure',name=filename.name)
+#                        mode='courbure',
+                       name=filename.name)
     debug(S0)
-    dump00 = S0.toDump()
-#     debug('dump00')
-#     pprint(dump00)
     if show :S0.plot(plt, titre=filename.name)
+
+    debug(paragraphe='4. S = NSplineSimple(**dump00) (points:%s)'%filename.name)
+    dump00 = S0.toDump()
+    debug("dump00")
+    pprint(dump00)
+    S = NSplineSimple(**dump00)
+    debug("dump00==S.toDump() : %s"%dump00==S.toDump())
+
+    debug(paragraphe='4. S1 = S0.copy() (points:%s)'%filename.name)
+    S = S0.copy()
+    debug("dump00==S1.toDump() : %s"%dump00==S.toDump())
+
+
+
+
+
+
 
     filename = Path(RUNS_DIR, 'spline.npkl')
     S0.save(filename=filename)
@@ -832,7 +968,7 @@ def testCorrectionRM(show=True):
 #     plt.title(msg)
 #     if show : plt.show()
 
-def mainTest(show=True):
+def mainTest(show=False):
     files = [Path(VALIDATION_DIR,'unenervure2d.gnu'),
             Path(VALIDATION_DIR,'1.gnu'),
             Path(VALIDATION_DIR,'simple','simple2d1.gnu'),
@@ -855,6 +991,9 @@ def mainTest(show=True):
 
     debug(titre='TODO : methode=("us",k) ne marche pas')
     for filename in files[0:3] :
+        if 1:
+            testSequenceBasique(filename, show=show)
+            debug(titre='fin testSequenceBasique %s'%filename.name)
         if 1:
             testConstructeurs(filename, show=show)
             debug(titre='fin testConstructeurs %s'%filename.name)
