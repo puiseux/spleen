@@ -5,7 +5,7 @@
 Created on 11 mai 2012
 
 @author: puiseux
-__updated__ = '2019-01-25'
+__updated__ = '2019-01-31'
 '''
 import datetime
 import gc  # garbage colector
@@ -37,6 +37,7 @@ from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
 from scipy.optimize import minimize_scalar
 from shapely.geometry import LinearRing, Point, Polygon
 from matplotlib import pylab
+from collections import OrderedDict
 # import logging
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)
@@ -1248,12 +1249,15 @@ def rayCross(polygon, point):
 
 def isInsideOrFrontier(p, Q, eps=1.0e-6):
     u"""
-        :param p : (x,y) = ndarray((1,2), float) un point en 2d
-        :param Q : est un polygone = ndarray((n,2), float) supposé fermé i.e. le premier point == le dernier point,
-        :param eps : float = precision
-        :return :
-            True si p est à l'intérieur du polygone Q ou sur la frontiere (bande de largeur eps) et
-            False s'il est à l'extérieur.
+    Utilise le package shapely (Polygon et Point)
+    :param p : (x,y) = ndarray((1,2), float) un point en 2d
+    :param Q : est un polygone = ndarray((n,2), float) supposé fermé i.e. 
+        le premier point == le dernier point,
+    :param eps : float = precision
+    :return :
+        True si p est à l'intérieur du polygone Q ou sur la frontiere 
+            (bande de largeur eps) et
+        False s'il est à l'extérieur.
     """
     P = Polygon(Q)
     p = Point(p)
@@ -1454,5 +1458,32 @@ def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
 #         debug (h, A1, A2, A4, (h/3)*(A1 + A2 + A4))
     return (h/3)*(A1 + A2 + A4)
 
+def dictsAreEqual(d1,d2):
+    d1 = OrderedDict(d1)
+    d2 = OrderedDict(d2)
+    if not d1.keys() == d2.keys() :
+#         debug('not equal')
+#         print d1.keys()
+#         print d2.keys()
+        return False
+    for (k1,v1), (k2,v2) in zip(d1.items(),d2.items()) :
+        if not type(v1) == type(v2) :
+#             debug('not equal')
+#             print type(v1)
+#             print type(v2)
+            return False
+        if isinstance(v1, (dict,OrderedDict)) :
+            if not dictsAreEqual(v1, v2) :
+#                 debug('not equal')
+#                 print v1
+#                 print v2
+                return False
+        elif not v1==v2 :
+#             debug('not equal')
+#             print v1
+#             print v2
+            return False
+#     debug('equal')
+    return True
 if __name__=="__main__":
     pass

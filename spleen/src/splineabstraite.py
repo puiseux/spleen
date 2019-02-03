@@ -63,45 +63,30 @@ def absCurvReal(S, T):
 #         res = asarray([quad(lambda s : sqrt(S.sx(s,1)**2+S.sy(s,1)**2), 0.0, t) for t in T])
         return res[:,0],  res[:,1]
 
-def distance2PointSpline(p, S, t0=0.5, tol=1.0e-9):
+def distancePointSpline(p, S, t0=0.5, tol=1.0e-9):
     u"""
-    Comme son nom l'indique, calcule le carré de la plus courte distance d'un point p à
-    une spline paramétrée S(t) = x(t), y(t), 0<=t<=1
-    :param S: la spline paramétrique
-    :type S: NSplineAbstract.
+    Comme son nom l'indique, calcule le carré de la plus courte distance euclidienne 
+    d'un point p à une spline paramétrée S(t) = x(t), y(t), 0<=t<=1
+    :param S: NSplineAbstract, la spline paramétrique
     :param p: (x,y)=(float, float) le point.
     :param t0: float, initialisation des itérations
     :param tol: float, tolérance passée à scipy.optimize.minimize_scalar
     :return: le resultat res,
     voir https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult
     en particulier :
-
         - res.x : float, valeur de t réalisant cette distance
         - res.nfev : int, nb evaluation de phi(t)
         - res.fun : float, valeur finale de phi(t)
 
-    local : la fonction phi(t) à optimiser est la distance de p à S(t)
+    local : la fonction phi(t) à optimiser est le carré de la distance de p à S(t)
     """
     a, b = p[0], p[1]
     x, y = S.sx, S.sy
-
-#     def phi(t):
-#         return (a-x(t))**2 + (b-y(t))**2
-#     def dphi(t):
-#         d1 = 2*(x(t,1)*(x(t)-a) + y(t,1)*(y(t)-b))
-#         return d1
-#
-#     def d2phi(t) :
-#         d2 = 2*(x(t,2)*(x(t)-a) + x(t,1)**2 +
-#                 y(t,2)*(y(t)-a) + y(t,1)**2)
-#         return d2
-#     res = minimize_scalar(phi, bounds=(0.0, 1.0), method='bounded', tol=1.0e-9)
-    res = minimize_scalar(lambda t: (a-x(t))**2 + (b-y(t))**2,
-                                bounds=(0.0, 1.0),
-                                method='bounded',
-                                options={'xatol':1.0e-9})
-#     res = newton(dphi, t0, fprime=d2phi,
-#                 tol=1.0e-3, maxiter=50)
+    phi = lambda t: (a-x(t))**2 + (b-y(t))**2
+    res = minimize_scalar(phi,
+                          bounds=(0.0, 1.0),
+                          method='bounded',
+                          options={'xatol':1.0e-9})
     return res
 
 def computeSpline(cpoints, methode):
