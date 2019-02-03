@@ -24,6 +24,7 @@ from utilitaires import (Path,trace,my2dPlot)
 from config import VALIDATION_DIR
 from utilitaires import rdebug, debug
 from pprint import pprint
+import cPickle
 
 
 def pointsFromFile(filename):
@@ -65,6 +66,19 @@ def pointsFromFile(filename):
                 raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
         else :
             raise IOError(u"%s est un fichier '.spl' ; il devrait contenir un dictionnaire (dict Python) bien constitue."%filename.name)
+    elif ext in ('.pkl',) :
+        u"""peut-etre Une spline format pkl"""
+        with open(filename,'r') as f :
+            dump = cPickle.load(f)
+        if isinstance(dump, dict):
+            if dump.has_key('cpoints') :
+                return np.asarray(dump['cpoints'])
+            elif dump.has_key('dmodel') :
+                return np.asarray(dump['dmodel']['cpoints'])
+            else :
+                raise IOError(u"je ne sais pas extraire les points de ce fichier : %s"%filename.name)
+        else :
+            raise IOError(u"%s est un fichier '.pkl' ; je ne parviens pas à en extraire des points 2d."%filename.name)
     else :
 #         rdebug()
         raise IOError(u'Je ne sais pas lire ce fichier "%s"'%filename)

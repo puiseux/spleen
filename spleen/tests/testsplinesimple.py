@@ -14,7 +14,7 @@ plt.rcParams["figure.figsize"] = (20,10)
 from difflib import context_diff
 from collections import OrderedDict
 from scipy.interpolate import dfitpack
-__updated__="2019-02-02"
+__updated__="2019-02-03"
 import os, sys
 from path import Path
 # print os.getcwd()
@@ -167,6 +167,7 @@ def testSequenceBasique(filename, show=True):
             plt.legend()
             plt.axis('equal')
             plt.show()
+    debug(titre='Fin testSequenceBasique %s'%filename.name)
 
 def testConstructeurs(filename, show=False) :
     debug(titre='testConstructeurs %s'%filename.name)
@@ -222,6 +223,7 @@ def testConstructeurs(filename, show=False) :
     d0,d1 = dump00, S1.toDump()
     debug('d0==d1',dictsAreEqual(d0,d1))
     if show :S1.plot(plt, titre='copy')
+    debug(titre='Fin testConstructeurs %s'%filename.name)
 
 def testMethodes(filename, show=True):
     debug(titre='testMethodes(%s)'%filename.name)
@@ -266,7 +268,8 @@ def testMethodes(filename, show=True):
             debug('(methode=%s; mode=%s) => pas de spline'%(str(methode),str(mode)),
                    '%s : %s'%(type(msg).__name__,unicode (msg)))
     if show : plt.show()
-#     exit()
+    debug(titre='Fin testMethodes(%s)'%filename.name)
+
 def testModifGlobales(filename, show=True) :
     debug(titre="testModifGlobales : %s"%filename.name)
 #     numfig = 0
@@ -313,6 +316,7 @@ def testModifGlobales(filename, show=True) :
     debug(translate_2_3=mesures(S0))
     if show : S0.plot(plt, titre='translate((2,3))')
 #     if show : plt.show()
+    debug(titre="Fin testModifGlobales : %s"%filename.name)
 
 def testModifLocales(filename, show=True)  :
     debug(titre="testModifLocales : %s"%filename.name)
@@ -370,6 +374,7 @@ def testModifLocales(filename, show=True)  :
     S.name='SPLINE3'
     if show : S.plot(plt, titre='load(toDump())',show=True)
     print S
+    debug(titre="Fin testModifLocales : %s"%filename.name)
 
 def testSaveRead(filename, show=True):
     u"""Diverses manières de lire, construire, sauvegarder une NSplineSimple"""
@@ -382,7 +387,7 @@ def testSaveRead(filename, show=True):
     S4 = NSplineSimple()
     S4.load(S.toDump())
     dump4 = S4.toDump()
-    fname = Path(filename.dirname, filename.namebase+'#.pkl')
+    fname = Path(RUNS_DIR, filename.namebase+'#.pkl')
     print fname
     print "    ==> cPickle::dump()/load()"
     with open(fname,'w') as f :
@@ -397,7 +402,7 @@ def testSaveRead(filename, show=True):
     print 'dump==dump1 ?', dump==dump1
 
     print "    ==> file::read()/write() "
-    fname = Path(filename.dirname, filename.namebase+'#.spl')
+    fname = Path(RUNS_DIR, filename.namebase+'#.spl')
     S2 = NSplineSimple(**dump)
     dump2 = S2.toDump()
     with open(fname,'w') as f :
@@ -416,6 +421,7 @@ def testSaveRead(filename, show=True):
 #     debug(dump3=dump3)
 #     debug(dump4=dump4)
 #     exit()
+    debug(titre="Fin testSaveRead : %s"%filename.name)
 
 def testEchantillonnage(filename, trados, show=True):
     u"""echantillonnage entre ta et tb. [ta,tb]=[0,1] => echantillonnage complet"""
@@ -452,6 +458,7 @@ def testEchantillonnage(filename, trados, show=True):
         s0.plot(plt, more=[(E[:,0],E[:,1],'y^','echantillon \nn=%d, %.2f=>%.2f'%(ne,ta,tb)),])
 #     plt.plot(E[:,0],E[:,1],'y^','echantillon')
         plt.show()
+    debug(titre="Fin testEchantillonnage %s-trados : %s"%(trados,filename.name))
 
 def testDivers(filename, show=True):
     debug(titre="testDivers : %s"%filename.name)
@@ -489,7 +496,7 @@ def testDivers(filename, show=True):
     - S.longueur('x') =
         # longueur vraie(x=r) par intégration numérique
         # longueur du polyligne S.[cpoints,dpoints,epoints] 'x'=['c','d','e']
-    - S.distanceTo(p) et affiche le résultat pour 3 points
+    - S.projection(p) et affiche le résultat pour 3 points
         Calcule la distance du point 'p' à la spline 'S' et le point 'h' de la spline
         le plus proche de 'p'. Retourne également la precision et le nb d'appels à fonction
         Utilise :
@@ -578,34 +585,36 @@ def testDivers(filename, show=True):
 #     debug(top='%g'%rect.top(), left='%g'%rect.left(), width='%g'%rect.width(), height='%g'%rect.height(), )
 #     debug(bottom='%g'%rect.bottom(), top='%g'%rect.top())
     if show : S.plot(plt, titre="**dump")
+    debug(titre="Fin testDivers : %s"%filename.name)
 
 def testDivers1(filename, show=True):
 #     show=True
     debug(titre="testDivers1 : %s"%filename.name)
 
     msg=u"""
-    On teste la methode NSplineSimple.distanceTo(obj).
+    On teste les methodes NSplineSimple.projectionObj(obj) et
+    NSplineSimple.projection(obj).
     """
     debug(msg)
     cpoints = pointsFrom(filename)[::-1]
     #On recale le BA en 0,0
     corde, nba = computeCordeAndNBA(cpoints)
-    debug(corde=corde,nba=nba)
+    debug(corde=corde,nba=nba, len_cpoints=len(cpoints))
     cpoints = cpoints-cpoints[nba]
-    cpoints = cpoints[0:-20]
+    cpoints = cpoints[0:nba]
 #     cpoints = cpoints[0:nba+1]
-    debug(BA=cpoints[nba], BF=cpoints[0], extrados=cpoints[nba/2])
+    debug(BA=cpoints[-1], BF=cpoints[0], extrados=cpoints[nba/2])
 #     S0 = NSplineSimple(cpoints=cpoints, name=filename.name)
 #     debug(S0)
 #     if show : S0.plot(plt, show=True)
     ########################################
-    dump = {'cpoints': [[0.5279636979103088, 0.07332829385995865], [0.7137287259101868, 0.3275330364704132], [1.268811468596966, 0.3365727279966774], [1.1390328407287598, 0.07332829385995865], [1.2571670716747245, 0.2148051133421408], [1.2206038430660453, -0.0507648238639925], [1.5545598268508911, -0.0048885527066886425]],
-#             'methode': ('cubic', 'not-a-knot'),
-            'methode': ('ius', 3),
-            'name': u'test',
-            'nbpe': 30,
-            'precision': 1000,
-            'mode': 'lineaire'}
+#     dump = {'cpoints': [[0.5279636979103088, 0.07332829385995865], [0.7137287259101868, 0.3275330364704132], [1.268811468596966, 0.3365727279966774], [1.1390328407287598, 0.07332829385995865], [1.2571670716747245, 0.2148051133421408], [1.2206038430660453, -0.0507648238639925], [1.5545598268508911, -0.0048885527066886425]],
+# #             'methode': ('cubic', 'not-a-knot'),
+#             'methode': ('ius', 3),
+#             'name': u'test',
+#             'nbpe': 30,
+#             'precision': 1000,
+#             'mode': 'lineaire'}
     dump = {'classename': 'NSplineSimple',
             'cpoints': cpoints,
             'methode': ('cubic', 'not-a-knot'),
@@ -620,7 +629,7 @@ def testDivers1(filename, show=True):
 #     p1, p2, p3 = [0.0,0.25], S.barycentre[0], S.centregravite
     p1, p2, p3 = [0.0,0.25], [1.0, -0.1], [1.0, 0.1],
     debug(p1=p1,p2=p2,p3=p3)
-    (t1,d1,n1,m1), (t2,d2,n2,m2), (t3,d3,n3,m3) = S.distanceTo(p1), S.distanceTo(p2), S.distanceTo(p3)
+    (t1,d1,n1,m1), (t2,d2,n2,m2), (t3,d3,n3,m3) = S.projection(p1), S.projection(p2), S.projection(p3)
     pj1, pj2, pj3 = S(t1), S(t2), S(t3)
 
     debug(paragraphe="****  DISTANCE POINT-SPLINE discret=0  ****")
@@ -632,10 +641,10 @@ def testDivers1(filename, show=True):
             ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(d3))]
 
     if show : S.plot(plt, more=more, titre='distance point-spline(continu)', show=True)
-    
-    (t1,d1,n1,m1) = S.distanceTo(p1,discret=100)
-    (t2,d2,n2,m2) = S.distanceTo(p2,discret=100) 
-    (t3,d3,n3,m3) = S.distanceTo(p3,discret=100)
+
+    (t1,d1,n1,m1) = S.projection(p1,discret=100)
+    (t2,d2,n2,m2) = S.projection(p2,discret=100)
+    (t3,d3,n3,m3) = S.projection(p3,discret=100)
     pj1, pj2, pj3 = S(t1), S(t2), S(t3)
     debug("paragraphe=****  DISTANCE POINT-SPLINE discret=100 ****")
     print '    message=%-20s'%m1,'d(S,p1)=%-10.3g'%d1, 't=%-10.3g'%t1, 'nb appels a fct=%d'%n1
@@ -646,17 +655,17 @@ def testDivers1(filename, show=True):
             ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(d3))]
 
     if show : S.plot(plt, more=more, titre='distance point-spline (discret)', show=True)
-    T, D, N = S.distanceTo(S.epoints,discret=100)
-    print '    S.distanceTo(S.epoints) : norm(D)=%.3g, max(D)=%.3g'%(sqrt(sum(D)), sqrt(max(D)))
+    T, D, N,_ = S.projectionObj(S.epoints,discret=100)
+    print '    S.projectionObj(S.epoints) : norm(D)=%.3g, max(D)=%.3g'%(sqrt(sum(D)), sqrt(max(D)))
 #     P = asarray([p1,p2,p3])
     P = (rand(5,2)-0.3)/10+S.centregravite
 #     debug(P.tolist())
-    T, D, N = S.distanceTo(P,discret=1000)
+    T, D, N,_ = S.projectionObj(P,discret=1000)
     S.nbpd=1000
     Pj = S(T)
-    debug(paragraphe='S.distanceTo(P,discret=10)', T_D_N=zip(T,D,N))
+    debug(paragraphe='S.projectionObj(P,discret=10)', T_D_N=zip(T,D,N))
 #     exit()
-    
+
     more = [([p[0],pj[0]],[p[1],pj[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(d)) for p, pj, d in zip(P,Pj,D)]
 
     if show : S.plot(plt, more=more, titre='distance point-spline', show=True)
@@ -665,6 +674,7 @@ def testDivers1(filename, show=True):
     if show :
         S.plot(plt, titre=u'avant élagage', show=False)
         s1.plot(plt, titre=u"Après élagage, distance=%.3g ; nb points contrôle : %d => %d"%(d,n0,n1), show=True)
+    debug(titre="Fin testDivers1 : %s"%filename.name)
 
     return
 
@@ -672,6 +682,7 @@ def testPlacementRM(show=True):
     ##############################################
     ### debut construction exemple
     ##############################################
+    debug(titre="testPlacementRM : pas de fichier")
     debug()
     B1 = asarray([[0,0],[0.5,0.25],[0.5,0.8],[0,1.1],[0,1.7],[0.5,2]], float) #un S
     B2 = asarray([[2,0],[2.5,1],[2,2]], float)#un C à l'envers
@@ -723,6 +734,7 @@ def testPlacementRM(show=True):
     L'erreur est de %.2f mm soit %.2f‰"""%(l1,l2,n,delta,1000*dd,1000*dd/lref)
     plt.title(msg)
     if show : plt.show()
+    debug(titre="Fin testPlacementRM : pas de fichier")
 
 def testElaguer(filename, trados, fonction='elaguer', show=True):
     debug(titre="testElaguer : %s"%filename.name)
@@ -805,7 +817,8 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
     def comparePointsSpline(P,s):
         u"""comparaison graphique, P famille de points s spline
         On trace les projections de P sur la spline s"""
-        pjs = s(s.distanceTo(P)[0])
+#         debug(s.projection(P))
+        pjs = s(s.projectionObj(P)[0])
         if show : s.plot(plt, more=([P[:,0], P[:,1],'g.', 'C0'], [pjs[:,0], pjs[:,1],'y.','projections']))
 
     u"""Extraction intrados et extrados, normalisation"""
@@ -841,14 +854,15 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
     print u'  norme frobenius D0-D1 = %.2e somme des distances point à point des splines discrétisées'%norm(d0-d1, 'fro')
     print u'  norme frobenius D0-D1 = %.2e moyenne des distances point à point des splines discrétisées'%(norm(d0-d1, 'fro')/len(d0))
     print u'  nb pts contrôle       : %d => %d'%(len(s0),len(s1))
-    compareCourbures(s0, s1, corde, trados)
+#     compareCourbures(s0, s1, corde, trados)
     comparePointsSpline(s0.cpoints, s1)
-    return
+    debug(titre="Fin testElaguer : %s"%filename.name)
 
 def testCorrectionRM(show=True):
     ##############################################
     ### debut construction exemple
     ##############################################
+    debug(titre="testCorrectionRM ")
     debug()
     vc = 0.25
     B = asarray([[0,0],[0.5,0.25],[0.5,0.8],[0,1.1],[0,1.7],[0.5,2],
@@ -945,68 +959,52 @@ def testCorrectionRM(show=True):
 #     L'erreur est de %.2f mm soit %.2f‰"""%(l1,l2,n,delta,1000*dd,1000*dd/lref)
 #     plt.title(msg)
 #     if show : plt.show()
+    debug(titre="Fin testCorrectionRM ")
 
-def mainTest(show=True):
+def mainTest(show=False):
     files = [
-            Path(VALIDATION_DIR,'1.gnu'),
-            Path(VALIDATION_DIR,'simple','simple2d1.gnu'),
-            Path(VALIDATION_DIR,'simple','anguleux.gnu'),
-            Path(VALIDATION_DIR,'simple','extrados.gnu'),
-            Path(VALIDATION_DIR,'simple','demi-cercle.gnu'),
-            Path(VALIDATION_DIR,'reference.pts'),
-            Path(VALIDATION_DIR,'ARBIZON.PTS'),
-            Path(VALIDATION_DIR,'shark.pts'),
-            Path(RUNS_DIR,'profils','D2v5p2.pts'),
-            Path(VALIDATION_DIR,'diamirM.pts'),
-            Path(VALIDATION_DIR,'blocjonc.spl'),
+            Path(VALIDATION_DIR,'spline-0#.spl'),
             Path(VALIDATION_DIR,'spline-0.spl'),
+            Path(VALIDATION_DIR,'blocjonc.spl'),
+            Path(VALIDATION_DIR,'shark.spl'),
+            Path(VALIDATION_DIR,'diamirE.spl'),
             Path(VALIDATION_DIR,'P0.spl'),
             Path(VALIDATION_DIR,'P0#.spl'),
+            Path(VALIDATION_DIR,'E-shark.spl'),
+            Path(VALIDATION_DIR,'E-diamirE.spl'),
+            Path(VALIDATION_DIR,'NACA2415.spl'),
             Path(VALIDATION_DIR,'unenervure2d.gnu'),
+            Path(VALIDATION_DIR,'spline-0#.pkl'),
             ][::-1]
 
-    debug(titre='TODO : methode=("us",k) ne marche pas')
-    for filename in files[0:1] :
-        if 0:
+#     debug(titre='TODO : methode=("us",k) ne marche pas')
+    for filename in files :
+        if 1:
+            testSequenceBasique(filename, show=show)
+        if 1:
+            testConstructeurs(filename, show=show)
+        if 1:
+            testSaveRead(filename, show=show)
+        if 1:
+            testMethodes(filename, show=show)
+        if 1:
+            testModifGlobales(filename, show=show)
+        if 1:
             testModifLocales(filename, show=show)
-            debug('fin testModifLocales %s'%filename.name)
-#             exit()
         if 1:
             testDivers1(filename, show)
-            debug(titre='fin testDivers1 %s'%filename.name)
-            exit()
         if 1:
             try :
                 testDivers(filename, show=show)
             except AttributeError as msg:
                 debug('AttributeError :'+str(msg))
-            debug('fin testDivers %s'%filename.name)
-        if 1:
-            testSequenceBasique(filename, show=show)
-            debug(titre='fin testSequenceBasique %s'%filename.name)
-        if 1:
-            testConstructeurs(filename, show=show)
-            debug(titre='fin testConstructeurs %s'%filename.name)
-        if 1:
-            testSaveRead(filename, show=show)
-            debug('fin testSaveRead %s'%filename.name)
-        if 1:
-            testMethodes(filename, show=show)
-            debug('fin testMethodes %s'%filename.name)
-        if 1:
-            testModifGlobales(filename, show=show)
-            debug('fin testModifGlobales %s'%filename.name)
         if 1:
             testEchantillonnage(filename, trados='e',show=show)
             testEchantillonnage(filename, trados='i',show=show)
-            debug('fin testEchantillonnage %s'%filename.name)
         if 1:
             testElaguer(filename, trados='i', fonction='elaguer',show=show)
-            debug('fin testElaguer intrados %s'%filename.name)
         if 1:
             testElaguer(filename, trados='e', fonction='elaguer',show=show)
-            debug('fin testElaguer extrados %s'%filename.name)
-            exit()
 #         if 1:
 #             testElaguer(filename, trados='e', fonction='ajuster',show=show)
 #             debug('fin testElaguer extrados %s'%filename.name)
@@ -1015,12 +1013,9 @@ def mainTest(show=True):
 #             debug('fin testElaguer intrados %s'%filename.name)
         if 0:
             testCorrectionRM(show=show)
-            debug('fin testCorrectionRM')
         if 0:
             testPlacementRM(show=show)
-            debug('fin testPlacementRM')
         debug(titre='fin tests %s'%filename.name)
-#             exit()
     debug(titre='fin tests')
 if __name__=='__main__':
     mainTest()

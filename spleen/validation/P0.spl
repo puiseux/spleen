@@ -1,5 +1,3 @@
-
-#spline ProfilNormalise
 {'classename': 'ProfilNormalise',
  'cpoints': [[1.0, 0.0],
              [0.6384023049193002, 0.03924247739401637],
@@ -25,7 +23,7 @@
  'methode': [('cubic', ((2, 0, 0), (1, 0, -0.5))),
              ('cubic', ((1, 0, -0.25), (2, 0, 0)))],
  'mode': ['courbure', 'courbure'],
- 'name': u'P0.spl',
+ 'name': u'P0',
  'nbpe': [38, 49],
  'pouverture': (-3.290911950076864, -5.704570379817846),
  'precision': [1000, 1000],
