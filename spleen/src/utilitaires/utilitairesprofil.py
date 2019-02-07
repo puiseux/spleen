@@ -27,7 +27,7 @@ import pickle
 # from scipy.interpolate import (Rbf, InterpolatedUnivariateSpline,
 #                                LSQUnivariateSpline, UnivariateSpline,
 #                                splrep, splev, interp1d)
-from utilitaires import absCurv, courbure, splineInterpolation, dist2
+from utilitaires.utilitairesdivers import absCurv, courbure, splineInterpolation, dist2
 from shapely.geometry import LineString, Polygon, Point
 # from geos import LineString
 # DEBOG=True

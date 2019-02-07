@@ -15,7 +15,7 @@ from numpy import asarray as array, linspace
 from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
 import cPickle
-from utilitaires.utilitaires import (Path, whoami, debug, rdebug,stack,rstack,
+from utilitaires.utilitairesdivers import (Path, whoami, debug, rdebug,stack,rstack,
                         absCurv,dist2, baryCentre, centreGravite, simpson)
 from utilitaires.lecteurs import pointsFrom
 from utilitaires.lecteurs import LecteurUniversel

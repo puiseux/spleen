@@ -9,8 +9,8 @@ Created on 17 mai 2012
 import sys
 from path import Path
 import numpy as np
-from utilitaires import (find,findAll,findAllLines,_findRel,whoami,debug,rdebug)
-from config import VALIDATION_DIR
+from utilitaires.utilitairesdivers import (find,findAll,findAllLines,_findRel,whoami,debug,rdebug)
+# from config import VALIDATION_DIR
 TAGS=[]
 
 class Lecteur(file):

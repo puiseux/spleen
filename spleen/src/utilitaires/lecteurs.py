@@ -20,9 +20,9 @@ from lecteurdata import LecteurData
 from lecteurdxf import LecteurDXF,LecteurDXFNervures,LecteurDXF0, LecteurDXF1
 # from lecteursvg import LecteurSVG
 # from lecteurnervures import LecteurNervures
-from utilitaires import (Path,trace,my2dPlot)
-from config import VALIDATION_DIR
-from utilitaires import rdebug, debug
+from utilitaires.utilitairesdivers import (Path,trace,my2dPlot)
+# from config import VALIDATION_DIR
+from utilitaires.utilitairesdivers import rdebug, debug
 from pprint import pprint
 import cPickle
 
@@ -157,7 +157,7 @@ class LecteurUniversel(object):
             self.lecteur=LecteurMatlab(filename)
             self.lire()
         elif 'svg' in ext:
-            from utilitaires.utilitaires.lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
+            from utilitaires.utilitairesdivers.lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
             self.lecteur=LecteurSVG(filename)
             self.lire()
 

@@ -11,12 +11,13 @@ Description :
 @contact:    be@nervures.com, pierre@puiseux.name
 @deffield    creation: 19 janv. 2013
 '''
-__updated__="2019-01-22"
+__updated__="2019-02-06"
 VERSION = 'v1-'+__updated__
 NAME = 'AXile'
 TEMPLATE = 'temp'
 import math
-from utilitaires.utilitaires import trace
+from utilitaires.utilitairesdivers import trace
+from numpy import pi
 #from config import LOG_FILES
 #from config import NB_BACKUP
 class SplinePrefs(object) :
@@ -38,6 +39,14 @@ class ProfilPrefs(object) :
     precisionaffichage = 1000 #nb de points a afficher
     profparamnew = (86, 43, 53, 37)#nptprof, iouvext, iouvint, iba
     EPS = 1.0e-5
+    precisionaffichage = 1000 #nb de points a afficher
+    #Dans l'échantillonage, on impose 'nbpbf' points au bord de fuite
+    #à l'intrados comme à l'extrados
+    #à répartir dans les 'pourcentbf' derniers % de la corde
+    #Sinon, on a trop peu de points pour les pinces au BF
+    nbpbf, pourcentbf = 20, 15.0+pi*1.0e-6
+    profparam1 = (86, 43, 53, 37, nbpbf, pourcentbf)#nptprof, iouvext, iouvint, iba
+    #Pour visualisation
 
 if __name__ == "__main__" :
     print u'Rien a faire'

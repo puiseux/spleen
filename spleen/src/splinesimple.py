@@ -7,31 +7,27 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-03"
+__updated__="2019-02-07"
 '''
-from utilitaires.utilitaires import (rstack, eliminerPointsDoublesConsecutifs, diff,
-    className, centreGravite, baryCentre, XY)
-# from splineabstraite import absCurvReal
-from utilitaires.lecteurs import pointsFrom, LecteurUniversel
-import sys,os,math
-from array import array
-#
-from matplotlib import pyplot as plt
-# plt.rcParams["figure.figsize"] = (20,10)
-import numpy as np
-from numpy import log, linspace, asarray, sqrt, arange, zeros, cos, tan, pi,\
-    loadtxt, ndarray, argmin, nan
-from numpy.linalg import  norm
-# import scipy as sp
-# from config import VALIDATION_DIR, RUNS_DIR
-from scipy.optimize import newton, minimize
-from pprint import pprint
-from utilitaires.utilitaires import (Path, segmentPlusProche, stack, debug, rdebug, dist,
-                        hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
-from splineabstraite import computeSpline
-from numbers import Number
-from scipy.integrate.quadpack import quad
+import sys, os, math
 import cPickle
+from array import array
+from matplotlib import pyplot as plt
+# from pprint import pprint
+from numbers import Number
+plt.rcParams["figure.figsize"] = (20,10)
+from utilitaires import (rstack, eliminerPointsDoublesConsecutifs,
+                         className, centreGravite, baryCentre, XY,
+                         Path, segmentPlusProche, stack, debug, rdebug, dist,
+                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
+from utilitaires.lecteurs import pointsFrom, LecteurUniversel
+from splineabstraite import computeSpline
+from numpy import (log, linspace, asarray, sqrt, arange, zeros, cos,
+                   tan, pi, loadtxt, ndarray, argmin, nan, where, savetxt, ones,
+                   vstack, insert, delete, isnan, NaN)
+from numpy.linalg import  norm
+# from scipy.optimize import newton, minimize
+from scipy.integrate.quadpack import quad
 from scipy.optimize._minimize import minimize_scalar
 
 class NSplineSimple(object):
@@ -54,7 +50,7 @@ class NSplineSimple(object):
         * dump DOIT contenir les clés :
              - aucune
         * dump PEUT contenir les clés suivantes (sinon il y a des valeurs par défaut)
-            - 'points' dont la valeur est un np.ndarray, ou un QPolygon
+            - 'points' dont la valeur est un .ndarray, ou un QPolygon
                 ou une liste de points, ou un filename ou encore None
             - 'precision' = nb de points pour le tracé de la spline
             - 'methode' : cf computeSpline() paramètre hyper important.
@@ -80,7 +76,7 @@ class NSplineSimple(object):
         # Paramètre :
             * T peut être
                 - un réel entre 0 et 1
-                - ou un np.ndarray de n réels dans [0,1] (de shape (n,1)? ou (1,n)?)
+                - ou un .ndarray de n réels dans [0,1] (de shape (n,1)? ou (1,n)?)
                 - ou une liste de n réels entre 0 et 1
             * diff est l'ordre de dérivation
         # Retourne :
@@ -90,7 +86,7 @@ class NSplineSimple(object):
             * si diff=2, retourne les dérivées secondes x"(t),y"(t)
         # Utilisation :
             >>> S = NSpline(....)
-            >>> T = np.linspace(0.0, 1.0, 11)
+            >>> T = .linspace(0.0, 1.0, 11)
             >>> S(T)
             ... : les 11 points [S(0), S(0.1), ...,S(0.9), S(1)] de la spline
             N.B. : la fonction zip fait ceci:
@@ -122,7 +118,7 @@ class NSplineSimple(object):
         >>> S[1:3]
         ... AttributeError: 'QPolygonF' object has no attribute 'x'
         """
-        return self._cpoints[k]
+        return self.cpoints[k]
 
     def __setitem__(self,k,value):
         u"""
@@ -133,7 +129,7 @@ class NSplineSimple(object):
         >>> print S[1]
         [20.0, 30.0]
         """
-        if np.all(self._cpoints[k]==value) : #inutile de déclencher un _update()
+        if all(self._cpoints[k]==value) : #inutile de déclencher un _update()
             return
         self._cpoints[k] = value
         self._update()#indispensable pour mettre à jour self._xxx
@@ -200,7 +196,7 @@ class NSplineSimple(object):
         u"""
         Attention, la cle est 'points'  dans les anciens projets, et 'cpoints' dans les nouveaux.
         OUI=>On affecte _cpoints directement qui évite l'appel au setter de cpoints (qui appelle _update()).
-        cpoints DOIT être liste, tuple, array ou np.ndarray, sans points doubles consécutifs
+        cpoints DOIT être liste, tuple, array ou ndarray, sans points doubles consécutifs
         """
         keys = dump.keys()
         if 'name'      in keys : self.name     = dump.pop('name')
@@ -211,20 +207,21 @@ class NSplineSimple(object):
         if 'nbpe'      in keys : self._nbpe    = dump.pop('nbpe')#nbp echantillonnage
         if 'nbpd'      in keys : self._nbpd    = dump.pop('nbpd')#nbp discretisation
         if 'precision' in keys : self._nbpd    = dump.pop('precision')#idem
-
+#         debug(self._methode)
         for key in ('points', 'cpoints') :#la cle 'cpoints' est prioritaire, en cas
             if key in dump:
                 cpoints = dump.pop(key)
                 if isinstance(cpoints, (list, tuple, array)) :#types Python de base
                     #obligé de considerer ce cas, car pour le load d'un pkl cpoints est une liste
                     cpoints = asarray(cpoints)
-                if not isinstance(cpoints, np.ndarray) :
-                    msg = u'Les points de controle doivent etre de type np.ndarray((*,2)), et non pas %s.'%cpoints.__class__.__name__
-                    msg = msg + u' \nUtilisez la fonction points=pointsFrom(points) pour transformer a peut pres n\'importe quoi en np.ndarray((n,2)).'
+                if not isinstance(cpoints, ndarray) :
+                    msg = u'Les points de controle doivent etre de type ndarray((*,2)), et non pas %s.'%cpoints.__class__.__name__
+                    msg = msg + u' \nUtilisez la fonction points=pointsFrom(points) pour transformer a peut pres n\'importe quoi en ndarray((n,2)).'
                     msg = msg + u' \nLes points de controle ne doivent pas avoir de points doubles consecutifs.'
                     msg = msg + u' \nUtilisez points = eliminerPointsDoublesConsecutifs(points) en cas de doute.'
                     raise TypeError(msg)
-                if self.methode[1]=='periodic' and len(cpoints) > 0 :#and np.any(cpoints[0] != cpoints[-1]) :
+#                 debug(self.methode)
+                if self.methode[1]=='periodic' and len(cpoints) > 0 :#and any(cpoints[0] != cpoints[-1]) :
                     self._cpoints = cpoints#pas de update pour le moment
                     self.close()#Ca appelle le _update si besoin
                 self.cpoints = cpoints#Ca appelle le _update()
@@ -256,7 +253,7 @@ class NSplineSimple(object):
         try :
             if ext in (".gnu", '.txt'):
                 #seulement les points échantillonnés
-                np.savetxt(filename, self.epoints)
+                savetxt(filename, self.epoints)
             # elif ext==".pts":
             #     #seulement les points échantillonnés
             #     writeProfil(filename, self.epoints)
@@ -291,23 +288,29 @@ class NSplineSimple(object):
             for key in ('points', 'cpoints') :
                 if dump.has_key(key) :
                     dump[key] = pointsFrom(dump.pop(key))
+        elif ext in('.spl','.nspl') : 
+            with open(filename, 'r') as f :
+                dump = eval(f.read())
+                if dump.has_key('dmodel') : 
+                    dump = dump.pop('dmodel')
+#                 self.load(dump)
 #         #debug(dump=dump)
         self.load(dump)
 
     @property
     def cpoints(self):
         u"""
-        points de contrôle, sous forme np.ndarray((n,2)), None si non initialisé
+        points de contrôle, sous forme ndarray((n,2)), None si non initialisé
         """
         return self._cpoints
 
     @cpoints.setter
     def cpoints(self, points):
-        u"""points de contrôle, sous forme np.ndarray((n,2))
-        - points est un np.ndarray((n,2)) et ne doit pas avoir de points doubles consécutifs."""
+        u"""points de contrôle, sous forme ndarray((n,2))
+        - points est un ndarray((n,2)) et ne doit pas avoir de points doubles consécutifs."""
 #         stack('points=%s'%points)
         if points is None or len(points)<1 :
-            self._cpoints = np.zeros((0,2))
+            self._cpoints = zeros((0,2))
         else :
             self._cpoints = points
         self._update()
@@ -341,7 +344,7 @@ class NSplineSimple(object):
 
     @property
     def epoints(self):
-        u"""points échantillonnés, sous forme np.ndarray((n,2))"""
+        u"""points échantillonnés, sous forme ndarray((n,2))"""
         if not hasattr(self,'_epoints') :
             self._epoints = self(self.tech)
         return self._epoints
@@ -507,7 +510,7 @@ class NSplineSimple(object):
         répartition (échantillonnage) de nbp points sur la spline self,
         entre les abscisses ta et tb, suivant le mode précisé par 'mode'
         *supprime self._epoints et modifie self._tech*
-        :return : les abscisses T=np.ndarray(shape=(n,1)) (je crois!)
+        :return : les abscisses T=ndarray(shape=(n,1)) (je crois!)
                 des points échantillonnés
 
         :param mode : str ou unicode ou par defaut None
@@ -525,12 +528,12 @@ class NSplineSimple(object):
             - Si mode='telkel' ou 'cpoints', ce paramètre est inutile.
             - Dans tous les autres cas il est indispensable, nbp>0
 
-        :param ta : float dans [0,1] ou np.ndarray((n,1)) comme retourné par
+        :param ta : float dans [0,1] ou ndarray((n,1)) comme retourné par
             self.absCurv()
             - facultatif, ta=0 par defaut
             - l'abs. curv. du premier point d'échantillonnage
 
-        :param tb : float dans [0,1] ou np.ndarray((n,1)) comme retourné par
+        :param tb : float dans [0,1] ou ndarray((n,1)) comme retourné par
             self.absCurv()
             - facultatif, tb=1 par defaut
             - l'abs. curv. du dernier point d'échantillonnage
@@ -585,10 +588,10 @@ class NSplineSimple(object):
             N = 100001
             T = linspace(ta,tb,N)#N-1 micro intervalles
             dt = T[1]-T[0]#micro intervalles de largeur dt
-            CA = np.sqrt(np.abs(self.courbure(T)))
+            CA = sqrt(abs(self.courbure(T)))
             S = (CA[1:]+CA[:-1])*(dt/2)#Les sinuosités des N micro-intervalles = dt*moyenne des courbures aux extrémités
             s0 = sum(S)/(nbp-1)#La sinuosité (constante) de chaque intervale Te[j],Te[j+1] défini ci dessous
-            Te = np.ones(nbp)*ta# les te[j] cherchés
+            Te = ones(nbp)*ta# les te[j] cherchés
             Te[-1] = tb
 #             debug(Te=Te)
             i, Sj = 0, 0.0#i=numéro du micro-intervalle
@@ -618,6 +621,7 @@ class NSplineSimple(object):
         else :
             rdebug('mode echantillonnage inconnu : ',mode=mode, nbp=nbp, ta=ta, tb=tb)
             self._tech =  zeros((0,))
+        return self._tech
 
     @property
     def methode(self):
@@ -627,6 +631,11 @@ class NSplineSimple(object):
         u"""
         Changement de spline (ius, cubic, periodic,...)
         """
+        if len(self)==2 : #on fait une interpolation linéaire
+#             debug('>>>>yeap')
+            newmethode = 'ius', 1
+        elif len(self) == 3 :#on fait une interpolation quadratique
+            newmethode = 'ius', 2
         if newmethode[0] == self.methode[0] :
             self._methode = newmethode
             self._update()#tout est modifié
@@ -674,7 +683,7 @@ class NSplineSimple(object):
                 sx_05=self.sx(0.5)
                 sy_05=self.sy(0.5)
 #                 rdebug(sx_05=sx_05, sy_05=sy_05)
-                if np.isnan(sx_05) or np.isnan(sy_05) :# in (np.nan,np.inf) or sy_05 in (np.nan,np.inf) :
+                if isnan(sx_05) or isnan(sy_05) :# in (nan,inf) or sy_05 in (nan,inf) :
                     raise ValueError('sx(0.5) ou sy(0.5) : not a number')
             except AttributeError as msg :
                 rdebug(msg)
@@ -709,7 +718,7 @@ class NSplineSimple(object):
             raise(msg)
 
     def plot(self, plt, control=True, nbpd=None, nbpe=None, mode=None,
-             titre=None, more=[], texts=[], show=True, buttons=True):
+             titre=None, more=[], texts=[], show=True, buttons=True, numbers=[]):
         """
         :param plt : une instance de pyplot, obtenue en amont par :
               >>> from matplotlib import pyplot as plt
@@ -718,6 +727,10 @@ class NSplineSimple(object):
         :param nbpe : int, nb de points d'echantillonage
         :param titre : str ou unicode, titre
         :param more : list, [(X,Y, couleur,'nom'), ...] tracé supplementaire
+        :param texts : list, [(x,y, 'text', style=, fontsize=...), ...] texts en x,y
+        :param numbers: list ou set ou tuple ['3c','12e','100d'] numéroter les points
+            controle, echantillon, discretisation '3c' signifie que l'on numérote
+            les cpoints par pas de 3, '100d' les dpoints par pas de 100 etc ...
           """
         from matplotlib.widgets import CheckButtons
 #         plt.figure(numfig)
@@ -736,9 +749,25 @@ class NSplineSimple(object):
         spline, = ax.plot(D[:,0], D[:,1], 'b-', lw=1)
         echantillon, = ax.plot(E[:,0], E[:,1], 'g.', lw=1)
         control, = ax.plot(C[:,0], C[:,1], 'ro', lw=1)
+        for chars in numbers :
+            if len(chars)>1 :
+                step = eval(chars[:-1])
+            else :
+                step = 1#numerotation de un point sur step
+            char = chars[-1]
+            if char=='c' :
+                for k, p in enumerate(C[::step]) :
+                    plt.text(p[0], p[1], '%d'%(step*k))
+            elif char=='e' :
+                for k, p in enumerate(E[::step]) :
+                    plt.text(p[0], p[1], '%d'%(step*k))
+
+        for txt in texts :
+            plt.text(*txt)
+
         if buttons :
-            butt = ['control', 'spline','echantillon',]
-            values = [True, True, True]
+            butt = [u'control', u'spline',u'echantillon',u'numéros']
+            values = [True, True, True,True]
             draws = [control, spline, echantillon]
         for x, y, color, name in more:
             temp, = ax.plot(x, y, color)
@@ -749,9 +778,6 @@ class NSplineSimple(object):
                 values.append(True)
         plt.subplots_adjust(left=0.2)
         plt.axis('equal')
-        for txt in texts :
-            plt.text(*txt)
-
         if buttons :
             rax = plt.axes([0.05, 0.4, 0.1, 0.15])
             check = CheckButtons(rax, butt, values)
@@ -772,11 +798,11 @@ class NSplineSimple(object):
         return plt
 
     def plotCourbure(self):
-        from matplotlib import pyplot as plt
+#         from matplotlib import pyplot as plt
         from matplotlib.widgets import CheckButtons
 #         nbpd = self.precision
-        nbpe = self.nbpe
-        self.echantillonner()
+#         nbpe = self.nbpe
+#         self.echantillonner()
         D = self.dpoints
         C = self.cpoints
         # E = self.epoints
@@ -827,7 +853,11 @@ class NSplineSimple(object):
             return absCurv(self.epoints, normalise=False)[-1]
         else:#longueur vraie
             u"""Longueur vraie de la spline défini par self.sx, self.sy"""
-            return self.absCurv(1)
+            if hasattr(self, '_longueur') :
+                return self._longueur
+            else :
+                self._longueur=self.absCurv(1)
+                return self._longueur
 
     @property
     def height(self):
@@ -867,11 +897,13 @@ class NSplineSimple(object):
     def courbure(self, T) :
         dx,  dy  = self.sx(T, 1), self.sy(T, 1)
         d2x, d2y = self.sx(T, 2), self.sy(T, 2)
-        norm3_d2 = np.sqrt(dx**2+dy**2)**3
+        norm3_d2 = sqrt(dx**2+dy**2)**3
         sc = (dx*d2y-dy*d2x)/(norm3_d2)
+        sc[where(norm3_d2 < 1.0e-12)] = NaN
+#         debug(sc=sc)
         return sc
         # si norm_d2=0, x"(t)=y"(t)=0, c'est une droite, courbure nulle
-#         sc[np.where(norm3_d2 < 1.0e-12)] = 0.0
+#         sc[where(norm3_d2 < 1.0e-12)] = 0.0
 
     def absCurv(self, T, witherr=False):
         u"""
@@ -918,12 +950,12 @@ class NSplineSimple(object):
     #         res = asarray([quad(lambda s : sqrt(S.sx(s,1)**2+S.sy(s,1)**2), 0.0, t) for t in T])
             return (res[:,0], res[:,1]) if witherr else res[:,0]
 
-    def integraleCourbure(self, a=0, b=1, n=100):
+    def integraleCourbure(self, a=0.0, b=1.0, n=100):
         u"""Integrale de la valeur absolue de la courbure, caractérise la
         régularité de la courbe"""
         #     n DOIT être pair"""
         h = float(b-a)/n
-        T = np.linspace(a, b, n+1)
+        T = linspace(a, b, n+1)
         C = abs(self.courbure(T))
         A1 = C[0] + C[-1]
         A2 = 2*sum(C[i] for i in range(2,n) if i%2==0)
@@ -1014,14 +1046,14 @@ class NSplineSimple(object):
             raise ValueError('Point double, Impossible d\'ajouter ce point:%s'%(pos))
             # return #eviter points doubles, les abs curv douvent être strictement croissantes.
         else :
-            self.cpoints = np.vstack((self.cpoints, pos))
+            self.cpoints = vstack((self.cpoints, pos))
             self._update()
             return i
 
     def index(self, t):
         """Localise t dans self.abscurv:retourne les deux entiers
         k1,k2  tels que k1 < t <= k2"""
-        if t<0 or t>1 : return np.nan, np.nan
+        if t<0 or t>1 : return nan, nan
         T = self.knots
         k = 0
         while T[k]<t : k+=1
@@ -1058,7 +1090,7 @@ class NSplineSimple(object):
             raise ValueError('Point double, impossible d\'inserer ce point:%s en position %d'%(str(pos),i))
             # return #eviter points doubles, car les abs curv doivent être strictement croissantes.
         else:
-            cpoints = np.insert(cpoints, i, (pos,), axis=0)
+            cpoints = insert(cpoints, i, (pos,), axis=0)
 #             debug(cpoints=cpoints)
             self.cpoints = cpoints
 #             self._update()#deja fait par le cpoint.setter
@@ -1070,11 +1102,11 @@ class NSplineSimple(object):
         """
         point = self[pnum]
         if update : #le setter de cpoints fait un update
-            self.cpoints = np.delete(self.cpoints, pnum, 0)
+            self.cpoints = delete(self.cpoints, pnum, 0)
         else :
             #le setter de cpoints fait un update, parfois c'est indésirable
             #dans ce cas, on intervient directement sur _cpoints
-            self._cpoints = np.delete(self._cpoints, pnum, 0)
+            self._cpoints = delete(self._cpoints, pnum, 0)
 #         self._update()#c'est fait par le setter de cpoints
         return point
 
@@ -1470,10 +1502,10 @@ class NSplineSimple(object):
             t = T[idx]
             #raffinement
             t0, t1 = max([0,t-eps]), min([1,t+eps])
-            try : 
+            try :
                 tt, dd, nev, msg = self.projection(p, discret=0, t0=t0, t1=t1)
             except ValueError as msg :
-                tt, dd, nev, msg = t, d, nan, u'Echec optimisation' 
+                tt, dd, nev, msg = t, d, nan, u'Echec optimisation'
             if debog :
                 debug(titre=u'==> p=c0[%d]=, discret = %-6d'%(debog, discret))
                 print u' D%d = asarray(%s)'%(debog, D.tolist())
@@ -1561,6 +1593,7 @@ class NSplineSimple(object):
             - n0, n1 = nb de points de contrôle avant et après élagage
 
         """
+        histoire = []
         if len(self) < 10 :
             rdebug(u"Élagage inutile, %d points de contrôle seulement"%len(self))
             return self, self.pourMille(0),(len(self),len(self))
@@ -1570,16 +1603,16 @@ class NSplineSimple(object):
         n = len(self)
         if t == 'cubic' and m == 'periodic' :#il faut au moins 3 points et c[0] = c[-1]
             seen = [0, n/4, n/2, 3*n/4, n-1]
-            debug('cubic, periodic, 5 points',seen=seen)
+#             debug('cubic, periodic, 5 points',seen=seen)
             c1 = pointsFrom(self[seen])
         elif dist2(c0[0], c0[-1]) < 1.0e-6 :
             seen = [0, n/3, 2*n/3, n-1]
             c1 = pointsFrom(self[seen])
-            debug('ferme, 4 points',seen=seen)
+#             debug('ferme, 4 points',seen=seen)
         else:
             seen = [0,n-1]
             c1 = pointsFrom(self[seen])
-            debug('ouvert, 2 points',seen=seen)
+#             debug('ouvert, 2 points',seen=seen)
         se = NSplineSimple(cpoints=c1,
                            methode=self.methode,
                            nbpd=self.nbpd,
@@ -1592,12 +1625,12 @@ class NSplineSimple(object):
             texts+= [(c1[0,0],c1[0,1],u'se:%d'%0),(c1[-1,0],c1[-1,1],u'se:%d'%(len(c1)-1))]
         T1, D01, _, _ = se.projectionObj(c0, discret=nd)#T1, D01 de longueur len(c0)
         while len(seen)<len(c0):
-            debug(seen=seen)
+#             debug(seen=seen)
             D01[seen] = 0.0#On ne veut pas remettre 2 fois le même point (=>point double)
             d = max(D01)#le point de c0 le plus eloigné de se
             imaxd = (D01 == d).nonzero()
-            dm = self.pourMille(sqrt(d))
             idx0 = imaxd[0][0]
+            histoire.append((idx0, self.pourMille(d)))
             seen = sorted(list(set(seen+[idx0])))
             pos0 = c0[idx0]#position(x,y) du point à inserer dans se
             #On cherche maintenant en quelle position (k) il faut l'insérer
@@ -1628,9 +1661,10 @@ class NSplineSimple(object):
             se.insertPoint(pos0, i)#ca devrait fonctionner sans exception...
             T1, D01, _, _ = se.projectionObj(c0, discret=nd)
             dm = self.pourMille(d)
-            debug(u'dist-%d = %.2g‰ '%(len(seen),dm))
+#             debug(u'dist-%d = %.2g‰ '%(len(seen),dm))
             c1 = se.cpoints.copy()
             if dm<eps : break
+#         histoire.append((idx0, self.pourMille(d)))
         if len(se) == len(self) :#même nb de points : on garde la spline initiale.
             se.cpoints = self.cpoints.copy()
             n0 = len(self)
@@ -1640,7 +1674,9 @@ class NSplineSimple(object):
         #ca ne marche pas du tout !!!
         n0 = len(self)
         n1 = len(se)
-        debug('Apres ELAGAGE : dist = %.2g mm/m ; %d => %d '%(dm,n0,n1))
+#         debug(historique_distances=["dm(%d)=%5.3g (pt %d)"%(k, dm, i) for k,(i,dm) in  enumerate(histoire)])
+        debug(historique_distances=[float("%5.2f"%(dm)) for k,(_,dm) in  enumerate(histoire)])
+        debug('Apres ELAGAGE : dist = %.2g mm/m ; %d points => %d points '%(dm,n0,n1))
 
         if replace :
             self.cpoints = se.cpoints
@@ -1672,104 +1708,6 @@ def dist2s(P0, P):
         surf += adet(a1-a0, b0-a1) + adet(a1-b0, b1-a1)
     return surf
 
-# def projection(S, p, discret=0, t0=0.0, t1=1.0):
-#     u"""
-#     Calcule le projeté du point p sur la portion S01 de la spline S
-#         S01 = {S(t), t dans I=[t0,t1]},
-#         i.e. le min de la fonction phi : s-> dist(p,S(s)), t dans I.
-#     Pour cela,
-#     - si discret=0, on appelle scipy.minimize_scalar() sur l'intervalle I.
-#         Ce faisant, on risque fort de ne pas tomber sur le bon min,
-#         lorsqu'il y a plusieurs minima locaux.
-#         Typiquement, si S est un profil (fermé) et p=centre de gravité de
-#         S, la courbe t -> dist(p,S(t)) présente 2 minima locaux.
-#         On doit donc localiser le min absolu en discrétisant la spline.
-#         C'est ce qui est fait si discret>0
-#     - si discret>0, les valeurs de t0 et t1 sont ignorées.
-#         On localise le min absolu en discrétisant la spline
-#         => S.dpoints = S(T) ou T contient 1+discret pas de temps
-#         linéairement répartis, i.e. discret intervalles de largeur dt.
-#         # on cherche tm=le min (discret) des distances dist(p, S.dpoints)
-#         # on raffine ensuite sur l'intervalle [tm-dt, tm+dt]
-#     :param p : tuple, list ou ndarray((2,)), les coord. du point p.
-#     :param discret : int, le nombre de points de discrétisation
-#     :param t0,t1: float, float, l'intervalle de recherche du min.
-#         on doit avoir 0.0 <= t0 < t1 <= 1.0
-#     :return tt, dd, nev, msg : float, float, int, str
-#         - tt dans [t0,t1] est le temps sur S du projeté p' = S(tt)
-#         - dd est la distance euclidienne dist(p,p')
-#         - nev le nombre d'évaluations de la fonction phi(s)
-#         - msg un message fournit par minimize_scalar()
-#     """
-#     debog=False
-#     if discret>0 :
-#         S.nbpd = discret#_dpoints est effacé et recalculé à la demande
-#         eps = 1.0/(discret-1)
-#         #les distances de p aux points de dpoints
-#         D = norm(S.dpoints-p,axis=1)
-#         idx = argmin(D)
-#         d = D[idx]
-# #         debug(d=d,idx=idx)
-#         T = linspace(0,1,discret)
-#         #t est le temps du point dpoints[idx] sur le polygone S.dpoints
-#         t = T[idx]
-#         #raffinement
-#         t0, t1 = max([0,t-eps]), min([1,t+eps])
-#         tt, dd, nev, msg = projection(S, p, discret=0, t0=t0, t1=t1)
-#         if debog :
-#             debug(titre=u'==> p=c0[%d]=, discret = %-6d'%(debog, discret))
-#             print u' D%d = asarray(%s)'%(debog, D.tolist())
-#             print u' T%d = asarray(%s)'%(debog, T.tolist())
-#             print u' idx = %d  indice du point le plus éloigné de se dans c0#'%idx
-#             print u" Avant raffinement : t=%-6.3g, d=%-6.3g, (t0,t1)=(%.3g,%.3g)"%(t, d, t0, t1)
-#             print u" Après raffinement : t=%-6.3g, d=%-6.3g, ev=%2d, msg='%s'"%(tt, dd, nev, msg)
-# #         return t, d, 0, 'pas de raffinement'
-#         return tt, dd, nev, msg
-#     else :#discret=0
-#         a, b = p[0], p[1]
-#         res = minimize_scalar(lambda t: (a-S.sx(t))**2 + (b-S.sy(t))**2,
-#                               bounds=(t0, t1),
-#                               method='bounded',
-#                               options={'xatol':1.0e-9})
-#         return res.x, sqrt(res.fun), res.nfev, res.message
-#
-# def projectionObj(S, obj, discret=0):
-#     u"""
-#     Calcule la projection de l'objet obj sur la spline S par appels répétés à
-#         projection(S,obj[k],...)
-#     :param obj: NSplineSimple ou ndarray((n,2),dtype=float) ou bien
-#                 un seul point (float, float) a projeter sur S.
-#         # si obj et une NSplineSimple on projete les points de obj.cpoints sur S
-#         # si obj est un ndarray((n,2)) on projete les points de obj sur S
-#     :param discret: int, un nombre de points de discrétisation pour le calcul
-#         des projections.
-#     :return tprojs, dists, nevs, msgs: cf doc scipy.optimize.OptimizeResult
-#         - tprojs est la liste des parametres t des (c)points de obj sur S
-#         - dists est la liste des distances à S des projetés
-#         - nevs est la liste des nb d'évaluation de phi
-#         - msgs sont des messages de convergence donnés par scipy.minimize_scalar
-#     La fonction phi(t) (distance de p à S, lorsque p est un point (x,y))
-#     peut admettre plusieurs minima locaux.
-#     Il faut les trouver tous et les comparer entre eux pour obtenir le vrai
-#     minimum.
-#     C'est ce que fait l'appel à projete()
-#     """
-#     if isinstance(obj, (tuple, list, ndarray)) and len(obj)==2 :
-#         return projection(S, p=obj, discret=discret)
-#     else :
-#         tprojs = zeros((len(obj),))
-#         dists  = zeros((len(obj),))
-#         nevs   = zeros((len(obj),),dtype=int)
-#         msgs   = zeros((len(obj),), dtype=str)
-#         if isinstance(obj, NSplineSimple) :
-#             P = obj.cpoints
-#         elif isinstance(obj, ndarray) and len(obj[0])==2 :
-#             P = obj
-#         for k, p in enumerate(P) :
-# #             debog = False if k != NUM else k
-#             tprojs[k], dists[k], nevs[k], msgs = projection(S, p, discret)
-#         return tprojs, dists, nevs, msgs
-
 def distance(s1, s2, precision):
     u"""
     distance separant deux splines, au sens :
@@ -1778,7 +1716,7 @@ def distance(s1, s2, precision):
 #     s2.precision = s1.precision = precision
     T = linspace(0, 1, precision)
     d = s1(T) - s2(T)
-    return np.linalg.norm(d)
+    return norm(d)
 # #############################
 
 def placementReperesMontage(B1,B2,delta,):
@@ -1815,7 +1753,7 @@ def placementReperesMontage(B1,B2,delta,):
     -------
     :param B1, B2: les tableaux de points des deux bords à assembler
         (quelconques mais de même longueur, à peu près)
-    :type B1, B2 : np.ndarray((n,2))
+    :type B1, B2 : ndarray((n,2))
     :param delta: (float) le  pas des repères
         (distance entre deux repères consécutifs, constant pour le moment mais
         ça peut se changer)
@@ -1887,15 +1825,15 @@ def correctionReperesMontage(B,R, mode='production'):
     (et non pas de point à point)
 
     :param B, R: points du bord et repères de montage d'origine (chemin R)
-    :type B : np.ndarray((n,2))
-    :type R : np.ndarray((m,2)) (n et m n'ont pas besoin d'être égaux)
+    :type B : ndarray((n,2))
+    :type R : ndarray((m,2)) (n et m n'ont pas besoin d'être égaux)
     :return:
         - si mode = 'test' : (sR, T) = la spline polygonale passant par les
             repères d'origine, que j'appelle chemin polygonal ci-dessus,
             et les valeurs du paramètre t de sorte que les n repères de montage
             corrigés sont RC=sR(T).
         - si mode = 'production' :les repères de montage corrigés,
-            sous forme d'un np.ndarray((n,2))
+            sous forme d'un ndarray((n,2))
     :remarque: sur le cas test, construit par la fonction testCorrectionRM()
     la longueur du bord B est 4.303, la longueur du chemin R est 4.3365
     l'erreur max initiale sur les longueurs est 0.033 soit 8‰
@@ -1923,8 +1861,8 @@ def correctionReperesMontage(B,R, mode='production'):
 if __name__=="__main__":
     from testsplinesimple import mainTest
     mainTest()
-#     placementReperesMontage(T=np.asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
-#                              TR=np.asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))
+#     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
+#                              TR=asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))
 #     exit()
     # app = QApplication(sys.argv)
 

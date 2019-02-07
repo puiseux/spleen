@@ -11,16 +11,14 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @contact:    be@nervures.com
 @deffield    updated: 31 Jan 2013
 '''
-import sys,os,math,cPickle
-from path import Path
-from utilitaires.utilitaires import (stack, debug, rdebug, dist2, dist, rcercle)
+from utilitaires import (stack, className, debug, rdebug, dist2, dist, rcercle)
 import numpy as np
-from paramgeneraux import ProfsParamNew, ProfsParam
-from profil.naca import naca4,naca5
+import cPickle
+from parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
+from naca import naca4,naca5
 from splinecomposee import NSplineComposee
 from utilitaires.utilitairesprofil import computeCordeAndNBA
-from numpy import (zeros,)
-from numpy import asarray as array
+from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace)
 from scipy.optimize import newton
 from preferences import ProfilPrefs
 class Profil(NSplineComposee):
@@ -51,7 +49,7 @@ class Profil(NSplineComposee):
 #         pprint(dump)
         self.conforme = None
         self.nb_echantillonnages = 0
-#         self.nb_normalisations = 0
+        self._profparam = None
         try :
             naca = dump.pop('naca')
             if len(naca) == 2 : #liste non vide
@@ -60,46 +58,39 @@ class Profil(NSplineComposee):
                 if len(serie) == 5 : points = naca5(serie, naca[1])
                 dump['points'] = points
                 dump['name'] = 'naca'+serie
-        except KeyError :
-    #             debug( msg)
+        except KeyError as msg :
+#             debug(str(msg))
             pass
         #Appelle setDefaultValues() puis load() puis _update()
         super(Profil, self).__init__(**dump)
 #         il faut calculer nba (i.e. ruptures) AVANT le _update
 #         self._update()
-        '''c'est un profil brut, sans BA, une seule spline, il faut tout refaire
-           c'est le cas de tous les projets antérieurs à 14 dec 2017'''
         if len(self.splines) == 1:
+            '''c'est un profil brut, sans BA, une seule spline, il faut tout 
+               refaire c'est le cas de tous les projets antérieurs à 14 dec 2017
+            '''
             corde, nba = computeCordeAndNBA(self.cpoints)
             self.precision = [1000]
             self.mode = ['courbure']
-#             P = self.cpoints
-#             #Rayons de BA [ex,in]trados marche pas tres bien
-#             Re = rcercle(P[nba-2],P[nba-1],P[nba]) if nba>=2 else corde/2
-#             R0 = rcercle(P[nba-1],P[nba],  P[nba+1]) if nba>=1 and len(self)>nba+1 else corde/3
-#             Ri = rcercle(P[nba],  P[nba+1],P[nba+2]) if len(self)>nba+2 else corde/4
-# #             debug(Re=Re, Ri=Ri, R0=R0, corde=corde)
             Re, Ri = corde/2, corde/4#C'est ce qui marche le mieux
             self.split(nba,
                        ('cubic',((2, 0, 0), (1, 0, -abs(Re)))),#extrados
                        ('cubic',((1, 0, -abs(Ri)), (2, 0, 0)))#intrados
                        )
-#             debug(rayonBA=self.rba)
             '''L'ouverture n'est pas précisée dans le dump
             (qui est chargé par super(Profil, self).__init__(**dump)),
-            elle est donc définie par profparam'''
+            elle est donc définie par profparam.???
+            Il devrait y avoir les valeurs par defaut.... Je les met ici'''
             iouvext, iouvint = self.profparam.iouverture
-            try :
-                ouvint,  ouvext  = self.cpoints[iouvint], self.cpoints[iouvext]
-#                 debug(corde=self.corde, ouvint=ouvint, ouvext=ouvext)
-                pouvint=100*ouvint[0]/self.corde
-                pouvext=100*ouvext[0]/self.corde
-#                 debug(pouvext=pouvext, pouvint=pouvint)
-                self.pouverture = (-pouvext, -pouvint)
-#                 debug()
-            except IndexError:# as msg :
-                pass
-#                 debug(msg)
+            self.pouverture = self.prefs.pouverture
+#             try :
+#                 ouvint,  ouvext  = self.cpoints[iouvint], self.cpoints[iouvext]
+#                 pouvint=100*ouvint[0]/self.corde
+#                 pouvext=100*ouvext[0]/self.corde
+#                 self.pouverture = (-pouvext, -pouvint)
+#             except IndexError as msg :
+#                 pass
+# #                 debug(msg)
 
             '''Les noms'''
             self.splines[0].role = 'Extrados'
@@ -111,8 +102,8 @@ class Profil(NSplineComposee):
 #         return self.epoints
     def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, maxiter=50):
         u"""
-        :return: la valeur du paramètre t correspondant à l'abscisse |x|/100.
-            Si t est non trouvé, retourne np.nan
+        :return t: float, la valeur du paramètre t correspondant à l'abscisse |x|/100.
+            Si t est non trouvé, ou si x==0.0 retourne np.nan
             Plus précisement la recherche se fait dans
 
                 - S = extrados si x>0
@@ -125,21 +116,20 @@ class Profil(NSplineComposee):
             alors _getT(x) retourne est le premier point trouvé.
             Il faut donc utiliser t0 pour trouver le second, mais ça n'est pas prévu pour...
             Non testé dans ce dernier cas.
-        :param x: float, la position du point (dont on cherche l'abcisse curviligne t),
-            en % de corde.
+        :param x: float, 0<=x<=100. la position du point (dont on cherche
+            l'abcisse curviligne t), en % de corde.
             La recherche se fait sur l'intrados si x<0 et sur l'extrados si x>0.
-        :type x: float, 0<=x<=100.
-        :param t0 : la recherche se fait par itérations de Newton, elle démarre à t=t0
-        :type t0 : float.
-        :param nbit :
-
+            si x==0.0, retourne nan
+        :param t0 : float, la recherche se fait par itérations de Newton, elle
+            démarre à t=t0
+        :param nbit : bool
             - si nbit est True, retourne le couple (t, nb iterations)
             - si nbit est False, retourne t.
-
-        :type nbit : bool.
-        :param dt : est l'intervalle de recherche.
-        :param tol: float, paramètre passé à np.newton(), (=The allowable error of the zero value.)
-        :param maxiter: int, paramètre passé à np.newton(), (=Maximum number of iterations.)
+        :param dt : [tmin, tmax], est l'intervalle de recherche.
+        :param tol: float, paramètre passé à np.newton(),
+            (=The allowable error of the zero value.)
+        :param maxiter: int, paramètre passé à np.newton(),
+            (=Maximum number of iterations.)
 
         """
         if x == 0.0 : return (np.nan, 0) if nbit else np.nan
@@ -149,8 +139,7 @@ class Profil(NSplineComposee):
         Px = (Ax + absx*(Fx-Ax))
         if absx > 1.0 :
             raise ValueError("∣x∣=%g devrait etre dans [0,100]. C'est une abscisse en %% de corde"%abs(x))
-        if x>=0 : S = self.splines[0]
-        else    : S = self.splines[1]
+        S = self.splines[0] if x>0 else self.splines[1]
         if t0 is None :
             if x>0 : t0 = 1.0 - absx
             elif x<0 : t0 = absx
@@ -169,8 +158,13 @@ class Profil(NSplineComposee):
         :return: le nb de points d'échantillonnage.
         Dès que self.profparam existe, c'est lui qui décide de nbpe."""
         try :
-            return [1+self.iba, self.profparam.nptprof-self.iba]
-        except AttributeError:
+            self.splines[0].nbpe = 1+self.iba
+            self.splines[1].nbpe = self.profparam.nptprof-self.iba
+            self._nbpe = [1+self.iba, self.profparam.nptprof-self.iba]
+            return self._nbpe
+        except AttributeError:#profparam n'existe pas encore
+            return self._nbpe
+        except IndexError:#la spline[1] n'existe pas encore
             return self._nbpe
 
     @nbpe.setter
@@ -183,7 +177,7 @@ class Profil(NSplineComposee):
 #         debug('entree load',dump_keys=dump.keys())
         super(Profil, self).load(dump)
 #         debug('entree load apres super.load',dump_keys=dump.keys())
-        if isinstance(dump,(Path,)) :
+        if isinstance(dump,(str, unicode)) :
             f = open(dump,'r')
             d = cPickle.load(f)
             self.load(d)
@@ -214,13 +208,13 @@ class Profil(NSplineComposee):
             #un objet de type ProfsParamNew (xx.01.2017 <projet< 25.02.2017 ou
             #une chaîne de caractères '[nptprof=86, iouverture=(46, 47), iba=37]'
             #une liste (certains autres projets?) ou
-            self.profparam = ProfsParamNew(**dparams)
-        except TypeError :#as msg:
+            self.profparam = ProfsParam1(**dparams)
+        except TypeError as msg:
 #             debug('TypeError', msg)
-            self.profparam = dparams.castToProfsParamNew()
-        except KeyError :#as msg :#pas de profparam dans cette liste d'arguments on prend ceux par defaut
+            self.profparam = dparams.castToProfsParam1()
+        except KeyError as msg :#pas de profparam dans cette liste d'arguments on prend ceux par defaut
 #             debug('KeyError', msg)
-            self.profparam = ProfsParamNew(*self.prefs.profparamnew)
+            self.profparam = ProfsParam1(*self.prefs.profparam1)
 #         debug(name=self.name, profparams=self.profparam)
         try :
             self.pouverture = dump.pop('pouverture')
@@ -324,13 +318,16 @@ class Profil(NSplineComposee):
         - sur l'intrados si x<0
         """
         if pouverture[0] < pouverture[1] :
-            rdebug(u"Attention, recouvrement extrados/intrados : %s"%(str(pouverture)))
+            msg = u"%s : attention, recouvrement extrados/intrados : %s"%(self.name, str(pouverture))
+            debug(msg)
         if pouverture[0]*pouverture[1] < 0 :
-            rdebug(u"Attention, les points ouverture ne sont pas sur le meme trados : %s"%(str(pouverture)))
+            msg = u"%s : attention, les points ouverture ne sont pas sur le meme trados : %s"%(self.name, str(pouverture))
+            debug(msg)
         self._pouverture = pouverture
 #         stack()
         if hasattr(self, '_epoints') :
-            del self._epoints#pour que les points d'échantillonnage contiennent les points d'ouverture
+            #pour que self soit rééchantillonné au besoin
+            del self._epoints
     @property
     def recouvrement(self):
         u"""L'intrados tissu recouvre l'extrados tissu"""
@@ -387,7 +384,7 @@ class Profil(NSplineComposee):
     @property
     def douverture(self, nbp=100):
         u"""Retourne un tableau numpy de nbp points discrétisés de l'ouverture"""
-        (kam, tam), (kav,tav) = self.touverture
+        touv = (kam, tam), (kav,tav) = self.touverture
 #         debug(pouv=self.pouverture, touv=touv)
 #         if kam!=kav :
         if kam == kav : #deux points sur le meme trados
@@ -397,7 +394,8 @@ class Profil(NSplineComposee):
             return zeros((nbp,2))
 
     def echantillonner(self):
-        u"""Echantillonnage de tout le profil, par tranche, compte tenu de l'ouverture,
+        u"""
+        Echantillonnage de tout le profil, par tranche, compte tenu de l'ouverture,
         selon les prescriptions de self.profparam.
         ********************************************************************
         *******On suppose que l'ouverture est entièrement à l'intrados******
@@ -412,6 +410,8 @@ class Profil(NSplineComposee):
         - intrados : du dernier point ouverture au BF
         """
 #         epoints = super(Profil, self).echantillonner(nbp, mode)
+        debug(u'%s : <%s> %d-eme echantillonnage'%(self.name, className(self), self.nb_echantillonnages))
+
         mode=['courbure','courbure']
         self.nb_echantillonnages += 1
         _, ri = self.rba
@@ -420,20 +420,11 @@ class Profil(NSplineComposee):
 
         """extrados : echantillonnage standard"""
 
-#         if profparam is None :
         pp = self.profparam
-#         rdebug(pp=pp)
-#         elif isinstance(profparam, ProfsParamNew) :
-#             pp = self.profparam = profparam
-#         else :
-#             raise TypeError("J'attend un ProfsParamNew au lieu de %s"%type(profparam.__class_.__name__))
-#        rdebug('name=%s'%self.name,'nb_echantillonages=%d'%self.nb_,'profparam=%s'%pp)
         Se = self.splines[0]#extrados
-#         pp = self.profparam
-        nbpBF = 20 #je garde 10 points pour BF, pour les pinces
-        Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0], onlyT=True)
+#         nbpBF = 20 #je garde 10 points pour BF, pour les pinces
+        Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0])
 #         debug(Text)
-        self.techext = Text
         eext = Se(Text)#points echantillon extrados
         #pour debug
 #         eint = np.zeros((pp.nptint-pp.nptret,2))
@@ -462,7 +453,7 @@ class Profil(NSplineComposee):
 #         debug('appel echantillonner retour', nbpret=nbpret, ta=0, tb=tam, mode=mode[1])
         try :
             #echantillonnage retour BA=>am
-            Tret = Si.echantillonner(nbp=nbpret, ta=0, tb=tam, mode=mode[1], onlyT=True)
+            Tret = Si.echantillonner(nbp=nbpret, ta=0, tb=tam, mode=mode[1])
         except RuntimeWarning :
             rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
             raise
@@ -472,13 +463,13 @@ class Profil(NSplineComposee):
 #         debug(eret=eret, len_eret=len(eret))
 #         debug('appel echantillonner ouverture', nbpouv=nbpouv, ta=tam, tb=tav, mode=mode[1])
         try :
-            Touv = Si.echantillonner(nbp=nbpouv, ta=tam, tb=tav, mode=mode[1], onlyT=True)#echantillonnage ouverture
+            Touv = Si.echantillonner(nbp=nbpouv, ta=tam, tb=tav, mode=mode[1])#echantillonnage ouverture
         except RuntimeWarning :
             rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
             raise
 #         rdebug(eouv=eouv, len_eouv=len(eouv))
         #Tfin = les t de l'intrados tissu
-        Tfin = Si.echantillonner(nbp=nbpfin, ta=tav, tb=1, mode=mode[1], onlyT=True)#echantillonnage ouverture=>BF
+        Tfin = Si.echantillonner(nbp=nbpfin, ta=tav, tb=1, mode=mode[1])#echantillonnage ouverture=>BF
 #         rdebug('===> Nb points', ret=len(eret), ouv=len(eouv),efin=len(efin))
 #         debug(Tret=Tret, Touv=Touv,Tfin=Tfin)
         # les trois absc. curv. Tret[0], Touv[0] et Touv[-1] désignent des points doubles
@@ -487,20 +478,21 @@ class Profil(NSplineComposee):
         # - Touv[-1] est l'absc. curv. de l'extrémité avale de l'ouverture, elle coincide avec Tfin[0]
         # Tfin contient les absc. curv. des points intrados tissu
         # Tint = les t de l'intrados théorique
-        Tint = np.hstack([Tret[1:],Touv[1:-1],Tfin])
-        self.techint = Tint
+        Tint = hstack([Tret[1:],Touv[1:-1],Tfin])
+        self._techint = Tint
+        self._techext = Text
 #         debug(T_intrados=Tint)
         eint = Si(Tint)#les points intrados théorique echantillonnés
-        self._epoints = np.vstack((eext,eint))
+        self._epoints = vstack((eext,eint))
 #         debug(nb_points_echantillonnage=len(self._epoints))
         return self._epoints
     @property
     def info(self):
         infos = super(Profil,self).info
         infos = [infos[k] for k in (0,1,9,10,11)]
-        infos = infos + [u"*Extrados :\n     ----------------"] + self.splines[0].info
+        infos = infos + [u"*Extrados :\n     ----------"] + self.splines[0].info
         infos = infos + [u""]
-        infos = infos + [u"*Intrados :\n     ----------------"] + self.splines[1].info
+        infos = infos + [u"*Intrados :\n     ----------"] + self.splines[1].info
         infos = infos + [u""]
         infos = infos + [u"*divers (%s) :"%self.name+u"\n     -------"]
         infos = infos + [u'%20s = '%u"pouverture"+u"%s"%(str(self.pouverture))]
@@ -516,19 +508,23 @@ class Profil(NSplineComposee):
 #
     @profparam.setter
     def profparam(self,profparam):
-        u'''Les paramètres du profil :
-        - ProfsParamNew (nptprof, iouvext, iouvint, iba)
-        - ou ProfsParam(nptext, nptint, iba) => old fashion.
+        u'''
+        Les paramètres du profil :
+        - ProfsParam1 (nptprof, iouvext, iouvint, iba,nbpbf,pourcentbf)
+        - ou ProfsParamNew(nptprof, iouvext, iouvint, iba) => old fashion.
+        - ou ProfsParam(nptext, nptint, iba) => very old fashion.
         Utiles uniquement pour l'échantillonnage'''
-        if not isinstance(profparam, (ProfsParamNew, ProfsParam)) :
-            raise(TypeError,u"Une instance de ProfsParamNew est attendue,impossible d'affecter un %s : %s."%(profparam.__class__.__name__,str(profparam)))
-        if hasattr(self, '_profparam') and not profparam == self._profparam :
+        if not isinstance(profparam, (ProfsParam1, ProfsParamNew, ProfsParam)) :
+            raise(TypeError,u"Une instance de ProfsParam1 est attendue,impossible d'affecter un %s : %s."%(profparam.__class__.__name__,str(profparam)))
+        if hasattr(self, '_profparam')\
+                and self._profparam is not None\
+                and not profparam == self._profparam :
             try : del self._epoints
             except : pass
 #         debug(profparam)
 #         try : debug(avant=self._profparam)
 #         except : debug(avant='pas de profparam')
-        self._profparam=profparam.castToProfsParamNew()
+        self._profparam=profparam.castToProfsParam1()
 #         debug(apres=self._profparam)
 #         self.emit(SIGNAL('modifProfparam()'))
     def appendPoint(self, p):
@@ -588,8 +584,8 @@ class Profil(NSplineComposee):
         self.dilatext = 1+coefext/100.0
         self.dilatint = 1+coefint/100.0
         dilate = self.copy()
-        dilate.splines[0].hardScale((1.0, self.dilatext), centre=array([0,0]))
-        dilate.splines[1].hardScale((1.0, self.dilatint), centre=array([0,0]))
+        dilate.splines[0].hardScale((1.0, self.dilatext), centre=asarray([0,0]))
+        dilate.splines[1].hardScale((1.0, self.dilatint), centre=asarray([0,0]))
         return dilate
         # XY = self.points.copy()
         # XY[0:self.iba,1]*=self.dilatext
@@ -629,10 +625,10 @@ class Profil(NSplineComposee):
     def normalise(self, scale=1.0):
 #        alert(self)
         facteur = scale/self.corde
-        cba, cbf = np.array(self[self.nba]), np.array(self[0])
+        cba, cbf = asarray(self[self.nba]), asarray(self[0])
         u = cbf-cba
-        alfa = np.arctan2(u[1], u[0])
-        if np.abs(alfa) > 1.0e-5 :
+        alfa = arctan2(u[1], u[0])
+        if abs(alfa) > 1.0e-5 :
 #             debug( '##### u, alfa', u, 180*alfa/np.pi)
 #             debug(alfa=alfa, cba=cba)
             self.hardRotate(-alfa, cba, 'radians')
@@ -649,6 +645,11 @@ class Profil(NSplineComposee):
         prof = Profil(profil=self)
         prof.normalise(scale)
         return prof
+
+    def ligneMoyenne(self):
+        u"""Calcule et retourne la ligne moyenne"""
+        T = linspace(0,1,100)
+        return 0.5*(self.splines[0](T) + self.splines[1](T)[::-1])
 
     def verification(self):
         '''Verifions que la nervure est bien dans l'ordre BF>Extrados>BA>intrados'''
@@ -744,7 +745,7 @@ class Profil(NSplineComposee):
             reponse.append(s+u"Intrados convexe : %s"%(ok))
             oks.append(ok)
 
-        oks=np.array(oks)
+        oks=asarray(oks)
         if np.all(oks) :
             self.conforme=True
             reponse.append(str(oks))
@@ -789,6 +790,7 @@ class Profil(NSplineComposee):
         ba = (1,0,ri)
         self.splines[1].methode = (sint,(ba,bf))#appelle _update
         self._update()
+    
     @property
     def erba(self):
         u"""Retourne le rayon de BA calculé avec les points echantillonnés"""
@@ -936,12 +938,14 @@ class Profil(NSplineComposee):
         ouverture, = ax.plot([xouvext, xouvint],[youvext, youvint],'yo', label=u'ouverture:%d, %d'%(self.profparam.iouvext, self.profparam.iouvint))
         BA, = ax.plot([xBA],[yBA],'go', label=u'BA:%d'%self.iba)
         rax = plt.axes([0.05, 0.4, 0.1, 0.5])
-        labels   = ('ext', 'ext control','int', 'int control', 'All', 'Ech', 'BA', 'ouverture')
+        labels   = ('ext', 'ext control','int', 'int control', 'tout', 'Ech', 'BA', 'ouverture')
         entities = (espline,econtrol,ispline,icontrol,all,  ech,  BA,   ouverture)
         valinit  = (False,  False,   False,  False,   True, True, True, True)
 
-        for entity, value in zip(entities,valinit):
-            entity.set_visible(value)
+        for entite, value in zip(entities,valinit):
+#             rdebug(entite=entite)
+            try : entite.set_visible(value)
+            except AttributeError : pass
         check = CheckButtons(rax,labels,valinit)
 
         def func(label):
@@ -953,7 +957,7 @@ class Profil(NSplineComposee):
                 ispline.set_visible(not ispline.get_visible())
             elif label == 'int control':
                 icontrol.set_visible(not icontrol.get_visible())
-            elif label == 'All':
+            elif label == 'Tout':
                 all.set_visible(not all.get_visible())
             elif label == 'Ech':
                 ech.set_visible(not ech.get_visible())
@@ -965,242 +969,23 @@ class Profil(NSplineComposee):
         check.on_clicked(func)
 #         return plt
         if show : plt.show()
-# <<<<<<< HEAD
 
-# if __name__=="__main__":
-#     from tests.testsprofil import testMain
-#     testMain()
-# =======
-# def testProfil(filename):
-# #     p = Profil(points=None, parent=None, naca=['2415', 50], name=None)
-# #     print p.verification()
-# #     print p
-#     from matplotlib import pyplot as plt
-# #     print " => Constructeur presque vide, puis append(5,10):\n    +++++++++++++++++++++++++++++++++++++"
-#     p = Profil()
-# #     debug( p)
-# #     try : p.appendPoint((5,10))
-# #     except RuntimeError as msg : rdebug(msg)
-# #     numfig = -1
-# #     print " => Constructeur filename :\n    +++++++++++++++++++++"
-#     debug(" => constructeur np.ndarray  :\n    +++++++++++++++++++++++")
-#     p = Profil(points=pointsFrom(filename))
-#     p.normalise()
-#     debug(p)
-#     for msg in p.verification() :
-#         print msg
-# #     p.plot(plt,titre='Profil(points=pointsFrom(filename))')
+    def update(self):
+        u'''
+        Mise à jour de nba et profparam.
+        Doit être appelé à chaque modification (suppression, insertion, deplacement) d'un point du profil
+        - suppression, insertion de point : on reconstruit profparam entier=> ?????.
+        - déplacement de point : seul nba peut changer.
+        On appelle le _update de NSplineComposee (i.e. celui de NSplineAbstraite),
+        '''
+        try : del self._techint
+        except AttributeError : pass
+        try : del self._techext
+        except AttributeError : pass
 
-#     debug(" => test toDump/load  :\n    +++++++++++++++++++++++")
-#     dump = p.toDump()
-#     debug(p)
-# #     pprint(dump)
-#     p = Profil(**dump)
-# #     p.verification()
-# #     p.plot(plt, titre='p = Profil(**p.toDump())')
+        return super(Profil,self)._update()
+    _update = update
 
-# #     p[46] = (3.3, -1.9)
-# #     p.plot(plt, titre='p[46] = (3.3, -1.9)')
-
-# #     p = Profil(points=points)
-# #     debug( p)
-# #     print " => constructeur QPolygon  :\n    +++++++++++++++++++++"
-# #     p = Profil(points=pointsFrom(p.qpolygon))
-# #     print p
-#     debug(" => constructeur recopie  :\n    +++++++++++++++++++++")
-# #     rdebug(pp=p.profparam)
-# #     try :
-# #         p.iouverture = p.iba-10,p.iba+10
-# #         p.plot(plt, titre='PROBLEM:p.iouverture = p.iba-10,p.iba+10')
-# #     except UnboundLocalError as msg:
-# #         rdebug('nombre de points de retour nptret=%d<0 ? '%p.profparam.nptret,msg=msg)
-#     debug(pp=p.profparam)
-#     p.iouverture = p.iba+5,p.iba+10
-#     p.pouverture = -1.0,-5.0
-#     q = Profil(profil=p)
-# #     debug(q)
-# #     rdebug(pp=p.profparam)
-#     debug(qp=q.profparam)
-# #     exit()
-# #     return
-#     debug('scaled')
-#     debug(p.scaled(2))
-#     #print "constructeur QPolygon :",p
-#     #print '########## Profil divers (BA, absCurv, extrados, ligne moyenne...) ##########'
-# #     p.removePoint(0)
-# #     curv = absCurv(p)
-# #     dcurv = curv[1:]-curv[:-1]
-# #     print dcurv
-# #     print 'p.absCurv()',absCurv(p)
-#     debug('########## Profil geometrie ##########')
-# #     rdebug(p.profparam)
-# #     exit()
-#     p.iouverture = p.iba+3,p.iba+10#sinon il sait pas echantillonner
-#     debug(p)
-#     p.plot(plt, titre='p.iouverture = p.iba+3,p.iba+10')
-
-#     p.hardScale((2,2))
-#     debug(p)
-#     pprint(p.toDump())
-#     p.plot(plt, titre='p.hardScale((2,2))')
-#     p.hardRotate(30,centre=(2,2))
-#     p.plot(plt, titre='p.hardRotate(30,centre=(2,2))')
-#     p.translate((100,100))
-#     p.plot(plt, titre='p.translate((100,100)')
-# #     print p.verification()
-#     debug( p)
-#     p.normalise()
-#     debug(p)
-#     p.plot(plt, titre='normalise()')
-#     p[1] = (0.6,0.12)
-#     p.plot(plt, titre='p[1] = (0.6,0.12)')
-#     p.iouverture = p.iba+2,p.iba+5
-#     p.plot(plt, titre='ouverture = %d, %d'%(p.iba+2,p.iba+5))
-#     p.insertPoint((0.23,0.16))
-#     p.plot(plt, titre='insertPoint((0.23,0.16))')
-#     p.removePoint(1)
-#     p.plot(plt, titre='p.removePoint(1)')
-#     plt.show()
-# #     return
-
-#     p.iouverture=p.nba+2,p.nba+3
-#     debug( p)
-# #     exit()
-#     debug(p.points)
-#     debug( p)
-# #     filename=Path(VALIDATION_DIR,'ARBIZON.PTS')
-#     p=Profil(points=pointsFrom(filename))
-#     mp=Profil(profil=p)
-#     centre=array((7,0))
-#     mp.hardRotate(30,centre)
-#     mp.hardScale((0.5,0.5),centre)
-#     p.dump(Path(RUNS_DIR,'profildump.pkl'))
-#     f=open(Path(RUNS_DIR,'profildump.pkl'),'r')
-#     d=cPickle.load(f)
-#     pprint(d)
-#     p.load(d)
-#     debug(p)
-#     p.normalise()
-#     debug(p)
-#     rdebug('################## Fin testprofil ##################')
-# #     exit()
-
-# def testElaguer(filename):
-#     from matplotlib import pyplot as plt
-#     p = Profil(points=pointsFrom(filename), precision=[1000])
-#     debug(rba=p.rba)
-#     debug('Extrados : Se\'(1.0)=%s'%(p.splines[0](1.0,1)))
-#     debug('Intrados : Si\'(0.0)=%s'%(p.splines[1](0.0,1)))
-#     debug('sinuosite=',p.splines[1].integraleCourbure(0.01,1,1000))
-# #     return
-#     p.elaguer(eps=1, replace=True)
-#     debug(rba=p.rba)
-#     debug('sinuosite=',p.splines[1].integraleCourbure(0.01,1,1000))
-#     p.plot(plt, nbpd=[1000,1000],titre='elagage')
-#     plt.show()
-
-# def testDivers(filename):
-#     if 'spl' in filename.ext :
-#         pass
-#     p = Profil(points=pointsFrom(filename), precision=[1000])
-#     debug(rba=p.rba, corde=p.corde)
-#     p.normalise()
-#     debug(rba=p.rba, corde=p.corde)
-
-# def testSaveAndOpen(filename):
-#     from matplotlib import pyplot as plt
-#     if '.spl' in filename :
-#         S = Profil(points=pointsFrom(filename))
-# #         with open(filename,'r') as f :
-# #             lines = f.readlines()
-# #         for line in lines :
-# #             dump = eval(line)
-# #             S = Profil(**dump)
-#         print S
-#     else :
-#         S = Profil(points=pointsFrom(filename),
-# #                       methode=('cubic',((2, 0, 0), (1, 0, -5))),
-#                       mode=['courbure'],
-#                       precision=[3000])
-#     S.normalise()
-#     fname = Path(filename.dirname, filename.namebase+'Test.spl')
-#     debug(fname)
-#     with open(fname,'w') as f :
-#         cPickle.dump(S.toDump(),f)
-#     with open(fname,'r') as f :
-#         dump = cPickle.load(f)
-#         S1 = Profil(**dump)
-#     S1.elaguer(1, True)
-#     S1.rba = (-1,-1)
-#     S1.plot(plt,titre='rba=%s'%str(S1.rba))
-#     plt.show()
-#     dump  = S.toDump()
-#     dump1 = S1.toDump()
-#     debug('dump==dump1 ?', dump==dump1)
-#     pprint(dump1)
-#     debug('S.rba   = %s\n'%str(S.rba)+\
-#           '    S1.rba  = %s\n'%str(S1.rba)+\
-#           '    S.erba  = %s\n'%str(S.erba)+\
-#           '    S1.erba = %s\n'%str(S1.erba)+\
-#           '    S.drba  = %s\n'%str(S.drba)+\
-#           '    S1.drba = %s'%str(S1.drba))
-
-
-# def testEchantillonner(filename):
-#     from matplotlib import pyplot as plt
-#     P = Profil(points=pointsFrom(filename),
-# #                       methode=('cubic',((2, 0, 0), (1, 0, -5))),
-# #                       mode=['linear'],
-#                       precision=[3000])
-#     P.normalise()
-#     P.elaguer(2, True)
-#     P.pouverture = pam, pav = -10, -40#en % de corde
-#     debug(P)
-#     touv  = P.touverture #= (kam, tam), (kav,tav)
-#     debug(touv=touv)
-#     debug(ouverture=P.ouverture)
-
-#     debug('P._getT(%.f%%)=%f'%(pam,P._getT(pam)))
-#     debug('P._getT(%.1f%%)=%f'%(pav,P._getT(pav)))
-# #     P.echantillonner()
-#     P.plot(plt, titre='echantillonage : pouv=%s, touv=%s'%(str(P.pouverture),str(P.touverture)))
-#     P.hardScale(2, centre=array([0,0]))
-#     P.hardRotate(180, centre=(0,0))
-# #     debug(P)
-#     touv  = P.touverture #= (kam, tam), (kav,tav)
-#     debug(touv=touv)#,P_t=sint(t))
-#     debug(ouverture=P.ouverture)
-#     debug('P._getT(%.1f%%)=%f'%(pam,P._getT(pam)))
-#     debug('P._getT(%.1f%%)=%f'%(pav,P._getT(pav)))
-#     P.plot(plt,titre='echantillonage : rotation 180')#%(str(P.pouverture),str(P.touverture)))
-
-# def testOuverture(filename):
-#     from matplotlib import pyplot as plt
-#     P = Profil(points=pointsFrom(filename), name='Ouverture par defaut')
-#     P.plot0(plt, titre='testOuverture:%s'%P.name)
-#     pouv = (-20, -50)
-#     P.pouverture = pouv
-#     P.plot0(plt, titre='ouverture=%s'%(str(pouv)))
-
-# if __name__=="__main__":
-#     ##########
-#     sys.path.append(Path('..').abspath)
-#     p = Profil()#constructeur vide
-#     debug('Constructeur Vide', p)
-#     filename = Path(VALIDATION_DIR,'1.gnu')
-#     filename = Path(VALIDATION_DIR,'ARBIZON.PTS')
-#     filename = Path(VALIDATION_DIR,'faial2.dxf')
-#     filename = Path(VALIDATION_DIR,'simple','simple2d1.gnu')
-#     filename = Path(VALIDATION_DIR,'unenervure2d.gnu')
-#     filename = Path(VALIDATION_DIR,'simple','profil.gnu')
-#     filename = Path(RUNS_DIR,'profils','D2v5p2.pts')
-#     filename = Path(VALIDATION_DIR,'reference.pts')
-#     filename = Path(VALIDATION_DIR,'P0.spl')
-#     if 0 : testOuverture(filename)
-# #     exit()
-#     if 0 : testProfil(filename)
-#     if 0 : testEchantillonner(filename)
-#     if 0 : testElaguer(filename)
-#     if 0 : testSaveAndOpen(filename)
-#     if 1 : testDivers(filename)
-# >>>>>>> 25348b4c83ba1e7b57bcf0a9cd7f62d29ead8dec
+if __name__=="__main__":
+    from testsprofil import testMain
+    testMain()

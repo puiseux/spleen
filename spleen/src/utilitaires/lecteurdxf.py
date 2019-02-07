@@ -14,9 +14,9 @@ Description :
 import sys
 import numpy as np
 from lecteur import Lecteur
-from utilitaires import (find,findAll,_findRel,whoami,Path,trace,my2dPlot)
-from config import VALIDATION_DIR
-from utilitaires import debug
+from utilitaires.utilitairesdivers import (find,findAll,_findRel,whoami,Path,trace,my2dPlot)
+# from config import VALIDATION_DIR
+from utilitaires.utilitairesdivers import debug
 from dxfgrabber import dxfentities
 # from geomdl import BSpline, utilities
 from matplotlib import pyplot as plot

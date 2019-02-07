@@ -287,5 +287,5 @@ if __name__=="__main__":
 #     for p in pts:
 #         print '%.2f, %.2f'%(p[0],p[1])
     print pts.shape,pts[:,0]
-    from utilitaires.utilitaires import my2dPlot
+    from utilitaires.utilitairesdivers import my2dPlot
     my2dPlot((pts,))

@@ -14,8 +14,8 @@ Description : lecteur générique pour fichier paramètres.
 '''
 import sys,os
 from lecteur import Lecteur
-from utilitaires import whoami,trace
-from config import VALIDATION_DIR,DATA_DIR
+from utilitaires.utilitairesdivers import whoami,trace
+# from config import VALIDATION_DIR,DATA_DIR
 
 class LecteurData(Lecteur):
     """

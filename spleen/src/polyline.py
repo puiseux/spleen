@@ -14,10 +14,10 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 
 import sys,os,math
 from path import Path
-from config import  VALIDATION_DIR
-from utilitaires.utilitaires import (debug, rdebug,absCurv, my2dPlot,)
+# from config import  VALIDATION_DIR
+from utilitaires.utilitairesdivers import (debug, rdebug,absCurv, my2dPlot,)
 import numpy as np
-from utilitaires.utilitaires.lecteurs import pointsFrom, pointsFromFile
+from utilitaires.lecteurs import pointsFrom, pointsFromFile
 from splinesimple import NSplineSimple
 from numpy import asarray
 

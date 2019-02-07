@@ -14,13 +14,13 @@ plt.rcParams["figure.figsize"] = (20,10)
 from difflib import context_diff
 from collections import OrderedDict
 from scipy.interpolate import dfitpack
-__updated__="2019-02-03"
+__updated__="2019-02-05"
 import os, sys
 from path import Path
 # print os.getcwd()
 from splinesimple import (NSplineSimple, placementReperesMontage,
                           correctionReperesMontage)
-from utilitaires.utilitaires import (diff,XY, dictsAreEqual)
+from utilitaires import (diff,XY, dictsAreEqual)
 from utilitaires.lecteurs import pointsFrom
 from utilitaires.utilitairesprofil import computeCordeAndNBA
 import sys,os,math
@@ -33,7 +33,7 @@ from numpy.linalg import  norm
 from config import VALIDATION_DIR, RUNS_DIR
 # from scipy.optimize import newton, minimize
 from pprint import pprint
-from utilitaires.utilitaires import (debug, debug,absCurv,dist2)
+from utilitaires.utilitairesdivers import (debug, debug,absCurv,dist2)
 import cPickle
 def mesures(S0) :
     def fmt(r):return int(1000*r)/1000.0
