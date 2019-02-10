@@ -7,34 +7,29 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
+__updated__="2019-02-10"
 '''
 from matplotlib import pyplot as plt
-from numpy.random import rand
+from utilitaires.utilitairesdivers import stack
 plt.rcParams["figure.figsize"] = (20,10)
-from difflib import context_diff
+from numpy.random import rand
 from collections import OrderedDict
-from scipy.interpolate import dfitpack
-__updated__="2019-02-05"
-import os, sys
 from path import Path
-# print os.getcwd()
 from splinesimple import (NSplineSimple, placementReperesMontage,
                           correctionReperesMontage)
-from utilitaires import (diff,XY, dictsAreEqual)
 from utilitaires.lecteurs import pointsFrom
 from utilitaires.utilitairesprofil import computeCordeAndNBA
 import sys,os,math
-# from array import array
-
 import numpy as np
 from numpy import log, linspace, asarray, sqrt, zeros
 from numpy.linalg import  norm
-# import scipy as sp
 from config import VALIDATION_DIR, RUNS_DIR
-# from scipy.optimize import newton, minimize
 from pprint import pprint
-from utilitaires.utilitairesdivers import (debug, debug,absCurv,dist2)
+from utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreEqual)
 import cPickle
+import config
+# from mpi4py import MPI
+config.TEST_MODE = True
 def mesures(S0) :
     def fmt(r):return int(1000*r)/1000.0
     x, y = S0.barycentre[0]
@@ -45,11 +40,11 @@ def mesures(S0) :
     last = -2 if S0.isClosed() else -1
     s = norm(S0[0]-S0[last])/L
     d = {'barycentre':(fmt(x), fmt(y)),
-         'largeur':fmt(l),
-         'hauteur':fmt(h),
-         'longueur':fmt(L),
-         'courbure':fmt(c),
-         'sinuosite':fmt(s)}
+         'largeur'   :fmt(l),
+         'hauteur'   :fmt(h),
+         'longueur'  :fmt(L),
+         'courbure'  :fmt(c),
+         'sinuosite' :fmt(s)}
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
 
 def testSequenceBasique(filename, show=True):
@@ -89,27 +84,18 @@ def testSequenceBasique(filename, show=True):
         debug(paragraphe='1. methode-%d=%s (fichier %s)'%(k, str(methode),filename.name))
         S = NSplineSimple(cpoints=pointsFrom(filename), methode=methode, name=str(methode))
         debug(S)
-        try : debug(S._dpoints.shape)
-        except AttributeError as msg:debug(u'    Normal pas de S._dpoints : %s'%str(msg))
-        except Exception as msg : debug(str(msg))
-        try : debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
-        except Exception as msg : debug(str(msg))
+        debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
         debug(paragraphe='2. S._update() methode-%d=%s  (fichier %s)'%(k, str(methode),filename.name))
         S._update()
-        try :debug(S._dpoints)
-        except AttributeError as msg:debug(u'    Normal pas de S._dpoints : %s'%str(msg))
-        try : debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
-        except Exception as msg : debug(str(msg))
+        try :
+            debug(S._dpoints)
+        except AttributeError as msg:
+            debug(u'    Normal pas de S._dpoints : %s'%str(msg))
+        debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
         debug(S)
         if show :
-            try : S.plot(plt, show=True)
-            except Exception as msg :
-                debug(str(msg))
-                plt.plot(title=str(msg))
-                plt.title(str(msg)+'\n'+str(methode))
-                plt.show()
+            S.plot(show=True)
         debug('    Longueurs (c,d)=(%.5g,%.5g) ; nspline=%d'%(S.longueur('c'),S.longueur('d'), S.nbspline))
-#         debug('Longueurs (c,d,e)=(%.5g,%.5g,%.5g)'%(S.longueur('c'),S.longueur('d'),S.longueur('e')))
 
         i, p = len(S)/2, S.centregravite
         debug(paragraphe='3. S[%d]=[%.3g, %.3g], methode-%d=%s  (fichier %s)'%(i, p[0], p[1], k, str(methode),filename.name))
@@ -122,7 +108,7 @@ def testSequenceBasique(filename, show=True):
         print '    abscurv=',ac.shape, 'knots=',S.knots.shape, 'cpoints=',S._cpoints.shape
         print '    norm(S(ac)-S._cpoints)=',norm(S(ac)-S._cpoints)
         print '    norm(ac-S.knots)',norm(ac-S.knots)
-        if show : S.plot(plt,show=True, titre='%s : modif S[%d]=[%.3g, %.3g]'%(filename.name, i, p[0], p[1]))
+        if show : S.plot(show=True, titre='%s : modif S[%d]=[%.3g, %.3g]'%(filename.name, i, p[0], p[1]))
         debug(S[i],oldp=oldp)
         S[i] = oldp
         debug(paragraphe='4. echantillonnage methode-%d=%s  (fichier %s)'%(k, str(methode),filename.name))
@@ -152,7 +138,8 @@ def testSequenceBasique(filename, show=True):
             print 'mode=',S.mode, ', epoints=',e3.shape
             print 'T = %s'%S.tech.tolist()
             X3, Y3 = XY(e3)
-        except ValueError as msg :
+        except ValueError as msg :#normal
+            debug('normal', str(msg))
             print 'methode %s, mode echantillonnage = %s : %s'%(str(S.methode), str(S.mode), str(msg))
             X3,Y3 = zeros((0,)), zeros((0,))
         X0, Y0 = XY(e0)
@@ -188,14 +175,14 @@ def testConstructeurs(filename, show=False) :
     debug(paragraphe='3. p vide => p.cpoints=points de %s'%filename.name)
     points = pointsFrom(filename)
     p.cpoints = points
-    if show : p.plot(plt, titre='cpoints=pointsFrom()')
+    if show : p.plot(titre='cpoints=pointsFrom()')
 
     S0 = NSplineSimple(points=pointsFrom(filename),
                        methode=('cubic','periodic'),
 #                        mode='courbure',
                        name=filename.name)
     debug(S0)
-    if show :S0.plot(plt, titre=filename.name)
+    if show :S0.plot(titre=filename.name)
 
     debug(paragraphe='4. S = NSplineSimple(**dump00) (points:%s)'%filename.name)
     dump00 = S0.toDump()
@@ -217,12 +204,11 @@ def testConstructeurs(filename, show=False) :
 #     pprint(S0.toDump())
     debug(S0)
     debug('S0.toDump()==dump00',dictsAreEqual(S0.toDump(),dump02))
-    if show : S0.plot(plt, titre='open pkl')
-    if show : plt.show()
+    if show : S0.plot(titre='open pkl')
     S1 = S0.copy()
     d0,d1 = dump00, S1.toDump()
     debug('d0==d1',dictsAreEqual(d0,d1))
-    if show :S1.plot(plt, titre='copy')
+    if show :S1.plot(titre='copy')
     debug(titre='Fin testConstructeurs %s'%filename.name)
 
 def testMethodes(filename, show=True):
@@ -242,7 +228,7 @@ def testMethodes(filename, show=True):
                           mode='courbure',
                           name='SPLINE%d'%(k+1))
         debug(S)
-        if show : S.plot(plt, titre=filename.name+str(methode))
+        if show : S.plot(titre=filename.name+str(methode))
         if show : S.plotCourbure()
 
 #     filename=Path(VALIDATION_DIR,'simple','simple2d2.gnu')
@@ -258,16 +244,11 @@ def testMethodes(filename, show=True):
                     (('us',4),'courbure'),
                     (('us',7),'courbure'),
                     ):
-        try :
-            S = NSplineSimple(points=pointsFrom(filename), methode=methode, mode=mode)
-            debug(S)
-#             debug(u'\n'+70*u'*'+u'\n'+ u' TODO : methode=("us",k) ne marche pas. Va y avoir plein d\'exceptions'+u'\n'+70*u'*'+u'\n')
+        S = NSplineSimple(points=pointsFrom(filename), methode=methode, mode=mode)
+        debug(S)
 
-            if show : S.plot(plt, titre=filename.name+str(methode))
-        except Exception as msg:
-            debug('(methode=%s; mode=%s) => pas de spline'%(str(methode),str(mode)),
-                   '%s : %s'%(type(msg).__name__,unicode (msg)))
-    if show : plt.show()
+        if show and methode[1]<=5 : #pour k=7 ca plante
+            S.plot(titre=filename.name+str(methode))
     debug(titre='Fin testMethodes(%s)'%filename.name)
 
 def testModifGlobales(filename, show=True) :
@@ -279,42 +260,42 @@ def testModifGlobales(filename, show=True) :
                        precision=1000,
                        mode='courbure',
                        name='SPLINE01')
-    if show : S0.plot(plt, titre='NSplineSimple(points=pointsFrom(filename),...')
+    if show : S0.plot(titre='NSplineSimple(points=pointsFrom(filename),...')
 #     numfig += 1
 #     plt.figure(numfig)
     S0.cpoints = pointsFrom(filename)
     debug(initial=mesures(S0))
-    if show : S0.plot(plt, titre=filename.name+'cpoints = pointsFrom()')
+    if show : S0.plot(titre=filename.name+'cpoints = pointsFrom()')
 
 #     numfig += 1
 #     plt.figure(numfig)
     S0.symetriser(0)
     debug(symetriser_0=mesures(S0))
-    if show : S0.plot(plt, titre='symetriser(0)')
+    if show : S0.plot(titre='symetriser(0)')
 
 #     numfig += 1
 #     plt.figure(numfig)
     S0.symetriser(1)
     debug(symetriser_1=mesures(S0))
-    if show : S0.plot(plt, titre='symetriser(1)')
+    if show : S0.plot(titre='symetriser(1)')
 
 #     numfig += 1
 #     plt.figure(numfig)
     S0.hardRotate(30)#en degres par defaut
     debug(hardRotate_30=mesures(S0))
-    if show : S0.plot(plt, titre='hardRotate(30)')
+    if show : S0.plot(titre='hardRotate(30)')
 
 #     numfig += 1
 #     plt.figure(numfig)
     S0.hardScale((2,0.5))
     debug(hardScale_2_0point5=mesures(S0))
-    if show : S0.plot(plt, titre='hardScale((2,0.5))')
+    if show : S0.plot(titre='hardScale((2,0.5))')
 
 #     numfig += 1
 #     plt.figure(numfig)
     S0.translate((2,3))
     debug(translate_2_3=mesures(S0))
-    if show : S0.plot(plt, titre='translate((2,3))')
+    if show : S0.plot(titre='translate((2,3))')
 #     if show : plt.show()
     debug(titre="Fin testModifGlobales : %s"%filename.name)
 
@@ -330,49 +311,51 @@ def testModifLocales(filename, show=True)  :
     for key, value in mesure.items() :
         exec('%s=%s'%(key,value))
         exec("print '%20s = %s'%(key,value)")
-    if show : S.plot(plt, titre=filename.name)
+    if show : S.plot(titre=filename.name)
 
     try :
         i0 = S.insertPoint((0,0))
         if show and isinstance(i0, int):
-            S.plot(plt, titre='insertPoint((0,0)) en position %d'%i0)
-    except ValueError as msg : debug(msg)
+            S.plot(titre='insertPoint((0,0)) en position %d'%i0)
+    except ValueError as msg :
+        debug('normal', msg)
 
     try :
         i1 = S.appendPoint((2,1.5))
         if show and isinstance(i1, int):
-            S.plot(plt, titre='appendPoint((2,1.5)) num=%d'%i1)
-    except ValueError as msg : debug(msg)
+            S.plot(titre='appendPoint((2,1.5)) num=%d'%i1)
+    except ValueError as msg :
+        debug(msg)
+        raise
 
     try :
         i2 = S.insertPoint((-2,0))
-        if show : S.plot(plt, titre='insertPoint((2,-2)) en position %d'%i2)
-    except ValueError as msg : debug(msg)
+        if show : S.plot(titre='insertPoint((2,-2)) en position %d'%i2)
+    except ValueError as msg :
+        debug(msg)
+        raise
 
     try :
         i3 = S.insertPoint((6,0),len(S)/2)
-        if show : S.plot(plt, titre='insertPoint((6,0),%d) en position %d'%(len(S)/2,i3))
+        if show : S.plot(titre='insertPoint((6,0),%d) en position %d'%(len(S)/2,i3))
     except ValueError as msg :
         debug(msg)
+        raise
     S.removePoint(i3)
     S.removePoint(i2)
     S.removePoint(i1)
-    if show : S.plot(plt, titre='removePoint(%d,%d,%d)'%(i3,i2,i1))
+    if show : S.plot(titre='removePoint(%d,%d,%d)'%(i3,i2,i1))
 
     S[1] = (4,-0.1)
-    if show : S.plot(plt, titre='S[1] = (4,-0.1)',show=True)
+    if show : S.plot(titre='S[1] = (4,-0.1)',show=True)
     print S[1]
-#     if show : S.plot(plt, )
-    try : S._update()
-    except AttributeError as msg : debug(msg)
+    S._update()
     pprint(S.__dict__)
     dump = S.toDump()
-#     debug()
-#     pprint(dump)
     dump['methode'] = ('cubic','natural')
     S.load(dump)
     S.name='SPLINE3'
-    if show : S.plot(plt, titre='load(toDump())',show=True)
+    if show : S.plot(titre='load(toDump())',show=True)
     print S
     debug(titre="Fin testModifLocales : %s"%filename.name)
 
@@ -455,9 +438,9 @@ def testEchantillonnage(filename, trados, show=True):
     debug(Te=s0.tech)
     E = s0.epoints
     if show :
-        s0.plot(plt, more=[(E[:,0],E[:,1],'y^','echantillon \nn=%d, %.2f=>%.2f'%(ne,ta,tb)),])
+        s0.plot(more=[(E[:,0],E[:,1],'y^','echantillon \nn=%d, %.2f=>%.2f'%(ne,ta,tb)),])
 #     plt.plot(E[:,0],E[:,1],'y^','echantillon')
-        plt.show()
+#         plt.show()
     debug(titre="Fin testEchantillonnage %s-trados : %s"%(trados,filename.name))
 
 def testDivers(filename, show=True):
@@ -489,7 +472,7 @@ def testDivers(filename, show=True):
     cpoints = pointsFrom(filename)
     S0 = NSplineSimple(cpoints=cpoints, name=filename.name)
     debug(S0)
-    if show : S0.plot(plt, show=True)
+    if show : S0.plot(show=True)
     ########################################
     msg=u"""S est une NSplineSimple. Teste les méthodes :
     - S.absCurv(T) qui retourne les abscisses curvilignes VRAIES des points S(T)
@@ -522,7 +505,7 @@ def testDivers(filename, show=True):
             'mode': 'lineaire'}
     debug(msg)
     S = NSplineSimple(**dump)
-    if show : S.plot(plt)
+    if show : S.plot()
     knots = S.knots
     acn = S.absCurv(knots)
     acr = S.absCurv(acn)
@@ -535,40 +518,42 @@ def testDivers(filename, show=True):
     debug('vraie abscurv[-1]=%.10g'%lr)
     ln = acn[-1]
     debug('abscurv[-1]=%.10g'%ln)
-    S.nbpd=1000
+    S.nbpd=100
     ld3 = S.longueur('d')
     debug('S.dlongueur=%g'%ld3+u"(calculé sur %d points)"%S.precision)
-    S.nbpd=10000
+    S.nbpd=1000
     ld4 = S.longueur('d')
     debug('S.dlongueur=%g'%ld4+u"(calculé sur %d points)"%S.precision)
-    S.nbpd=100000
+    S.nbpd=10000
     ld5 = S.longueur('d')
     debug('S.dlongueur=%g'%ld5+u"(calculé sur %d points)"%S.precision)
     le = S.longueur('e')
     debug('S.elongueur=%g'%le)
     lc = S.longueur('c')
     debug('S.clongueur=%g'%lc)
-    diff = [l-lr,l-ln,l-ld3,l-ld4,l-ld5,l-le,l-lc]
-    plt.bar(range(len(diff)),diff)
-    plt.xticks(range(len(diff)),'lr,ln,ld3,ld4,ld5,le,lc'.split(','))
-    plt.title('differentes longueurs calculees')
 
-    if show : plt.show()
+    if show :
+        diff = [l-lr,l-ln,l-ld3,l-ld4,l-ld5,l-le,l-lc]
+        plt.show()
+        plt.bar(range(len(diff)),diff)
+        plt.xticks(range(len(diff)),'lr,ln,ld3,ld4,ld5,le,lc'.split(','))
+        plt.title('differentes longueurs calculees')
     p1, p2, p3 = [0.2,0.01], [1.1,0.2], [-0.1,0.3]
-    res1, res2, res3 = S.distance2To(p1), S.distance2To(p2), S.distance2To(p3)
-    pj1, pj2, pj3 = S(res1.x), S(res2.x), S(res3.x)
+    res1, res2, res3 = S.projection(p1), S.projection(p2), S.projection(p3)
+    pj1, pj2, pj3 = S(res1[0]), S(res2[0]), S(res3[0])
 #     debug(str(res))
-    debug("****  DISTANCE POINT-SPLINE  ****")
-    debug('message="%s"'%res1.message,'d(S,p1)=%g'%res1.fun, 't=%g'%res1.x, 'nb appels a fct=%d'%res1.nfev)
-    debug('message="%s"'%res2.message,'d(S,p2)=%g'%res2.fun, 't=%g'%res2.x, 'nb appels a fct=%d'%res2.nfev)
-    debug('message="%s"'%res3.message,'d(S,p3)=%g'%res3.fun, 't=%g'%res3.x, 'nb appels a fct=%d'%res3.nfev)
-    more = [([p1[0],pj1[0]],[p1[1],pj1[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(res1.fun)),
-            ([p2[0],pj2[0]],[p2[1],pj2[1]],'g-o', 'd(S,p2) : %.2g'%sqrt(res2.fun)),
-            ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(res3.fun))]
-    projections = [(pj1[0],pj1[1],'y.',''), (pj2[0],pj2[1],'y.', ''), (pj3[0],pj3[1],'y.', '')]
-    more += projections
-    if show : S.plot(plt, more=more, titre='distance point-spline', show=True)
-#     plt.plot(p1[0],p1[1],'go', label='p1 : %g'%res1.fun)
+    debug(paragraphe="****  DISTANCE POINT-SPLINE  ****")
+    debug('message="%s"'%res1[3],'d(S,p1)=%g'%res1[1], 't=%g'%res1[0], 'nb appels a fct=%d'%res1[2])
+    debug('message="%s"'%res2[3],'d(S,p2)=%g'%res2[1], 't=%g'%res2[0], 'nb appels a fct=%d'%res2[2])
+    debug('message="%s"'%res3[3],'d(S,p3)=%g'%res3[1], 't=%g'%res3[0], 'nb appels a fct=%d'%res3[2])
+    if show :
+        more = [([p1[0],pj1[0]],[p1[1],pj1[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(res1[1])),
+                ([p2[0],pj2[0]],[p2[1],pj2[1]],'g-o', 'd(S,p2) : %.2g'%sqrt(res2[1])),
+                ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(res3[1]))]
+        projections = [(pj1[0],pj1[1],'y.',''), (pj2[0],pj2[1],'y.', ''), (pj3[0],pj3[1],'y.', '')]
+        more += projections
+        S.plot(more=more, titre='distance point-spline', show=True)
+#     plt.plot(p1[0],p1[1],'go', label='p1 : %g'%res1[1])
 #     plt.legend()
 #     if show : plt.show()
 #     return
@@ -576,7 +561,7 @@ def testDivers(filename, show=True):
     debug(rect=S.boundingRect())
 #     debug('CLONE', clone=S.clone())
     debug('COPY', clone=S.copy())
-    S.hardScale((0.5,0.5), S.centre)
+    S.hardScale((0.5,0.5), S.centregravite)
     debug('APRES HARDSCALE',S=S)
     debug(rect=S.boundingRect())
     S.hardMove((10,10))
@@ -584,7 +569,7 @@ def testDivers(filename, show=True):
     debug(rect=S.boundingRect())
 #     debug(top='%g'%rect.top(), left='%g'%rect.left(), width='%g'%rect.width(), height='%g'%rect.height(), )
 #     debug(bottom='%g'%rect.bottom(), top='%g'%rect.top())
-    if show : S.plot(plt, titre="**dump")
+    if show : S.plot(titre="**dump")
     debug(titre="Fin testDivers : %s"%filename.name)
 
 def testDivers1(filename, show=True):
@@ -606,7 +591,7 @@ def testDivers1(filename, show=True):
     debug(BA=cpoints[-1], BF=cpoints[0], extrados=cpoints[nba/2])
 #     S0 = NSplineSimple(cpoints=cpoints, name=filename.name)
 #     debug(S0)
-#     if show : S0.plot(plt, show=True)
+#     if show : S0.plot(show=True)
     ########################################
 #     dump = {'cpoints': [[0.5279636979103088, 0.07332829385995865], [0.7137287259101868, 0.3275330364704132], [1.268811468596966, 0.3365727279966774], [1.1390328407287598, 0.07332829385995865], [1.2571670716747245, 0.2148051133421408], [1.2206038430660453, -0.0507648238639925], [1.5545598268508911, -0.0048885527066886425]],
 # #             'methode': ('cubic', 'not-a-knot'),
@@ -640,7 +625,7 @@ def testDivers1(filename, show=True):
             ([p2[0],pj2[0]],[p2[1],pj2[1]],'g-o', 'd(S,p2) : %.2g'%sqrt(d2)),
             ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(d3))]
 
-    if show : S.plot(plt, more=more, titre='distance point-spline(continu)', show=True)
+    if show : S.plot(more=more, titre='distance point-spline(continu)', show=True)
 
     (t1,d1,n1,m1) = S.projection(p1,discret=100)
     (t2,d2,n2,m2) = S.projection(p2,discret=100)
@@ -650,30 +635,31 @@ def testDivers1(filename, show=True):
     print '    message=%-20s'%m1,'d(S,p1)=%-10.3g'%d1, 't=%-10.3g'%t1, 'nb appels a fct=%d'%n1
     print '    message=%-20s'%m2,'d(S,p2)=%-10.3g'%d2, 't=%-10.3g'%t2, 'nb appels a fct=%d'%n2
     print '    message=%-20s'%m3,'d(S,p3)=%-10.3g'%d3, 't=%-10.3g'%t3, 'nb appels a fct=%d'%n3
-    more = [([p1[0],pj1[0]],[p1[1],pj1[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(d1)),
-            ([p2[0],pj2[0]],[p2[1],pj2[1]],'g-o', 'd(S,p2) : %.2g'%sqrt(d2)),
-            ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(d3))]
+    if show :
+        more = [([p1[0],pj1[0]],[p1[1],pj1[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(d1)),
+                ([p2[0],pj2[0]],[p2[1],pj2[1]],'g-o', 'd(S,p2) : %.2g'%sqrt(d2)),
+                ([p3[0],pj3[0]],[p3[1],pj3[1]],'g-o', 'd(S,p3) : %.2g'%sqrt(d3))]
 
-    if show : S.plot(plt, more=more, titre='distance point-spline (discret)', show=True)
+        S.plot(more=more, titre='distance point-spline (discret)', show=True)
     T, D, N,_ = S.projectionObj(S.epoints,discret=100)
     print '    S.projectionObj(S.epoints) : norm(D)=%.3g, max(D)=%.3g'%(sqrt(sum(D)), sqrt(max(D)))
 #     P = asarray([p1,p2,p3])
     P = (rand(5,2)-0.3)/10+S.centregravite
 #     debug(P.tolist())
     T, D, N,_ = S.projectionObj(P,discret=1000)
-    S.nbpd=1000
+    S.nbpd = 1000
     Pj = S(T)
-    debug(paragraphe='S.projectionObj(P,discret=10)', T_D_N=zip(T,D,N))
+    debug(paragraphe='Aleatoire : S.projectionObj(P,discret=%d)'%S.nbpd, T_D_N=zip(T,D,N))
 #     exit()
 
-    more = [([p[0],pj[0]],[p[1],pj[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(d)) for p, pj, d in zip(P,Pj,D)]
-
-    if show : S.plot(plt, more=more, titre='distance point-spline', show=True)
+    if show :
+        more = [([p[0],pj[0]],[p[1],pj[1]],'g-o', 'd(S,p1) : %.2g'%sqrt(d)) for p, pj, d in zip(P,Pj,D)]
+        S.plot(more=more, titre='distance point-spline', show=True)
     debug(paragraphe=u'Elagage')
     s1, d, (n0,n1) = S.elaguer(eps=1.0,debog=show)
     if show :
-        S.plot(plt, titre=u'avant élagage', show=False)
-        s1.plot(plt, titre=u"Après élagage, distance=%.3g ; nb points contrôle : %d => %d"%(d,n0,n1), show=True)
+        S.plot(titre=u'avant élagage', show=False)
+        s1.plot(titre=u"Après élagage, distance=%.3g ; nb points contrôle : %d => %d"%(d,n0,n1), show=True)
     debug(titre="Fin testDivers1 : %s"%filename.name)
 
     return
@@ -819,7 +805,7 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
         On trace les projections de P sur la spline s"""
 #         debug(s.projection(P))
         pjs = s(s.projectionObj(P)[0])
-        if show : s.plot(plt, more=([P[:,0], P[:,1],'g.', 'C0'], [pjs[:,0], pjs[:,1],'y.','projections']))
+        if show : s.plot(more=([P[:,0], P[:,1],'g.', 'C0'], [pjs[:,0], pjs[:,1],'y.','projections']))
 
     u"""Extraction intrados et extrados, normalisation"""
     points = pointsFrom(filename)
@@ -842,6 +828,8 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
     precision = 1000
     T0 = linspace(0,1,precision)
     s0 = NSplineSimple(cpoints=c0, precision=precision, methode=methode, mode='courbure')
+    Tc = linspace(0,1,100)
+    courb0 = s0.courbure(Tc)
     u"""La spline elaguée"""
     if fonction == 'elaguer' :
         s1, d, (n0,n1) = s0.elaguer(1,debog=show)
@@ -856,6 +844,10 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
     print u'  nb pts contrôle       : %d => %d'%(len(s0),len(s1))
 #     compareCourbures(s0, s1, corde, trados)
     comparePointsSpline(s0.cpoints, s1)
+    debug(paragraphe='courbure Avant')
+    print courb0.tolist()
+    debug(paragraphe='courbure Apres')
+    print s1.courbure(Tc).tolist()
     debug(titre="Fin testElaguer : %s"%filename.name)
 
 def testCorrectionRM(show=True):
@@ -978,7 +970,12 @@ def mainTest(show=False):
             ][::-1]
 
 #     debug(titre='TODO : methode=("us",k) ne marche pas')
-    for filename in files :
+#     comm = MPI.COMM_WORLD()
+#     rank = comm.Get_rank()
+#     size = comm.Get_size()
+    #for i in range(0,size):
+
+    for filename in files[:] :
         if 1:
             testSequenceBasique(filename, show=show)
         if 1:
@@ -991,13 +988,11 @@ def mainTest(show=False):
             testModifGlobales(filename, show=show)
         if 1:
             testModifLocales(filename, show=show)
+#             return
         if 1:
             testDivers1(filename, show)
         if 1:
-            try :
-                testDivers(filename, show=show)
-            except AttributeError as msg:
-                debug('AttributeError :'+str(msg))
+            testDivers(filename, show=show)
         if 1:
             testEchantillonnage(filename, trados='e',show=show)
             testEchantillonnage(filename, trados='i',show=show)
@@ -1018,6 +1013,7 @@ def mainTest(show=False):
         debug(titre='fin tests %s'%filename.name)
     debug(titre='fin tests')
 if __name__=='__main__':
+
     mainTest()
 
     # sys.exit(app.exec_())

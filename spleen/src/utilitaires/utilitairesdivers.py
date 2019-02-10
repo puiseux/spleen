@@ -5,7 +5,7 @@
 Created on 11 mai 2012
 
 @author: puiseux
-__updated__ = '2019-01-31'
+__updated__ = '2019-02-10'
 '''
 import datetime
 import gc  # garbage colector
@@ -38,6 +38,7 @@ from scipy.optimize import minimize_scalar
 from shapely.geometry import LinearRing, Point, Polygon
 from matplotlib import pylab
 from collections import OrderedDict
+import config
 # import logging
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)
@@ -908,13 +909,18 @@ def clickableLink(filename, lineno):#, name):
 #     filename = filename.replace(SOURCES_DIR,'').strip('/\\')
     return unicode(u'File "%s", line %d'%(filename, lineno))#, name))
 
+# clickableLink = _clickableLink if not config.TEST_MODE else lambda f,l : f.name
+
 def _strace(*args,**kargs) :
     u"""_trace simplifié, sans le nom de la classe"""
     frame = sys._getframe(2)
     fcode = frame.f_code
     fonction = fcode.co_name
     filename = Path(fcode.co_filename)#.name
-    toclick = clickableLink(filename, frame.f_lineno)
+    if config.TEST_MODE :
+        toclick = u"(module %s)"%filename.name
+    else :
+        toclick = clickableLink(filename, frame.f_lineno)
     output = args[0]
     args = args[1:]
     try :
@@ -1251,11 +1257,11 @@ def isInsideOrFrontier(p, Q, eps=1.0e-6):
     u"""
     Utilise le package shapely (Polygon et Point)
     :param p : (x,y) = ndarray((1,2), float) un point en 2d
-    :param Q : est un polygone = ndarray((n,2), float) supposé fermé i.e. 
+    :param Q : est un polygone = ndarray((n,2), float) supposé fermé i.e.
         le premier point == le dernier point,
     :param eps : float = precision
     :return :
-        True si p est à l'intérieur du polygone Q ou sur la frontiere 
+        True si p est à l'intérieur du polygone Q ou sur la frontiere
             (bande de largeur eps) et
         False s'il est à l'extérieur.
     """

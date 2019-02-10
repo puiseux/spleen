@@ -10,7 +10,7 @@ Description :
 '''
 from numbers import Number
 import numpy as np
-from numpy import asarray as array, linspace
+from numpy import asarray as array, linspace, loadtxt, savetxt
 
 from scipy.optimize import newton, minimize, minimize_scalar
 from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
@@ -65,7 +65,7 @@ def absCurvReal(S, T):
 
 def distancePointSpline(p, S, t0=0.5, tol=1.0e-9):
     u"""
-    Comme son nom l'indique, calcule le carré de la plus courte distance euclidienne 
+    Comme son nom l'indique, calcule le carré de la plus courte distance euclidienne
     d'un point p à une spline paramétrée S(t) = x(t), y(t), 0<=t<=1
     :param S: NSplineAbstract, la spline paramétrique
     :param p: (x,y)=(float, float) le point.
@@ -337,51 +337,129 @@ class NSplineAbstract(object):
         self.load(dump)
 #         self._update()Doit etre appelé explicitement par les héritiers au bon moment
 
-    def __call__(self, T, diff=0):
+    def __getitem__(self,k):
         u"""
-        # Paramètre :
-            * T peut être
-                - un réel entre 0 et 1
-                - ou un np.ndarray de n réels dans [0,1] (de shape (n,1)? ou (1,n)?)
-                - ou une liste de n réels entre 0 et 1
-            * diff est l'ordre de dérivation
-        # Retourne :
-        les 2 ndarrays de shape (n,1), zippés, contenant les points (sx(ti, diff), sy(ti, diff)) ou ti parcourt T
-            * si diff=0, retourne les coordonnées du point x(t), y(t),
-            * si diff=1, retourne les dérivées x'(t), y'(t)
-            * si diff=2, retourne les dérivées secondes x"(t),y"(t)
-        # Utilisation :
-            >>> S = NSpline(....)
-            >>> T = np.linspace(0.0, 1.0, 11)
-            >>> S(T)
-            ... : les 11 points [S(0), S(0.1), ...,S(0.9), S(1)] de la spline
-            N.B. : la fonction zip fait ceci:
-            >>> z = zip(range(3),range(3))
-            >>> z
-            ... [(0, 0), (1, 1), (2, 2)]
+        Pour accéder aux points du polygone de controle (en lecture)
+        ne traite pas les slices
+        Retourne un tuple (x,y)
+        >>> S = NSplineSimple(points=....)
+        >>> S[3]
+        [10.0,3.14] le point points[3]
+        ne gère pas les slices
+        >>> S[1:3]
+        ... AttributeError: 'QPolygonF' object has no attribute 'x'
         """
-#         #debug(self.sx(T))
-#         #debug(self.sy(T))
-        try :
-            X, Y = self.sx(T, diff), self.sy(T, diff)
-#             debug(X)
-            try :
-                return array(zip(X, Y))
-            except TypeError :
-                return [X,Y]
-        except TypeError :
-            return
+        return self.cpoints[k]
+
+    def __str__(self):
+        return u'\n'.join(self.info)
+
+    @property
+    def height(self):
+        if not hasattr(self, '_height') :
+            self._height = 0 if len(self)<=1 else\
+                max(self.dpoints[:,1]) - min(self.dpoints[:,1])
+        return self._height
+
+    hauteur = height
+
+    @property
+    def width(self):
+        if not hasattr(self, '_width') :
+            self._width = 0 if len(self)<=1 else\
+                max(self.dpoints[:,0]) - min(self.dpoints[:,0])
+        return self._width
+
+    largeur = width
+
+    def boundingRect(self):
+        dpts = self.dpoints
+        xM, xm, yM, ym = dpts[:,0].max(), dpts[:,0].min(), dpts[:,1].max(), dpts[:,1].min()
+        return xm,ym,xM,yM
+
+    @property
+    def gravitycenter(self):
+        u"""Le vrai centre de gravité de la surface (plaque plane)
+        délimitée par le polygone fermé."""
+        return self[0] if len(self)==1 else centreGravite(self.dpoints)
+    centregravite=gravitycenter
+
+    @property
+    def barycentre(self):
+        u"""Le centre de gravité du nuage de points matériels cpoints."""
+        return baryCentre(self.cpoints)
 
     u"""methodes virtuelles pures"""
 ################################################################
+    def __call__(self, T, diff=0):
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
     def setDefaultValues(self):
         u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
+    def toDump(self):
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
+
     def load(self):
         u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
+
+    def copy(self):
+        u"""retourne une copie de self"""
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
+
+    def save(self, filename):
+        filename = Path(filename)
+        ext = filename.ext
+        try :
+            if ext in (".gnu", '.txt'):
+                #seulement les points échantillonnés
+                savetxt(filename, self.epoints)
+            # elif ext==".pts":
+            #     #seulement les points échantillonnés
+            #     writeProfil(filename, self.epoints)
+#             elif ext=='.npkl':
+                #Spline complète, pickle
+#                 cPickle.dump(self.toDump('new'),open(filename,'w'))
+            elif ext in ('.pkl','.npkl'):
+                #Spline complète, dict
+                cPickle.dump(self.toDump(),open(filename,'w'))
+            elif ext=='.spl':
+                #Spline complète, dict
+                with open(filename,'w') as f :
+                    f.write(str(self.toDump()))
+            elif ext=='.dxf':
+                raise NotImplementedError('Format dxf')
+            debug('Sauvegarde %s : OK'%filename)
+        except Exception as msg:
+            rdebug('Sauvegarde %s impossible : %s'%(filename.name,str(msg)))
+
+
+    def open(self, filename):
+        filename = Path(filename)
+        ext = filename.ext
+        #debug(filename=filename)
+        if ext in (".gnu", '.txt'):
+            dump = self.toDump()
+            dump['cpoints'] = loadtxt(filename)
+        elif ext==".pts":
+            dump = self.toDump()
+            dump['cpoints'] = LecteurUniversel(filename).points
+        elif ext in ('.pkl', '.npkl'):
+            dump = cPickle.load(open(filename,'r'))
+            for key in ('points', 'cpoints') :
+                if dump.has_key(key) :
+                    dump[key] = pointsFrom(dump.pop(key))
+        elif ext in('.spl','.nspl') :
+            with open(filename, 'r') as f :
+                dump = eval(f.read())
+                if dump.has_key('dmodel') :
+                    dump = dump.pop('dmodel')
+#                 self.load(dump)
+#         #debug(dump=dump)
+        self.load(dump)
+
 
     def computeSpline(self, *args, **kargs):
         u"""renseigne self.sx, self.sy"""
@@ -400,8 +478,8 @@ class NSplineAbstract(object):
         ultra privée, ne pas l'appeler de l'extérieur.
         Supprime et recalcule tout, en particulier les splines sx et sy
         '''
-#         self.nbupdate +=1
-#         debug(nbupdate=self.nbupdate)
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
+
         try : del self._qcpolygon
         except AttributeError : pass
         try : del self._qepolygon
@@ -419,70 +497,19 @@ class NSplineAbstract(object):
         try : del self._longueur
         except AttributeError : pass
 
-    def plot(self, plt, control=True, nbpd=None, nbpe=None, mode=None,
-             titre=None, more=[], show=True, buttons=True):
-        """
-        :param plt : une instance de pyplot, obtenue en amont par :
-              >>> from matplotlib import pyplot as plt
-        :param control : bool, affichage des points de controle True/False
-        :param nbpd : int, nb points de discretisation
-        :param nbpe : int, nb de points d'echantillonage
-        :param titre : str ou unicode, titre
-        :param more : list, [(X,Y, couleur,'nom'), ...] tracé supplementaire
-          """
-        from matplotlib.widgets import CheckButtons
-#         plt.figure(numfig)
-#         rdebug('***********')
-        if nbpd is None : nbpd = self.precision
-        if nbpe is None : nbpe = self.nbpe
-        if mode is None : mode = self.mode
-#         debug('appel echantillonnage', type(self))
+    def plot(self, *args, **kargs):
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
-        D = self.dpoints
-        C = self.cpoints
-#         E = self.epoints
-#         if len(E)==0 :
-#         rdebug()
-        E = self.echantillonner(nbp=nbpe, mode=mode)
-#         debug(E=E)
-        _, ax = plt.subplots()
-        if titre is None : titre = self.name+str(self.methode)
-        plt.title(titre)
-        spline, = ax.plot(D[:,0], D[:,1], 'b-', lw=1)
-        echantillon, = ax.plot(E[:,0], E[:,1], 'g.', lw=1)
-        control, = ax.plot(C[:,0], C[:,1], 'ro', lw=1)
-        if buttons :
-            butt = ['control','echantillon', 'spline',]
-            values = [True, True, True]
-            draws = [spline, control, echantillon]
-        for x, y, color, name in more:
-            temp, = ax.plot(x, y, color)
-            if not name : continue
-            if buttons :
-                draws.append(temp)
-                butt.append(name)
-                values.append(True)
-        plt.subplots_adjust(left=0.2)
-        plt.axis('equal')
+    def longueur(self, p='r'):
+        if p=='c':
+            return absCurv(self.cpoints, normalise=False)[-1]
+        elif p=='d' :
+            return absCurv(self.dpoints, normalise=False)[-1]
+        elif p=='e' :
+            return absCurv(self.epoints, normalise=False)[-1]
+        else:#longueur vraie
+            raise NotImplementedError(u"la methode %s('r') doit etre implemente"%(whoami(self)[:-2]))
 
-        if buttons :
-            rax = plt.axes([0.05, 0.4, 0.1, 0.15])
-            check = CheckButtons(rax, butt, values)
-
-            def func(label):
-                if label == 'spline':
-                    spline.set_visible(not spline.get_visible())
-                elif label == 'control':
-                    control.set_visible(not control.get_visible())
-                elif label == 'echantillon':
-                    echantillon.set_visible(not echantillon.get_visible())
-                else :
-                    draw = draws[butt.index(label)]
-                    draw.set_visible(not draw.get_visible())
-                plt.draw()
-            check.on_clicked(func)
-        if show : plt.show()
-        return plt
 
 if __name__=="__main__":
     debug('Rien a faire')

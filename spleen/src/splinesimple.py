@@ -7,7 +7,7 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-07"
+__updated__="2019-02-10"
 '''
 import sys, os, math
 import cPickle
@@ -15,22 +15,27 @@ from array import array
 from matplotlib import pyplot as plt
 # from pprint import pprint
 from numbers import Number
+from matplotlib.widgets import CheckButtons
+import config
+# from brouillon4 import plot
+# from splinecomposee import NSplineComposee
 plt.rcParams["figure.figsize"] = (20,10)
 from utilitaires import (rstack, eliminerPointsDoublesConsecutifs,
                          className, centreGravite, baryCentre, XY,
                          Path, segmentPlusProche, stack, debug, rdebug, dist,
                          hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
 from utilitaires.lecteurs import pointsFrom, LecteurUniversel
-from splineabstraite import computeSpline
+from splineabstraite import computeSpline, NSplineAbstract
 from numpy import (log, linspace, asarray, sqrt, arange, zeros, cos,
-                   tan, pi, loadtxt, ndarray, argmin, nan, where, savetxt, ones,
-                   vstack, insert, delete, isnan, NaN)
+                   tan, pi, loadtxt, ndarray, argmin, where, savetxt, ones,
+                   vstack, insert, delete, isnan, NaN, nan, NAN, empty,
+                   empty_like, zeros_like, sign, inf)
 from numpy.linalg import  norm
 # from scipy.optimize import newton, minimize
 from scipy.integrate.quadpack import quad
 from scipy.optimize._minimize import minimize_scalar
 
-class NSplineSimple(object):
+class NSplineSimple(NSplineAbstract):
     u"""
     - Les attributs _cpoints, _dpoints, _epoints ne valent JAMAIS None,
         ils sont TOUJOURS :
@@ -43,6 +48,7 @@ class NSplineSimple(object):
         _mode      = 'linear'
         _nbpe      = 30
         _cpoints  = zeros((0,2))
+        gparent = None
         eps = 1.0e-5 # 10 microns si les distances sont en metres
 
     def __init__(self, **dump):# cpoints=None, name='spline', role='spline'):
@@ -60,9 +66,9 @@ class NSplineSimple(object):
             - 'name' : str ou unicode pour affecter un nom
             - 'role' : str ou unicode pour affecter un role...
         """
-        super(NSplineSimple,self).__init__()
-        self.setDefaultValues()
-        self.load(dump)
+        super(NSplineSimple,self).__init__(**dump)
+#         self.setDefaultValues()
+#         self.load(dump)
         if self.mode in ('rayon', 'courbure') :
             if self.methode in (('ius',1),('us',1)) :
                 raise ValueError(u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode )
@@ -106,20 +112,6 @@ class NSplineSimple(object):
             debug('Spline inconstructible : %s'%str(msg))
             return zeros((0,2))
 
-    def __getitem__(self,k):
-        u"""
-        Pour accéder aux points du polygone de controle (en lecture)
-        ne traite pas les slices
-        Retourne un tuple (x,y)
-        >>> S = NSplineSimple(points=....)
-        >>> S[3]
-        [10.0,3.14] le point points[3]
-        ne gère pas les slices
-        >>> S[1:3]
-        ... AttributeError: 'QPolygonF' object has no attribute 'x'
-        """
-        return self.cpoints[k]
-
     def __setitem__(self,k,value):
         u"""
         mise à jour du polygone de contrôle et du polygone seulement
@@ -134,44 +126,42 @@ class NSplineSimple(object):
         self._cpoints[k] = value
         self._update()#indispensable pour mettre à jour self._xxx
 
-    def __str__(self):
-        return u'\n'.join(self.info)
-
     @property
     def info(self):
         infos=[
                 u"<%s>"%className(self),
-                u'%20s = '%u'name'+u'%s'%self.name,
-                u'%20s = '%u'role'+u'%s'%self.role,
-                u'%20s = '%u'nb pts controle'+u"%d"%len(self.cpoints),
-                u'%20s = '%u'closed'+u'%s'%self.isClosed(),
-                u'%20s = '%u'nb_splines, n_bech'+"%d, %d"%(self.nbspline, self.nbech),
-                u'%20s = '%u'methode'+u"%s"%str(self.methode),
-                u'%20s = '%u'nb points discretisation'+"%s"%str(self.nbpd),
-                u'%20s = '%u'mode echantillonage'+u"%s"%self.mode,
-                u'%20s = '%u'nb pts echantillon'+u"%s"%self.nbpe,
-#                 u'%20s = '%u'nb updates'+u"%s"%self.nbupdate,
+                u'%25s = '%u'name'+u'%s'%self.name,
+                u'%25s = '%u'role'+u'%s'%self.role,
+                u'%25s = '%u'nb pts controle'+u"%d"%len(self.cpoints),
+                u'%25s = '%u'closed'+u'%s'%self.isClosed(),
+                u'%25s = '%u'nb_splines, n_bech'+"%d, %d"%(self.nbspline, self.nbech),
+                u'%25s = '%u'methode'+u"%s"%str(self.methode),
+                u'%25s = '%u'degre'+u"%s"%str(self.degre),
+                u'%25s = '%u'nb points discretisation'+"%s"%str(self.nbpd),
+                u'%25s = '%u'mode echantillonage'+u"%s"%self.mode,
+                u'%25s = '%u'nb pts echantillon'+u"%s"%self.nbpe,
+#                 u'%25s = '%u'nb updates'+u"%s"%self.nbupdate,
                 ]
         i = u'largeur, hauteur'
         try :
             i1 = u"%g, %g"%(self.width, self.height)
         except Exception as msg :
             i1 = u"? (%s, %s)"%(className(self), msg)
-        infos.append(u'%20s = '%i+i1)
+        infos.append(u'%25s = '%i+i1)
 #
         i = u'position cg'
         try :
             i1 = u"%g, %g"%(self.centregravite[0], self.centregravite[1])
         except Exception as msg :
             i1 = u"? (%s, %s)"%(className(self), msg)
-        infos.append(u'%20s = '%i+i1)
+        infos.append(u'%25s = '%i+i1)
 #
         i = u'longueur'
         try :
             i1 = u"%g"%(self.longueur('r'))
         except Exception as msg :
             i1 = u"? (%s, %s)"%(className(self), msg)
-        infos.append(u'%20s = '%i+i1)
+        infos.append(u'%25s = '%i+i1)
 
         return infos
 
@@ -189,6 +179,7 @@ class NSplineSimple(object):
         self.nbech      = 0# nb echantillonnages (epoints)
         self.nbupdate   = 0
         self.eps        = self.Default.eps#precision en mètres
+        self.gparent    = None
 
     def load(self, dump):
         u"""Ce qui est commun à toutes les splines."""
@@ -245,57 +236,6 @@ class NSplineSimple(object):
         u"""retourne une copie de self"""
         dump = self.toDump()
         return type(self)(**dump)
-
-    def save(self, filename):
-        filename = Path(filename)
-        ext = filename.ext
-#         debug(filename=filename, ext=ext)
-        try :
-            if ext in (".gnu", '.txt'):
-                #seulement les points échantillonnés
-                savetxt(filename, self.epoints)
-            # elif ext==".pts":
-            #     #seulement les points échantillonnés
-            #     writeProfil(filename, self.epoints)
-#             elif ext=='.npkl':
-                #Spline complète, pickle
-#                 cPickle.dump(self.toDump('new'),open(filename,'w'))
-            elif ext in ('.pkl','.npkl'):
-                #seulement les points échantillonnés
-                cPickle.dump(self.toDump(),open(filename,'w'))
-            elif ext=='.spl':
-                #Spline complète, dict
-                with open(filename,'w') as f :
-                    f.write(str(self.toDump()))
-            elif ext=='.dxf':
-                raise NotImplementedError('Format dxf')
-            debug('Sauvegarde %s : OK'%filename)
-        except Exception as msg:
-            rdebug('Sauvegarde %s impossible : %s'%(filename.name,str(msg)))
-
-    def open(self, filename):
-        filename = Path(filename)
-        ext = filename.ext
-        #debug(filename=filename)
-        if ext in (".gnu", '.txt'):
-            dump = self.toDump()
-            dump['cpoints'] = loadtxt(filename)
-        elif ext==".pts":
-            dump = self.toDump()
-            dump['cpoints'] = LecteurUniversel(filename).points
-        elif ext in ('.pkl', '.npkl'):
-            dump = cPickle.load(open(filename,'r'))
-            for key in ('points', 'cpoints') :
-                if dump.has_key(key) :
-                    dump[key] = pointsFrom(dump.pop(key))
-        elif ext in('.spl','.nspl') : 
-            with open(filename, 'r') as f :
-                dump = eval(f.read())
-                if dump.has_key('dmodel') : 
-                    dump = dump.pop('dmodel')
-#                 self.load(dump)
-#         #debug(dump=dump)
-        self.load(dump)
 
     @property
     def cpoints(self):
@@ -580,6 +520,9 @@ class NSplineSimple(object):
             ou, ce qui revient au même, tq la sinuosité de ta à te[j] soit egale à Sj=j*s0
             """
 #             rdebug(mode,self.mode)
+            if self.methode[0] in ('us', 'ius') and self.methode[1] < 3 :
+                raise ValueError,\
+            u"""Impossible d'echantillonner, la courbure n'est pas definie pour une spline de degre %d< 3"""%self.methode[1]
             if nbp==1 :
                 debug(nbp=nbp, ta=ta,tb=tb)
                 stack()
@@ -619,7 +562,8 @@ class NSplineSimple(object):
                 Te[j] = T[i]
             self._tech =  Te
         else :
-            rdebug('mode echantillonnage inconnu : ',mode=mode, nbp=nbp, ta=ta, tb=tb)
+            stack('mode echantillonnage inconnu ')
+            rdebug(mode=mode, nbp=nbp, ta=ta, tb=tb)
             self._tech =  zeros((0,))
         return self._tech
 
@@ -717,38 +661,67 @@ class NSplineSimple(object):
 #             rdebug(type(msg).__name__, msg)
             raise(msg)
 
-    def plot(self, plt, control=True, nbpd=None, nbpe=None, mode=None,
-             titre=None, more=[], texts=[], show=True, buttons=True, numbers=[]):
+    def plot(self, figure=None, aspect={}, titre=None, more=[], texts=[], show=True,
+             buttons=True, numbers=['3p']):
         """
-        :param plt : une instance de pyplot, obtenue en amont par :
-              >>> from matplotlib import pyplot as plt
-        :param control : bool, affichage des points de controle True/False
-        :param nbpd : int, nb points de discretisation
-        :param nbpe : int, nb de points d'echantillonage
+        :param figure: une instance de matplotlib.figure.Figure
         :param titre : str ou unicode, titre
         :param more : list, [(X,Y, couleur,'nom'), ...] tracé supplementaire
         :param texts : list, [(x,y, 'text', style=, fontsize=...), ...] texts en x,y
         :param numbers: list ou set ou tuple ['3c','12e','100d'] numéroter les points
             controle, echantillon, discretisation '3c' signifie que l'on numérote
             les cpoints par pas de 3, '100d' les dpoints par pas de 100 etc ...
-          """
-        from matplotlib.widgets import CheckButtons
-#         plt.figure(numfig)
-#         rdebug('***********')
-        if nbpd is None : nbpd = self._nbpd
-        if nbpe is None : nbpe = self.nbpe
-        if mode is None : mode = self.mode
-#         debug('appel echantillonnage', type(self))
+        :param show: bool, True pour affichage de TOUS les plots en attente, False sinon
+        :return figure: la figure passée en argument ou nouvelle figure si None
 
+        """
+    #     renderer = RendererBase()
+        defaultaspect = {
+                    'c':'ro',#control :        red
+                    'd':'b-',#discretisation : blue
+                    'e':'g.',#echantillon :    green
+                    'r':'kv',#rupture:         black
+                  }
+        defaultaspect.update(aspect)
+        if figure is None :#pas de figure => on la crée
+            figure = plt.figure('plot(self)')
+#         debug(figure=figure)
+
+    #     if nbpd is None : nbpd = self.nbpd
+    #     if nbpe is None : nbpe = self.nbpe
+    #     if mode is None : mode = self.mode
         D = self.dpoints
         C = self.cpoints
         E = self.epoints
-        _, ax = plt.subplots()
-        if titre is None : titre = self.name+str(self.methode)
-        plt.title(titre)
-        spline, = ax.plot(D[:,0], D[:,1], 'b-', lw=1)
-        echantillon, = ax.plot(E[:,0], E[:,1], 'g.', lw=1)
-        control, = ax.plot(C[:,0], C[:,1], 'ro', lw=1)
+    #     debug(self)
+    #     exit()
+        axes = figure.get_axes()
+        if axes : ax = axes[0]
+        else : ax = figure.subplots()
+    #    debug(axes=axes, ax=ax,gca=plt.gca())
+
+    #     ax = figure.subplots()
+#         debug(ax=className(ax),figure=className(figure))
+        if titre : ax.set_title(titre)
+#         ax.set_title('prout')
+    #         titre = self.name+str(self.methode)
+
+        fmtc, fmtd, fmte, fmtr = (defaultaspect['c'], defaultaspect['d'],
+                                  defaultaspect['e'], defaultaspect['r'])
+    #     debug('fmtc=%s, fmtd=%s, fmte=%s'%(fmtc, fmtd, fmte))
+        if fmtc : control,     = ax.plot(C[:,0], C[:,1], fmtc, lw=1, label=u'Contrôle')
+        if fmtd : spline,      = ax.plot(D[:,0], D[:,1], fmtd, lw=1, label=u'Spline')
+        if fmte : echantillon, = ax.plot(E[:,0], E[:,1], fmte, lw=1, label=u'Échantillon')
+#         if isinstance(self, NSplineComposee) :
+#             R = asarray(self[self.ruptures])#des points
+#     #         Rx, Ry = XY(R)
+#             fmtr = defaultaspect['r']
+#             if fmtr : ruptures,     = ax.plot(R[:,0], R[:,1], fmtr, lw=1, markersize=12, label=u'Rupture')
+
+        for x, y, color, name in more:
+            _, = ax.plot(x, y, color, label=name)
+        figure.legend()
+
         for chars in numbers :
             if len(chars)>1 :
                 step = eval(chars[:-1])
@@ -757,45 +730,68 @@ class NSplineSimple(object):
             char = chars[-1]
             if char=='c' :
                 for k, p in enumerate(C[::step]) :
-                    plt.text(p[0], p[1], '%d'%(step*k))
+                    ax.text(p[0], p[1], '%d'%(step*k))
             elif char=='e' :
                 for k, p in enumerate(E[::step]) :
-                    plt.text(p[0], p[1], '%d'%(step*k))
+                    ax.text(p[0], p[1], '%d'%(step*k))
 
         for txt in texts :
-            plt.text(*txt)
+            ax.text(*txt)
+        ax.axis('equal')
 
         if buttons :
-            butt = [u'control', u'spline',u'echantillon',u'numéros']
-            values = [True, True, True,True]
+    #         figure.add_subplot('112')
+    #         rax = plt.axes([0.05, 0.4, 0.1, 0.15])
+            rax = figure.add_axes([0.05, 0.4, 0.1, 0.15])
+#             debug(rax=className(rax))#,fsubplot=className(fsubplot))
+            labels = [u'control', u'spline',u'echantillon']
+            values = [True, True, True]
             draws = [control, spline, echantillon]
-        for x, y, color, name in more:
-            temp, = ax.plot(x, y, color)
-            if not name : continue
-            if buttons :
-                draws.append(temp)
-                butt.append(name)
-                values.append(True)
-        plt.subplots_adjust(left=0.2)
-        plt.axis('equal')
-        if buttons :
-            rax = plt.axes([0.05, 0.4, 0.1, 0.15])
-            check = CheckButtons(rax, butt, values)
+
+#             if isinstance(self, NSplineComposee) :
+#                 labels.append(u'ruptures')
+#                 values.append(True)
+#                 draws.append(ruptures)
+
+        #         for x, y, color, name in more:
+        #             temp, = ax.plot(x, y, color)
+        #             if not name : continue
+        #             if buttons :
+        #                 draws.append(temp)
+        #                 labels.append(name)
+        #                 values.append(True)
+            figure.subplots_adjust(left=0.2)
+            for item in draws :
+                item.set_visible(True)
+    #     if buttons :
+            check = CheckButtons(rax, labels, values)
 
             def func(label):
-                if label == 'spline':
-                    spline.set_visible(not spline.get_visible())
-                elif label == 'control':
-                    control.set_visible(not control.get_visible())
-                elif label == 'echantillon':
-                    echantillon.set_visible(not echantillon.get_visible())
-                else :
-                    draw = draws[butt.index(label)]
+                try :
+                    draw = draws[labels.index(label)]
                     draw.set_visible(not draw.get_visible())
+                except Exception as msg:
+                    rdebug(u"label=%s marche po : %s"%(label,str(msg)))
+                    pass
+
+    #             if label == u'spline':
+    #                 spline.set_visible(not spline.get_visible())
+    #             elif label == u'control':
+    #                 control.set_visible(not control.get_visible())
+    #             elif label == u'echantillon':
+    #                 echantillon.set_visible(not echantillon.get_visible())
+    #             elif label == u'ruptures':
+    #                 ruptures.set_visible(not ruptures.get_visible())
+    #             else :
+    #                 draw = draws[labels.index(label)]
+    #                 draw.set_visible(not draw.get_visible())
                 plt.draw()
             check.on_clicked(func)
+    #         figure.subplots_adjust(left=0.2)
+        axes = figure.get_axes()
+#         debug(axes=axes)
         if show : plt.show()
-        return plt
+        return figure
 
     def plotCourbure(self):
 #         from matplotlib import pyplot as plt
@@ -843,21 +839,14 @@ class NSplineSimple(object):
         return plt
 
     def longueur(self, p='r'):
-        if len(self)<=1 :
-            return 0
-        elif p=='c':
-            return absCurv(self.cpoints, normalise=False)[-1]
-        elif p=='d' :
-            return absCurv(self.dpoints, normalise=False)[-1]
-        elif p=='e' :
-            return absCurv(self.epoints, normalise=False)[-1]
-        else:#longueur vraie
-            u"""Longueur vraie de la spline défini par self.sx, self.sy"""
+        if p=='r':#longueur vraie
             if hasattr(self, '_longueur') :
                 return self._longueur
             else :
-                self._longueur=self.absCurv(1)
+                self._longueur = self.absCurv(1) if len(self)>1 else 0
                 return self._longueur
+        else :
+            return super(NSplineSimple, self).longueur(p)
 
     @property
     def height(self):
@@ -893,13 +882,45 @@ class NSplineSimple(object):
     def barycentre(self):
         u"""Le centre de gravité du nuage de points matériels cpoints."""
         return baryCentre(self.cpoints)
+    @property
+    def degre(self):
+        m0,m1 = self.methode
+        if m0 in ('cubic',) : return 3
+        elif m0 in ('us','ius') : return m1
+        else : raise NotImplementedError,u"TODO:degre de la spline (methode=%s)"%self.methode
 
     def courbure(self, T) :
-        dx,  dy  = self.sx(T, 1), self.sy(T, 1)
-        d2x, d2y = self.sx(T, 2), self.sy(T, 2)
+        """
+        Calcule et retourne la courbure en T.
+        :param T: ndarray(n,).
+        :return sc: ndarray(n,) la courbure aux points de T.
+
+        :TODO :
+            raffiner en autorisant le calcul pour les splines de degré 1,
+            la dérivée première n'existe pas,
+                -> retourner inf si point anguleux et 0 sinon.
+            Analogue pour degré 2, la dérivée seconde n'existe pas,
+                -> retourner ce qu'il faut
+        """
+        try :
+            dx,  dy  = self.sx(T, 1), self.sy(T, 1)
+        except ValueError as msg :
+            rdebug(str(msg))
+            sc = empty_like(T)
+            sc[:] = nan
+            return sc
+        try :
+            d2x, d2y = self.sx(T, 2), self.sy(T, 2)
+        except ValueError as msg :
+            rdebug(str(msg))
+            sc = empty_like(T)
+            sc[:] = nan
+            return sc
         norm3_d2 = sqrt(dx**2+dy**2)**3
-        sc = (dx*d2y-dy*d2x)/(norm3_d2)
-        sc[where(norm3_d2 < 1.0e-12)] = NaN
+        v = dx*d2y-dy*d2x
+        sc = v/norm3_d2
+        iz = where(norm3_d2 < 1.0e-12)
+        sc[iz] = sign(v)[iz]*inf
 #         debug(sc=sc)
         return sc
         # si norm_d2=0, x"(t)=y"(t)=0, c'est une droite, courbure nulle
@@ -947,7 +968,7 @@ class NSplineSimple(object):
     #             return ac1+ac2, max(err1, err2)
         else :
             res = asarray([absCurv(self, t) for t in T])
-    #         res = asarray([quad(lambda s : sqrt(S.sx(s,1)**2+S.sy(s,1)**2), 0.0, t) for t in T])
+    #         res = asarray([quad(lambda s : sqrt(self.sx(s,1)**2+self.sy(s,1)**2), 0.0, t) for t in T])
             return (res[:,0], res[:,1]) if witherr else res[:,0]
 
     def integraleCourbure(self, a=0.0, b=1.0, n=100):
@@ -1651,8 +1672,7 @@ class NSplineSimple(object):
                 pj = se(t1)
                 more += [((pos0[0],pj[0]),(pos0[1],pj[1]),'go-',u'à ajouter en position %d'%(i))]
                 texts += [(pos0[0],pos0[1],u'%d'%(i))]
-                se.plot(plt,
-                        titre=u'Spline élaguée : \nseen=%s, \ndist=%.1g ‰'%(str(seen),d),
+                se.plot(titre=u'Spline élaguée : \nseen=%s, \ndist=%.1g ‰'%(str(seen),d),
                         more=more,texts=texts, show=True)
                 more = more[:-1]
                 c1 = se.cpoints
@@ -1683,9 +1703,9 @@ class NSplineSimple(object):
         return se, d, (n0,n1)
 
 
-################################################################################
-#############                    Fonctions                     #################
-################################################################################
+    ################################################################################
+    #############                    Fonctions                     #################
+    ################################################################################
 
 
 def adet(u,v):
@@ -1860,6 +1880,7 @@ def correctionReperesMontage(B,R, mode='production'):
 
 if __name__=="__main__":
     from testsplinesimple import mainTest
+    config.TEST_MODE = False
     mainTest()
 #     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
 #                              TR=asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))

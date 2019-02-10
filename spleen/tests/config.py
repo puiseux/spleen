@@ -81,6 +81,7 @@ SOURCES_DIR = Path(ROOT_DIR,'sources')
 DATA_DIR = Path(ROOT_DIR,'data')
 VALIDATION_DIR = Path(ROOT_DIR,'validation')
 TRASH_DIR = Path(RUNS_DIR,'trash')
+TEST_MODE = False
 print 'config.py = OK'
 print "ROOT_DIR       = '%s'"%ROOT_DIR
 print "RUNS_DIR       = '%s'"%RUNS_DIR
