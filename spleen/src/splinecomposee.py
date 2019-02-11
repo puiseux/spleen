@@ -89,7 +89,7 @@ class NSplineComposee(NSplineAbstract):
         self._nbpds      = []
         self._modes      = []#polyligne
         self._nbpes      = []
-        self._cpoints    = zeros((0,2))
+        self._cpoints    = zeros((1,2))
         self.name        = className(self)#+'(%d)'%(id(self))
         self.role        = className(self)
         self.nbspline    = 0# nb appels à computeSpline
@@ -152,7 +152,9 @@ class NSplineComposee(NSplineAbstract):
         u"""
         maintenant il y a une methode, mode, ... par brin
         On charge les points de contrôle"""
-        cpoints = zeros((1,2))
+#
+        try : cpoints = self._cpoints
+        except AttributeError : cpoints = zeros((1,2))
         for key in ('cpoints', 'points') :#la cle 'cpoints' est prioritaire, en cas
             if dump.has_key(key):
                 cpoints = dump.pop(key)
@@ -170,11 +172,13 @@ class NSplineComposee(NSplineAbstract):
 #         if self._ruptures :
         ok = self._ruptures[0] == 0 and self._ruptures[-1] in (-1,len(cpoints)-1)
         for r in self._ruptures[1:-1] :
-            ok = ok and 0 <= r <= len(cpoints)-1
+            ok = ok and 0 < r < len(cpoints)-1
         if not ok :
-            msg = [u'Probleme avec les points de rupture %s:'%self._ruptures,
-                   u'Le premier devrait etre 0, le dernier devrait etre %d (ou -1)'%(len(cpoints)-1),
-                   u'Les autres devraient etre dans l\'ordre croissant, et dans l\'intervalle ]0,%d[ '%(len(cpoints)-1),
+            msg = [
+                    u'Probleme avec les points de rupture %s:'%self._ruptures,
+                    u'Le premier devrait etre 0, le dernier devrait etre %d (ou -1)'%(len(cpoints)-1),
+                    u'Les autres devraient etre dans l\'ordre croissant, et dans l\'intervalle ]0,%d[ '%(len(cpoints)-1),
+                    u'Les autres devraient etre dans l\'ordre croissant, et dans l\'intervalle ]0,%d[ '%(len(cpoints)-1),
                    ]
             raise ValueError('\n'.join(msg))
         self._ruptures[-1] = len(cpoints)-1
@@ -189,7 +193,8 @@ class NSplineComposee(NSplineAbstract):
                                                 #sinon, en changeant (hardScale p.ex.) la spline 1, la spline 2 change aussi
                                                 #car elles on un point commun. Ce point serait modifié deux fois
                                                 #C'est un bug très difficile à trouver !!!
-                                                cpoints   = cpoints[deb:1+fin].copy(),
+#                                                 cpoints   = cpoints[deb:1+fin].copy(),
+                                                cpoints   = cpoints[deb:1+fin],
                                                 methode   = methodes[k],
                                                 nbpe      = nbpes[k],
                                                 mode      = modes[k],
@@ -306,6 +311,7 @@ class NSplineComposee(NSplineAbstract):
         Les points de contrôle sont dans les splines composantes.
         Le self._cpoints et self._qcpolygon de NSplineAbstract sont inutiles.
         On n'a pas besoin de les créer"""
+        return self._cpoints
         return self.__pointsFrom([s.cpoints for s in self.splines])
 
     @property
@@ -346,10 +352,10 @@ class NSplineComposee(NSplineAbstract):
                 u'%25s = '%u'role'+u'%s'%self.role,
                 u'%25s = '%u'nb pts controle'+u"%d"%len(self.cpoints),
                 u'%25s = '%u'closed'+u'%s'%self.isClosed(),
-                u'%25s = '%u'nb_splines, n_bech'+"%d, %d"%(self.nbspline, self.nbech),
+                u'%25s = '%u'nb_splines, n_bech'+u"%d, %d"%(self.nbspline, self.nbech),
                 u'%25s = '%u'methode'+u"%s"%str(self.methode),
-                u'%25s = '%u'nb pts discretisation'+"%s"%str(self.nbpd),
-                u'%25s = '%u'mode echantillonage'+u"%s"%self.mode,
+                u'%25s = '%u'nb pts discretisation'+u"%s"%str(self.nbpd),
+                u'%25s = '%u'mode echantillonage'+u"'%s'"%self.mode,
                 u'%25s = '%u'nb pts echantillon'+u"%s"%self.nbpe,
 #                 u'%25s = '%u'nb updates'+u"%s"%self.nbupdate,
                 ]
@@ -535,8 +541,9 @@ class NSplineComposee(NSplineAbstract):
             alfa = math.radians(alfa)
         if centre is None :
             centre = self.barycentre
-        for spline in self.splines :
-            spline.hardRotate(alfa, centre, unit='radians')
+        self.splines[0].hardRotate(alfa, centre, unit='radians')
+        for spline in self.splines[1:] :
+            spline.hardRotate(alfa, centre, unit='radians', keep=[0])
         # Les methodes des splines composantes changent (les valeurs des vecteurs dérivées aux extrémités)
         #on n'a pas le droit de changer self.methode...alors on contourne en changeant self._methode
         self._methode = [spl.methode for spl in self.splines]
@@ -748,8 +755,8 @@ class NSplineComposee(NSplineAbstract):
         try : del self._tech
         except AttributeError : pass
 
-        try : del self._cpoints#c'est juste un intermediaire à la construction
-        except AttributeError : pass
+#         try : del self._cpoints#c'est juste un intermediaire à la construction
+#         except AttributeError : pass
         try : del self._ruptures#c'est juste un intermediaire à la construction
         except AttributeError : pass
 
@@ -805,7 +812,8 @@ class NSplineComposee(NSplineAbstract):
         if fmtd : spline,      = ax.plot(D[:,0], D[:,1], fmtd, lw=1, label=u'Spline')
         if fmte : echantillon, = ax.plot(E[:,0], E[:,1], fmte, lw=1, label=u'Échantillon')
         if isinstance(S, NSplineComposee) :
-            R = asarray(S[S.ruptures])#des points
+            debug(cpoints=S.cpoints.shape, _cpoints=S._cpoints.shape)
+            R = asarray(S.cpoints[[S.ruptures]])#des points
     #         Rx, Ry = XY(R)
             fmtr = defaultaspect['r']
             if fmtr : ruptures,     = ax.plot(R[:,0], R[:,1], fmtr, markersize=12, label=u'Rupture')

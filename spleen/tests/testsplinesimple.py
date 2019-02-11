@@ -7,7 +7,7 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-10"
+__updated__="2019-02-11"
 '''
 from matplotlib import pyplot as plt
 from utilitaires.utilitairesdivers import stack
@@ -953,7 +953,7 @@ def testCorrectionRM(show=True):
 #     if show : plt.show()
     debug(titre="Fin testCorrectionRM ")
 
-def mainTest(show=False):
+def testMain(show=False):
     files = [
             Path(VALIDATION_DIR,'spline-0#.spl'),
             Path(VALIDATION_DIR,'spline-0.spl'),
@@ -1012,9 +1012,9 @@ def mainTest(show=False):
             testPlacementRM(show=show)
         debug(titre='fin tests %s'%filename.name)
     debug(titre='fin tests')
-if __name__=='__main__':
 
-    mainTest()
+if __name__=='__main__':
+    testMain()
 
     # sys.exit(app.exec_())
 #     os.system(' '.join(['python', Path('..','splinesimple.py')]))

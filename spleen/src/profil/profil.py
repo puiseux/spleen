@@ -13,7 +13,7 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 '''
 from utilitaires import (stack, className, debug, rdebug, dist2, dist, rcercle)
 import numpy as np
-import cPickle
+import cPickle, os
 from parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
 from naca import naca4,naca5
 from splinecomposee import NSplineComposee
@@ -21,6 +21,8 @@ from utilitaires.utilitairesprofil import computeCordeAndNBA
 from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace)
 from scipy.optimize import newton
 from preferences import ProfilPrefs
+from pprint import pprint
+
 class Profil(NSplineComposee):
     prefs = ProfilPrefs
 
@@ -66,7 +68,7 @@ class Profil(NSplineComposee):
 #         il faut calculer nba (i.e. ruptures) AVANT le _update
 #         self._update()
         if len(self.splines) == 1:
-            '''c'est un profil brut, sans BA, une seule spline, il faut tout 
+            '''c'est un profil brut, sans BA, une seule spline, il faut tout
                refaire c'est le cas de tous les projets antérieurs à 14 dec 2017
             '''
             corde, nba = computeCordeAndNBA(self.cpoints)
@@ -97,9 +99,27 @@ class Profil(NSplineComposee):
             self.splines[0].name = 'Extrados-'+self.name
             self.splines[1].role = 'Intrados'
             self.splines[1].name = 'Intrados-'+self.name
-#     @property
-#     def points(self):
-#         return self.epoints
+
+    def setDefaultValues(self):
+        """Valeurs par defaut:
+        Pour constructeur vide
+        TODO:si on load une spline composée avec des valeurs manquantes, ça plante
+        proposer une valeur unique par ex : class Default = (methode, mode, nbpd, nbpe)"""
+        self._cpoints    = asarray([[1.0, 0.0],[0.0, 0.0],[1.0, 0.0],])
+        self._ruptures   = [0,1,2]#les points de séparation des splines
+        #les methodes pour chaque brin de spline
+        self._methodes   = [('cubic', ((2, 0.0,  0.0), (1, 0.0, -1.0))),
+                            ('cubic', ((1, 0.0, -1.0), (2, 0.0,  0.0)))]
+        self._nbpds      = [1000, 1000]
+        self._modes      = ['courbure','courbure']#polyligne
+        self._nbpes      = [50, 50]
+        self.name        = className(self)#+'(%d)'%(id(self))
+        self.role        = className(self)
+        self.nbspline    = 0# nb appels à computeSpline
+        self.nbdpoint    = 0# nb calculs dpoints
+        self.nbech       = 0# nb echantillonnages (epoints)
+
+
     def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, maxiter=50):
         u"""
         :return t: float, la valeur du paramètre t correspondant à l'abscisse |x|/100.
@@ -163,9 +183,9 @@ class Profil(NSplineComposee):
             self._nbpe = [1+self.iba, self.profparam.nptprof-self.iba]
             return self._nbpe
         except AttributeError:#profparam n'existe pas encore
-            return self._nbpe
+            return [s.nbpe for s in self.splines]
         except IndexError:#la spline[1] n'existe pas encore
-            return self._nbpe
+            return [s.nbpe for s in self.splines]
 
     @nbpe.setter
     def nbpe(self, nbpe):
@@ -176,8 +196,12 @@ class Profil(NSplineComposee):
         u"""dump est un dictionnaire comme celui retourné par self.toDump()"""
 #         debug('entree load',dump_keys=dump.keys())
         super(Profil, self).load(dump)
+        
+#         debug('dump=')
+#         pprint(dump)
 #         debug('entree load apres super.load',dump_keys=dump.keys())
-        if isinstance(dump,(str, unicode)) :
+        # dump = nom de fichier
+        if isinstance(dump,(str, unicode)) and os.path.isfile(dump):
             f = open(dump,'r')
             d = cPickle.load(f)
             self.load(d)
@@ -490,10 +514,11 @@ class Profil(NSplineComposee):
     def info(self):
         infos = super(Profil,self).info
         infos = [infos[k] for k in (0,1,9,10,11)]
-        infos = infos + [u"*Extrados :\n     ----------"] + self.splines[0].info
-        infos = infos + [u""]
-        infos = infos + [u"*Intrados :\n     ----------"] + self.splines[1].info
-        infos = infos + [u""]
+        if len(self.splines)==2 :
+            infos = infos + [u"    *Extrados :\n     ----------"] + self.splines[0].info
+            infos = infos + [u""]
+            infos = infos + [u"    *Intrados :\n     ----------"] + self.splines[1].info
+            infos = infos + [u""]
         infos = infos + [u"*divers (%s) :"%self.name+u"\n     -------"]
         infos = infos + [u'%20s = '%u"pouverture"+u"%s"%(str(self.pouverture))]
         infos = infos + [u'%20s = '%u"corde"+u"%s"%(str(self.corde))]
@@ -790,7 +815,7 @@ class Profil(NSplineComposee):
         ba = (1,0,ri)
         self.splines[1].methode = (sint,(ba,bf))#appelle _update
         self._update()
-    
+
     @property
     def erba(self):
         u"""Retourne le rayon de BA calculé avec les points echantillonnés"""
@@ -988,4 +1013,6 @@ class Profil(NSplineComposee):
 
 if __name__=="__main__":
     from testsprofil import testMain
+    import config
+    config.TEST_MODE = False
     testMain()

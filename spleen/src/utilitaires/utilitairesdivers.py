@@ -5,7 +5,7 @@
 Created on 11 mai 2012
 
 @author: puiseux
-__updated__ = '2019-02-10'
+__updated__ = '2019-02-11'
 '''
 import datetime
 import gc  # garbage colector
@@ -25,7 +25,8 @@ from numpy.random import random#, choice
 # import numpy as np
 # import scipy as sp
 from numpy import (asarray, zeros, vstack, ndarray, matrix, absolute, copy,
-    nan, sqrt, where, sin, cos, logical_and, dot, argmin, arange, delete, inf, linspace,pi)
+    nan, sqrt, where, sin, cos, logical_and, dot, argmin, arange, delete, inf, linspace,pi,
+    radians)
 # from numpy.matlib import rand
 from path import Path
 from scipy import interpolate, ones, prod, sum
@@ -155,13 +156,19 @@ def splineInterpolation(points, methode='c cubic', tension=5, degre=3):
 
 def rotate(points, alfa, centre):
     u'''
-    alfa en radians
-     Retourne une COPIE de points rotationnée(!).
-    points est supposé stocké par ligne (shape=(n,2)), chaque point est de shape (1,2),
-    il les faudrait en colonne (shape=(2,1)) pour faire le produit matriciel.
-    Donc on transpose tout et on ecrit Xi' = C' + (Xi'-C')*A' au lieu de
-    Xi = C + A*(Xi-C), pour i= 0, 1,...
+    :param alfa: float, l'angle de rotation en radians
+    :param centre: ndarray((1,2)) ou list [float,float]
+    :param keep: les numeros des points à laisser en l'etat.
+        On peut avoir besoin de ne pas tourner le premier ou le dernier point
+        (pour les NSplineComposee)
+    :return Xt: une COPIE de points rotationnée(!).
+    :param points: ndarray((n,2),dtype=float) est stocké par ligne,
+        chaque point est de shape (1,2), il les faudrait en colonne (shape=(2,1))
+        pour faire le produit matriciel.
+        Donc on transpose tout et on ecrit Xi' = C' + (Xi'-C')*A' au lieu de
+        Xi = C + A*(Xi-C), pour i= 0, 1,...
     '''
+#     debug(points.shape, keep=keep)
     Ct = asarray(centre).reshape((1,2))
     cosa, sina = cos(alfa), sin(alfa)
     At = matrix([[cosa,-sina], [sina,cosa]]).transpose()
@@ -1492,4 +1499,11 @@ def dictsAreEqual(d1,d2):
 #     debug('equal')
     return True
 if __name__=="__main__":
-    pass
+    P = asarray([[0.,0.],[1.,2.],[2.,3.],[3.,4.]])
+    print P
+    RP = rotate(P,radians(90), centre=[0,0], keep=[2,3])
+    print RP
+    from matplotlib import pyplot as plt
+    plt.plot(P[:,0],P[:,1],'r-o')
+    plt.plot(RP[:,0],RP[:,1],'b-o')
+    plt.show()

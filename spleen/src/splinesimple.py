@@ -7,7 +7,7 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-10"
+__updated__="2019-02-11"
 '''
 import sys, os, math
 import cPickle
@@ -393,6 +393,10 @@ class NSplineSimple(NSplineAbstract):
         try : del self._sx
         except AttributeError : pass
         try : del self._sy
+        except AttributeError : pass
+        try : del self._width
+        except AttributeError : pass
+        try : del self._height
         except AttributeError : pass
 
     def isClosed(self, eps=0.0):
@@ -1031,8 +1035,8 @@ class NSplineSimple(NSplineAbstract):
             si centre==None on prend l'isobarycentre des points de contrôle.
         :param scale: (float, float)
         :return: None
-
         '''
+
         if len(self) == 0 : return
         if centre is None :
             centre = self.barycentre
@@ -1133,21 +1137,37 @@ class NSplineSimple(NSplineAbstract):
 
     def hardRotate(self, alfa, centre=None, unit='degres'):
         u'''
-        Rotation de self, alfa est en degres par défaut
-        si les dérivées aux extremités sont précisées, il faut les tourner elles aussi
-        methode est de la forme : ('cubic',(D0, Dn))
-        avec D0 = (d, a, b) ou (a,b) est le vecteur dérivée d-ieme au point 0
-        et Dn idem pour le dernier point.
+        Rotation de self, d'angle 'alfa', de centre 'centre'
+        :param alfa: float, angle en degres par défaut
+        :param centre : [float, float] le centre de la rotation, barycentre
+            de self par défaut.
+        :param unit: degres ou radians. Degrés par défaut.
+        :param keep: list de int, les points à garder en l'état
+            (ne pas faire tourner), normalement le point 0 ou -1.
+            Pour une spline composée SC, si on appelle SC.rotate(...), on
+            effectue une rotation pour chaque spline composante Si de SC.
+            Comme on n'a qu'un tableau SC.cpoints, le dernier cpoint de S0
+            coïncide avec le premier cpoint de S1, c'est la premiere rupture :
+                S0[-1]==S1[0]==SC.cpoints[SC.rupture[1]].
+            Sans précaution, on effectuerait DEUX FOIS la rotation sur ce
+            point. On ne la fait donc pas pour S1[0].
+            C'est un bug potentiel très difficile à localiser !!
+        Si les dérivées aux extremités sont précisées, il faut les tourner elles
+        aussi. C'est le cas si self.methode est de la forme ('cubic',(D0, Dn)),
+        avec D0 = (d, a, b) où (a,b) est le vecteur dérivée d-ieme au point 0
+        (d=1 ou 2) et
+        Dn = idem pour le dernier point.
         '''
 #         debug('avant:', alfa=alfa)
         if unit == 'degres' :
             alfa = math.radians(alfa)
 #         debug('apres:',alfa=alfa)
         if self.methode[0] == 'cubic' and isinstance(self.methode[1],(list, tuple)) :
-            #On fait tourner les dérivées premiere et seconde du point 0, puis du dernier point.
+            #On fait tourner les dérivées premiere et seconde du point 0,
+            #puis du dernier point.
             #Si les data sont x' et y'' par exemple, il faut faire tourner x',y' puis x'', y''
             newderivees = []
-            for k in range(2) : #on tourne les deux vecteurs dérivés aux extrémités
+            for k in (0,1) : #on tourne les deux vecteurs dérivés aux extrémités
                 derivees = self.methode[1][k]# Point 0 ou n
                 #la derivée doit être tournee de alfa
                 d = derivees[0]#ordre de derivation
@@ -1167,314 +1187,6 @@ class NSplineSimple(NSplineAbstract):
 #         debug('apres rotate', cpoints=self.cpoints, barycentre=self.barycentre, gravity=self.gravitycenter)
         self.cpoints = points
 #         self._update()c'est fait dans le setter cpoints()
-
-#     def elaguerNeMarcheQuePourUnTrados(self, eps=0.5, replace=False,debog=False):
-#         u"""
-#         On cherche une spline s1 avec un minimum de points de contrôle
-#         et qui soit à une distance de self.cpoints < eps (en ‰ de la longueur de self)
-#
-#         La distance(self.cpoints, s1) est le plus grand écart entre
-#         la spline calculée et les points de contrôle de la spline self.
-#         autrement dit le max des distances d(self.cpoints[k], s1), k=0,1,...
-#         où d(P, s1) est le min de la fonction t -> norme(P-s1(t)).
-#         Voir la methode self.distanceTo().
-#         On discrétise finement self (une seule fois) -> tableau de points D0
-#         On initialise s1 partant des quelques points de contrôle dont
-#         self.cpoints[0] et self.cpoints[-1].
-#         On discrétise finement s1 (à chaque ajout de point) -> tableau de points D1
-#         puis on rajoute des points de contrôle à s1 jusqu'a obtention de la précision désirée (eps)
-#         Pour rajouter un point, on repère la distance point à point de D0 et D1,
-#         disons qu'elle est au i-eme point et on insère dans s1 un point de contrôle
-#         que l'on positionne exactement en D0[i].
-#
-#         [ne marche pas =>] Quand la précision désirée est atteinte, on met
-#         un petit coup d'optimisation pour améliorer la position des points
-#         de contrôle de s1.
-#
-#         :param eps: float, la spline resultante est à une distance eps au maximum de self.
-#         :param replace: bool, si True, la spline élaguée remplace self.
-#         :return: s1, pm, (n0,n1)
-#
-#             - s1 est la spline NSplineSimple élaguée
-#             - pm = self.pourMille(d) est la précisison en valeur relative :
-#                 la spline s1 ne s'éloigne pas à plus de pm ‰ de self.
-#             - n0, n1 = nb de points de contrôle avant et après élagage
-#
-#         """
-#         if len(self) < 10 :
-#             rdebug(u"Élagage inutile, %d points de contrôle seulement"%len(self))
-#             return self, self.pourMille(0),(len(self),len(self))
-#         s0 = self
-#         nd = 5000
-# #         Td = linspace(0,1,nd)
-# #         T0 = self.knots
-#         c0 = s0.cpoints.copy()
-# #         d0 = asarray(s0(Td))
-#         t, m = self.methode
-#         n = len(self)
-#         if t == 'cubic' and m == 'periodic' :#il faut au moins 3 points et c[0] = c[-1]
-#             init = (c0[0], self(0.33), self(0.66), c0[0])
-#             init = (c0[0], self(0.25), self(0.5), self(0.75), c0[0])
-# #             debug('polyligne (4points) ferme')
-#             seen = [0, n/4, n/2, 3*n/4, n-1]
-#             init = self[seen]
-#             c1 = pointsFrom(init)
-#         elif dist2(c0[0], c0[-1]) < 1.0e-6 :
-# #             init = (c0[0], self(0.5), c0[0])
-#             seen = [0, n/3, 2*n/3, n-1]
-#             init = self[seen]
-# #             init = (c0[0], self(0.33), self(0.66), c0[0])
-#             c1 = pointsFrom(init)
-# #             debug('Initial : polyligne ferme =%s'%str(c1))
-#         else:
-# #             debug('polyligne non ferme')
-#             seen = [0,n-1]
-#             init = self[seen]
-#             c1 = pointsFrom(init)
-# #         debug(initial=c1)
-#         s1 = NSplineSimple(cpoints=c1,
-#                            methode=s0.methode,
-#                            nbpd=s0.nbpd,
-#                            name='%s-elaguee'%s0.name,
-#                            mode=s0.mode)
-# #         d1 = asarray(s1(Td))
-#         if debog :
-#             X0, Y0 = XY(c0)
-#             more = [(X0,Y0, 'r.-','c0'),]
-#         T, D, _ = s1.distanceTo(c0)
-# #         D[0] = D[-1] = 0.0
-# #         for k in range(len(c0)) :
-#         while len(seen)<len(c0):
-#             #indices du-des point-s ou la distance entre les deux splines est max
-#             debug(seen=seen)
-#             D[seen] = 0.0#On ne veut pas revisiter 2 fois le même point (=>point double)
-#             d = max(D)
-#             imaxd = (D == d).nonzero()
-#             dm = self.pourMille(sqrt(d))
-#             idx = imaxd[0][0]
-#             seen = sorted(list(set(seen+[idx])))
-#             pos0 = c0[idx]#position(x,y) du point à inserer dans s1
-#             #On cherche maintenant en quelle position (k) il faut l'insérer
-#             #
-#             K1 = s1.knots.tolist()#Les t des noeuds de s1
-#             t = T[idx]#le param t (sur s1) de la distance max
-#             # La position de t dans K1
-#             i = 0
-#             while K1[i] <= t : i += 1
-#             #i est l'indice d'insertion dans s1
-#             if len(seen)<7 :
-#                 debug('    t=%.3g'%t, knots=s1.knots.tolist(), )
-#                 print '    idx=',idx, ' ; insertion dans s1=',i#, ' ; dist=',D[idx],' ; maxD=',d
-#                 print '    dist=maxD ?',D[idx]==d
-#                 print '    *** distances de s1 (%d points) à c0'%len(s1), D.tolist()
-#             if debog :
-#                 s1.plot(plt,
-#                         titre=u'Spline élaguée : \nseen=%s, \ndist=%.1g ‰'%(str(seen),d),
-#                         more=more,show=True)
-#             try :
-#                 s1.insertPoint(pos0, i)
-#             except ValueError as msg :#Impossible d'inserer le point (point double ?)
-#                 debug(u'Ca devrait pas arriver, je tente autre chose', msg, pos0=pos0)
-#                 Td = linspace(0,1,nd)
-#                 d0 = asarray(s0(Td))
-#                 d1 = asarray(s1(Td))
-#                 ad = norm(d0-d1, 2, axis=1)#[1:-1]#ecart point à point des deux splines discrétisées
-#                 mad = (ad == max(ad)).nonzero()#indice des points ou la distance entre les deux splines est max
-#                 idx = mad[0]
-#                 t = Td[idx][0]
-#                 pos0 = d0[idx][0]
-#                 try :
-#                     s1.insertPoint(pos0)
-#                 except ValueError as msg :
-#                     rdebug(msg, pos0=pos0)
-#                     rdebug(u'Precision non atteinte, iteration %d : dist = %.2e '%(len(seen),d))
-#                     break
-# #                     c1 = s1.cpoints.copy()
-#
-# #             d = [distancePointSpline(c0[i], s1, t0=t).fun for i, t in enumerate(T0)]
-#             D = s1.distanceTo(c0)[1]
-#             D[0] = D[-1] = 0.0
-#             dm = self.pourMille(sqrt(max(D)))
-#             debug(u'dist-%d = %.2g‰ '%(len(seen),dm))
-# #             d1 = asarray(s1(Td))
-#             c1 = s1.cpoints.copy()
-#             if dm<eps : break
-#         if len(s1) == len(self) :#même nb de points : on garde la spline initiale.
-#             s1.cpoints = self.cpoints.copy()
-#             n0 = len(self)
-#             n1 = len(s1)
-#             return s1, d,(n0,n1)
-#         #ici on peut mettre un petit coup d'optimisation pour replacer les points de contrôle de s1
-#         #ca ne marche pas du tout !!!
-#         n0 = len(self)
-#         n1 = len(s1)
-#         debug('Apres ELAGAGE : dist = %.2g mm/m ; %d => %d '%(d,n0,n1))
-#
-#         if replace :
-#             self.cpoints = s1.cpoints
-#         return s1, d,(n0,n1)
-#
-#     def elaguerBeurk(self, eps=0.5, replace=False, debog=False):
-#         u"""
-#         On cherche une spline s1 avec un minimum de points de contrôle
-#         et qui soit à une distance de self.cpoints < eps (en ‰ de la longueur de self)
-#
-#         La distance(self.cpoints, s1) est le plus grand écart entre
-#         la spline calculée et les points de contrôle de la spline self.
-#         autrement dit le max des distances d(self.cpoints[k], s1), k=0,1,...
-#         où d(P, s1) est le min de la fonction t -> norme(P-s1(t)).
-#         Voir la methode self.distanceTo().
-#         On discrétise finement self (une seule fois) -> tableau de points D0
-#         On initialise s1 partant des quelques points de contrôle dont
-#         self.cpoints[0] et self.cpoints[-1].
-#         On discrétise finement s1 (à chaque ajout de point) -> tableau de points D1
-#         puis on rajoute des points de contrôle à s1 jusqu'a obtention de la précision désirée (eps)
-#         Pour rajouter un point, on repère la distance point à point de D0 et D1,
-#         disons qu'elle est au i-eme point et on insère dans s1 un point de contrôle
-#         que l'on positionne exactement en D0[i].
-#
-#         [ne marche pas =>] Quand la précision désirée est atteinte, on met
-#         un petit coup d'optimisation pour améliorer la position des points
-#         de contrôle de s1.
-#
-#         :param eps: float, la spline resultante est à une distance eps au maximum de self.
-#         :param replace: bool, si True, la spline élaguée remplace self.
-#         :return: s1, pm, (n0,n1)
-#
-#             - s1 est la spline NSplineSimple élaguée
-#             - pm = self.pourMille(d) est la précisison en valeur relative :
-#                 la spline s1 ne s'éloigne pas à plus de pm ‰ de self.
-#             - n0, n1 = nb de points de contrôle avant et après élagage
-#
-#         """
-#         if len(self) < 10 :
-#             rdebug(u"Élagage inutile, %d points de contrôle seulement"%len(self))
-#             return self, self.pourMille(0),(len(self),len(self))
-#         self = self
-#         nd = 100
-# #         Td = linspace(0,1,nd)
-# #         T0 = self.knots
-#         c0 = self.cpoints.copy()
-# #         d0 = asarray(self(Td))
-#         t, m = self.methode
-#         n = len(self)
-#         if t == 'cubic' and m == 'periodic' :#il faut au moins 3 points et c[0] = c[-1]
-#             seen = [0, n/4, n/2, 3*n/4, n-1]
-#             init = self[seen]
-#             c1 = pointsFrom(init)
-#         elif dist2(c0[0], c0[-1]) < 1.0e-6 :
-#             seen = [0, n/3, 2*n/3, n-1]
-#             init = self[seen]
-#             c1 = pointsFrom(init)
-#         else:
-#             seen = [0,n-1]
-#             init = self[seen]
-#             c1 = pointsFrom(init)
-#         s1 = NSplineSimple(cpoints=c1,
-#                            methode=self.methode,
-#                            nbpd=self.nbpd,
-#                            name='%s-elaguee'%self.name,
-#                            mode=self.mode)
-# #         d1 = asarray(s1(Td))
-#         if debog :
-#             X0, Y0 = XY(c0)
-#             more = [(X0, Y0, 'k.-','c0'),]
-#             texts = [(X0[0],Y0[0]-0.05,u'%d'%0),(X0[-1],Y0[-1]-0.05,u'%d'%(len(X0)-1))]
-#             texts+= [(c1[0,0],c1[0,1],u's1:%d'%0),(c1[-1,0],c1[-1,1],u's1:%d'%(len(c1)-1))]
-#         T1, D01, _ = s1.distanceTo(c0,discret=nd)
-#         while len(seen)<len(c0):
-#             #indices du-des point-s ou la distance entre les deux splines est max
-#             debug(seen=seen)
-#             D01[seen] = 0.0#On ne veut pas remettre 2 fois le même point (=>point double)
-#             d = max(D01)#le point de c0 le plus eloigné de s1
-#             imaxd = (D01 == d).nonzero()
-#             dm = self.pourMille(sqrt(d))
-#             idx0 = imaxd[0][0]
-#             seen = sorted(list(set(seen+[idx0])))
-#             pos0 = c0[idx0]#position(x,y) du point à inserer dans s1
-#             pj01 = s1(T1[idx0])#pj de pos0 sur s1
-# #             print 'c0 = asarray(%s)'%c0.tolist()
-#             print u's1 = NSplineSimple(**%s)'%s1.toDump()
-#             print u'seen = %s       #deja visités'%seen
-#             print u'idx0 = %d       #numero dans c0'%idx0
-#             print u't1 = %.3g       #temps dans s1'%T1[idx0]
-#             print u'pos0 = x, y = (%.3g,%.3g) #position c0[idx0]'%(pos0[0],pos0[1])
-#             print u'pj0 = xj, yj = (%.3g,%.3g) #projeté sur s1'%(pj01[0],pj01[1])
-#             #On cherche maintenant en quelle position (k) il faut l'insérer
-#             #
-#             K1 = s1.knots.tolist()#Les t des noeuds de s1
-#             t = T1[idx0]#le param t (sur s1) de la distance max
-#             # La position de t dans K1
-#             print 'knots = %s'%K1
-#             print 't = %g'%t
-#             i = 0
-#             while K1[i] < t : i += 1
-# #             i -= 1
-#             #i est l'indice d'insertion dans s1
-#             if len(seen)<7 :
-#                 debug('    t=%.3g'%t, knots=s1.knots.tolist(), )
-#                 print '    idx=',idx0, ' ; insertion dans s1=',i#, ' ; dist=',D[idx],' ; maxD=',d
-#                 print '    dist=maxD ?',D01[idx0]==d
-#                 print '    *** les distances [d(c0[i],s1) i=0...len(c0) ](len(s1) = %d points) à c0'%len(s1), D01.tolist()
-# #                 plt.plot(D)
-# #                 plt.title(u"distances de c0 à s1 ; min=%.3g point num%d"%(d, idx))
-# #                 plt.show()
-#             if debog :
-#                 pj = self(t)
-#                 more += [((pos0[0],pj[0]),(pos0[1],pj[1]),'go-',u'à ajouter en position %d'%(i))]
-#                 texts += [(pos0[0],pos0[1],u'%d'%(i))]
-# #                 debug(more=more)
-#                 s1.plot(plt,
-#                         titre=u'Spline élaguée : \nseen=%s, \ndist=%.1g ‰'%(str(seen),d),
-#                         more=more,texts=texts, show=True)
-#                 more = more[:-1]
-# #                 texts=texts[:-2]
-#                 c1 = s1.cpoints
-#                 texts = [(c1[0,0],c1[0,1],u's1:%d'%0),(c1[-1,0],c1[-1,1],u's1:%d'%(len(s1)))]
-#
-#             try :
-#                 s1.insertPoint(pos0, i)
-#             except ValueError as msg :#Impossible d'inserer le point (point double ?)
-#                 debug(u'Ca devrait pas arriver, je tente autre chose', msg, pos0=pos0)
-#                 raise msg
-#                 Td = linspace(0,1,nd)
-#                 d0 = asarray(self(Td))
-#                 d1 = asarray(s1(Td))
-#                 ad = norm(d0-d1, 2, axis=1)#[1:-1]#ecart point à point des deux splines discrétisées
-#                 mad = (ad == max(ad)).nonzero()#indice des points ou la distance entre les deux splines est max
-#                 idx = mad[0]
-#                 t = Td[idx][0]
-#                 pos0 = d0[idx][0]
-#                 try :
-#                     s1.insertPoint(pos0)
-#                 except ValueError as msg :
-#                     rdebug(msg, pos0=pos0)
-#                     rdebug(u'Precision non atteinte, iteration %d : dist = %.2e '%(len(seen),d))
-#                     break
-# #                     c1 = s1.cpoints.copy()
-#
-# #             d = [distancePointSpline(c0[i], s1, t0=t).fun for i, t in enumerate(T0)]
-#             D01 = s1.distanceTo(c0, discret=nd)[1]
-# #             D01[0] = D01[-1] = 0.0
-#             dm = self.pourMille(sqrt(max(D01)))
-#             debug(u'dist-%d = %.2g‰ '%(len(seen),dm))
-# #             d1 = asarray(s1(Td))
-#             c1 = s1.cpoints.copy()
-#             if dm<eps : break
-#         if len(s1) == len(self) :#même nb de points : on garde la spline initiale.
-#             s1.cpoints = self.cpoints.copy()
-#             n0 = len(self)
-#             n1 = len(s1)
-#             return s1, d,(n0,n1)
-#         #ici on peut mettre un petit coup d'optimisation pour replacer les points de contrôle de s1
-#         #ca ne marche pas du tout !!!
-#         n0 = len(self)
-#         n1 = len(s1)
-#         debug('Apres ELAGAGE : dist = %.2g mm/m ; %d => %d '%(d,n0,n1))
-#
-#         if replace :
-#             self.cpoints = s1.cpoints
-#         return s1, d,(n0,n1)
 
     def pourMille(self, longueur):
         u"""longueur convertie en ‰ de la longueur de self"""
@@ -1879,9 +1591,9 @@ def correctionReperesMontage(B,R, mode='production'):
         return sR(T)#en production
 
 if __name__=="__main__":
-    from testsplinesimple import mainTest
+    from testsplinesimple import testMain
     config.TEST_MODE = False
-    mainTest()
+    testMain()
 #     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
 #                              TR=asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))
 #     exit()

@@ -7,7 +7,7 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 
 @author:     Pierre Puiseux
 @copyright:  2018 Nervures. All rights reserved.
-__updated__="2019-02-07"
+__updated__="2019-02-11"
 '''
 import sys, cPickle
 from path import Path
@@ -18,23 +18,32 @@ from utilitaires.lecteurs import pointsFrom
 from numpy import asarray as array
 from profil import Profil
 from matplotlib import pyplot as plt
+import config
+config.TEST_MODE = True
 
 def testProfil(filename,show=False):
     name = filename.name
     debug(titre='testProfil : %s'%name)
 
-#     p = Profil(points=None, parent=None, naca=['2415', 50], name=None)
-#     print p.verification()
-#     print p
-#     print " => Constructeur presque vide, puis append(5,10):\n    +++++++++++++++++++++++++++++++++++++"
+    debug(paragraphe='p = Profil()')
     p = Profil()
+    pprint(p.toDump())
+    exit()
+    debug(paragraphe='p.open(%s)'%name)
+    p.open(filename)
+    print p
+    debug(paragraphe="p = Profil(points=None, parent=None, naca=['2415', 50], name=None)")
+    p = Profil(naca=['2415', 50], name=None)
+    print p.verification()
+    print p
+#     print " => Constructeur presque vide, puis append(5,10):\n    +++++++++++++++++++++++++++++++++++++"
 #     debug( p)
 #     try : p.appendPoint((5,10))
 #     except RuntimeError as msg : rdebug(msg)
 #     numfig = -1
 #     print " => Constructeur filename :\n    +++++++++++++++++++++"
     debug(" => constructeur np.ndarray  :\n    +++++++++++++++++++++++")
-    p = Profil(points=pointsFrom(filename))
+    p = Profil(cpoints=pointsFrom(filename))
     p.normalise()
     debug(p)
     for msg in p.verification() :
@@ -256,10 +265,13 @@ def testOuverture(filename,show=False):
 
 def testMain(show = False):
     p = Profil()#constructeur vide
-    debug('Constructeur Vide', p)
+    p.name = u'Vide (3 points)'
+    debug(titre='Constructeur Vide')
+    print p
+    pprint(p.toDump())
     files = [
-            Path(VALIDATION_DIR,'unenervure2d.gnu'),
             Path(VALIDATION_DIR,'diamirE.spl'),
+            Path(VALIDATION_DIR,'unenervure2d.gnu'),
             Path(VALIDATION_DIR,'E-diamirE.spl'),
             Path(VALIDATION_DIR,'E-shark.spl'),
             Path(VALIDATION_DIR,'shark.spl'),

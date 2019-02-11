@@ -49,6 +49,6 @@
  'pouverture': (-0.419468, -9.767929),
  'nbpe': [38, 63],
  'ruptures': [0, 40, 85],
- 'precision': [1000, 1],
+ 'precision': [1000, 1000],
  'mode': ['courbure', 'courbure']
 }
