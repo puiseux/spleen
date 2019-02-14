@@ -1471,39 +1471,31 @@ def simpson(f, a, b, n=10):#n doit être pair, integration precise ordre 3
 #         debug (h, A1, A2, A4, (h/3)*(A1 + A2 + A4))
     return (h/3)*(A1 + A2 + A4)
 
-def dictsAreEqual(d1,d2):
+def dictsAreNotEqual(d1,d2):
     d1 = OrderedDict(d1)
     d2 = OrderedDict(d2)
     if not d1.keys() == d2.keys() :
-#         debug('not equal')
-#         print d1.keys()
-#         print d2.keys()
-        return False
+        return 'diff :\n    keys1 = %s,\n    keys2 = %s'%(d1.keys(),d2.keys())
     for (k1,v1), (k2,v2) in zip(d1.items(),d2.items()) :
         if not type(v1) == type(v2) :
-#             debug('not equal')
-#             print type(v1)
-#             print type(v2)
-            return False
+            return 'diff :\n    %s : %s\n    %s : %s'%(k1,className(v1),k2,className(v2))
         if isinstance(v1, (dict,OrderedDict)) :
-            if not dictsAreEqual(v1, v2) :
-#                 debug('not equal')
-#                 print v1
-#                 print v2
-                return False
+            return dictsAreNotEqual(v1, v2)
         elif not v1==v2 :
-#             debug('not equal')
-#             print v1
-#             print v2
-            return False
+            return 'diff :\n    %s : %s\n    %s : %s'%(k1,v1,k2,v2)
 #     debug('equal')
-    return True
+    return False
 if __name__=="__main__":
-    P = asarray([[0.,0.],[1.,2.],[2.,3.],[3.,4.]])
-    print P
-    RP = rotate(P,radians(90), centre=[0,0], keep=[2,3])
-    print RP
-    from matplotlib import pyplot as plt
-    plt.plot(P[:,0],P[:,1],'r-o')
-    plt.plot(RP[:,0],RP[:,1],'b-o')
-    plt.show()
+    dd1 = dict(aa=10, bb=1000)
+    dd2 = dict(aa=10, bb=100)
+    d1 = dict(a=1,b=2,c=3,d=dd1)
+    d2 = dict(a=1,b=2,c=3,d=dd2)
+    print dictsAreNotEqual(d1, d2)
+#     P = asarray([[0.,0.],[1.,2.],[2.,3.],[3.,4.]])
+#     print P
+#     RP = rotate(P,radians(90), centre=[0,0], keep=[2,3])
+#     print RP
+#     from matplotlib import pyplot as plt
+#     plt.plot(P[:,0],P[:,1],'r-o')
+#     plt.plot(RP[:,0],RP[:,1],'b-o')
+#     plt.show()

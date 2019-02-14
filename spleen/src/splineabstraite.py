@@ -23,6 +23,30 @@ from utilitaires.lecteurs import LecteurUniversel
 from numpy import sqrt
 from scipy.integrate import quad
 from scipy.interpolate.fitpack2 import LSQUnivariateSpline
+from pprint import pprint
+
+def arrange(dump):
+    u"""
+    Remettre d'aplomb dump, des valeurs de clés obsolètes
+    Modifie dump, ne retourne rien.
+    """
+    for key in ('classename', 'classname') :
+        #ya les deux orthographes, c'est une erreur
+        if  key in dump.keys() :
+            dump['classname'] = dump.pop(key)
+            break
+
+    for key in ('precision', 'nbpd') :
+        #ya les deux orthographes, c'est une erreur
+        if  key in dump.keys() :
+            dump['nbpd'] = dump.pop(key)
+            break
+
+    for key in ('points', 'cpoints') :
+        #ya les deux orthographes, c'est une erreur
+        if  key in dump.keys() :
+            dump['cpoints'] = dump.pop(key)
+            break
 
 def absCurvReal(S, T):
     u"""
@@ -331,11 +355,21 @@ class NSplineAbstract(object):
     """
     # defaultprefs = SplinePrefs()
     SUPPORTED_FILES = ('*.gnu', '*.dxf', '*.pts', '*.pkl','*.spl','*.npkl')
+    class Default(dict):
+        def __init__(self):
+            dict.__init__(self,{})
+
     def __init__(self, **dump):
         super(NSplineAbstract, self).__init__()
-        self.setDefaultValues()
+        #Valeurs par defaut
+#         default = self.Default()
+        for key, value in self.Default().iteritems() :
+            setattr(self, key, value)
         self.load(dump)
 #         self._update()Doit etre appelé explicitement par les héritiers au bon moment
+
+    def load(self, dump):
+        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
     def __getitem__(self,k):
         u"""
@@ -394,10 +428,6 @@ class NSplineAbstract(object):
     def __call__(self, T, diff=0):
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
-    def setDefaultValues(self):
-        u"""Valeurs par defaut:"""
-        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
-
     def toDump(self):
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
@@ -435,17 +465,23 @@ class NSplineAbstract(object):
         except Exception as msg:
             rdebug('Sauvegarde %s impossible : %s'%(filename.name,str(msg)))
 
-
     def open(self, filename):
+        u"""
+        """
         filename = Path(filename)
         ext = filename.ext
         #debug(filename=filename)
         if ext in (".gnu", '.txt'):
-            dump = self.toDump()
+#             self.setDefaultValues()
+#             dump = self.toDump()
+            dump = {}
             dump['cpoints'] = loadtxt(filename)
+            dump['name'] = filename.name
         elif ext==".pts":
-            dump = self.toDump()
+#             self.setDefaultValues()
+#             dump = self.toDump()
             dump['cpoints'] = LecteurUniversel(filename).points
+            dump['name'] = filename.name
         elif ext in ('.pkl', '.npkl'):
             dump = cPickle.load(open(filename,'r'))
             for key in ('points', 'cpoints') :
@@ -456,10 +492,7 @@ class NSplineAbstract(object):
                 dump = eval(f.read())
                 if dump.has_key('dmodel') :
                     dump = dump.pop('dmodel')
-#                 self.load(dump)
-#         #debug(dump=dump)
         self.load(dump)
-
 
     def computeSpline(self, *args, **kargs):
         u"""renseigne self.sx, self.sy"""

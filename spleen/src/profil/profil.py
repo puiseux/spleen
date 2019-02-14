@@ -11,44 +11,91 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @contact:    be@nervures.com
 @deffield    updated: 31 Jan 2013
 '''
-from utilitaires import (stack, className, debug, rdebug, dist2, dist, rcercle)
+from utilitaires import (stack, className, debug, rdebug, dist2, dist, rcercle,
+                         Path)
 import numpy as np
 import cPickle, os
 from parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
 from naca import naca4,naca5
 from splinecomposee import NSplineComposee
 from utilitaires.utilitairesprofil import computeCordeAndNBA
-from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace)
+from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace,
+    loadtxt)
 from scipy.optimize import newton
 from preferences import ProfilPrefs
 from pprint import pprint
+from matplotlib.widgets import CheckButtons
+from matplotlib import pyplot as plt
+from utilitaires.utilitairesdivers import diff
+from splineabstraite import NSplineAbstract, arrange
+from splinesimple import NSplineSimple
+from utilitaires.lecteurs import LecteurUniversel, pointsFrom
 
 class Profil(NSplineComposee):
     prefs = ProfilPrefs
+    class Default(dict) :
+        u"""Un dictionnaire avec les valeurs par défaut"""
+        def __init__(self) :
+#             prefs = ProfilPrefs
+            self.cpoints = asarray([[1.0, 0.0],[0.0, 0.0],[1.0, 0.0],])
+                        #les points de séparation des splines
+            self.ruptures = [0,1,-1]
+                        #les methodes pour chaque brin de spline
+            self.methode = [('cubic', ((2, 0.0,  0.0), (1, 0.0, -1.0))),
+                        ('cubic', ((1, 0.0, -1.0), (2, 0.0,  0.0)))]
+            self.mode    = ['courbure','courbure']
+            self.nbpe    = [50, 50]
+            self.nbpd    = [1000, 1000]
+            self.name      = 'Profil'
+            self.role      = 'Profil'
+            self.nbspline  = 0,# nb appels à computeSpline
+            self.nbdpoint  = 0,# nb calculs dpoints
+            self.nbech     = 0,# nb echantillonnages (epoints)
+            dict.__init__(self,
+                   _cpoints  = self.cpoints,
+                   _ruptures = self.ruptures,
+                   _methodes = self.methode,
+                   _nbpds    = self.nbpd,
+                   _modes    = self.mode,
+                   _nbpes    = self.nbpe,
+                   name      = self.name,
+                   role      = self.role,
+                   nbspline  = self.nbspline,
+                   nbdpoint  = self.nbdpoint,
+                   nbech     = self.nbech,
+                   )
+        @property
+        def dump(self):
+            d = {}#est comme self, sans les _ : '_xxx'=>'xxx'
+            K = ('cpoints','ruptures','methode','nbpe','mode','nbpd',
+                        'name','role')
+            for key in K :
+                d[key] = getattr(self,key)
+            return d
 
+#             defautdump = dict(cpoints=cpoints)
     u"""
-    Un profil est une NSplineComposee comportant deux NSplineSimple, l'une pour l'extrados,
-    l'autre pour l'intrados. Avec un point de jonction (rupture) au BA.
+    Un profil est une NSplineComposee comportant deux NSplineSimple, l'une pour
+    l'extrados, l'autre pour l'intrados.
+    Avec un point de jonction (rupture) au BA.
     Les deux splines se joignent au BA avec une tangente verticale.
 
-    Il y a trois sortes de points :
+    Comme pour toute spline, il y a trois sortes de points :
     - cpoints = points de contrôle avec
-            nba = ciba = numéro du BA dans les points de contrôle
+            nba = numéro du BA dans les points de contrôle
 
     - epoints = points échantillonnés. Ce sont ceux qui servent à la coupe.
-            iba = eiba = numéro du BA dans les points échantillonnés
-            iouvext, iouvint = numéros des points ouverture dans les points échantillonnés
-            profparam = concerne les points échantillonnés
-            nbpe = [nbpeext, nbpeint] nb de points d'échantillonnage sur chaque spline
+        iba = numéro du BA dans les points échantillonnés
+        iouvext, iouvint = num. des pts ouverture dans les points échantillonnés
+        profparam = concerne les points échantillonnés
+        nbpe = [nbpeext, nbpeint] nb de pts d'échantillonnage sur chaque spline
 
-    - dpoints = points de discrétisation, uniquement pour visualisation
+    - dpoints = points de discrétisation, uniquement pour visualisation.
     """
 
     def __init__(self, **dump):
         u"""
         """
-#         debug(dump_keys=dump.keys())
-#         pprint(dump)
         self.conforme = None
         self.nb_echantillonnages = 0
         self._profparam = None
@@ -58,11 +105,17 @@ class Profil(NSplineComposee):
                 serie = naca[0].lower().strip('naca')
                 if len(serie) == 4 : points = naca4(serie, naca[1])
                 if len(serie) == 5 : points = naca5(serie, naca[1])
-                dump['points'] = points
+                dump['cpoints'] = points
                 dump['name'] = 'naca'+serie
+#                 corde, nba = computeCordeAndNBA(points)
+#                 dump['ruptures'] = [0, nba, -1]
         except KeyError as msg :
-#             debug(str(msg))
             pass
+        for key in ('cpoints','points') :#P = Profil(cpoints=[[x,y],...])
+            if dump.has_key(key) and not dump.has_key('ruptures'):
+                corde, nba = computeCordeAndNBA(dump[key])
+                dump['ruptures'] = [0, nba, -1]
+
         #Appelle setDefaultValues() puis load() puis _update()
         super(Profil, self).__init__(**dump)
 #         il faut calculer nba (i.e. ruptures) AVANT le _update
@@ -100,24 +153,26 @@ class Profil(NSplineComposee):
             self.splines[1].role = 'Intrados'
             self.splines[1].name = 'Intrados-'+self.name
 
-    def setDefaultValues(self):
-        """Valeurs par defaut:
-        Pour constructeur vide
-        TODO:si on load une spline composée avec des valeurs manquantes, ça plante
-        proposer une valeur unique par ex : class Default = (methode, mode, nbpd, nbpe)"""
-        self._cpoints    = asarray([[1.0, 0.0],[0.0, 0.0],[1.0, 0.0],])
-        self._ruptures   = [0,1,2]#les points de séparation des splines
-        #les methodes pour chaque brin de spline
-        self._methodes   = [('cubic', ((2, 0.0,  0.0), (1, 0.0, -1.0))),
-                            ('cubic', ((1, 0.0, -1.0), (2, 0.0,  0.0)))]
-        self._nbpds      = [1000, 1000]
-        self._modes      = ['courbure','courbure']#polyligne
-        self._nbpes      = [50, 50]
-        self.name        = className(self)#+'(%d)'%(id(self))
-        self.role        = className(self)
-        self.nbspline    = 0# nb appels à computeSpline
-        self.nbdpoint    = 0# nb calculs dpoints
-        self.nbech       = 0# nb echantillonnages (epoints)
+#     def setDefaultValues(self):
+#         """
+#         Valeurs par defaut:
+#         Pour constructeur vide
+#         """
+#         for key, value in self.default.iteritems() :
+#             setattr(self, key, value)
+#         self._cpoints    = asarray([[1.0, 0.0],[0.0, 0.0],[1.0, 0.0],])
+#         self._ruptures   = [0,1,2]#les points de séparation des splines
+#         #les methodes pour chaque brin de spline
+#         self._methodes   = [('cubic', ((2, 0.0,  0.0), (1, 0.0, -1.0))),
+#                             ('cubic', ((1, 0.0, -1.0), (2, 0.0,  0.0)))]
+#         self._nbpds      = [1000, 1000]
+#         self._modes      = ['courbure','courbure']#polyligne
+#         self._nbpes      = [50, 50]
+#         self.name        = className(self)#+'(%d)'%(id(self))
+#         self.role        = className(self)
+#         self.nbspline    = 0# nb appels à computeSpline
+#         self.nbdpoint    = 0# nb calculs dpoints
+#         self.nbech       = 0# nb echantillonnages (epoints)
 
 
     def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, maxiter=50):
@@ -192,19 +247,67 @@ class Profil(NSplineComposee):
         u"""Inutilisé, sert seulement à éviter un AttributeError"""
         self._nbpe = nbpe
 
+
+    def arrange(self, dump):
+        u"""
+        dump est un dictionnaire
+        - comme celui retourné par self.toDump()
+        - ou bien un dump avec 'cpoints' (quasiment) seul
+        - ou bien un dump de SplineSimple  => conversion en Profil
+        - ou bien un dump de SplineComposee => non traité
+        On arrange le dump pour qu'il puisse convertir en Profil à peu
+        près n'importe quoi
+        """
+        arrange(dump)#des cles mal nommées
+#         Profil.arrange(self, dump)#Attention, on appelle le arrange de
+        keys = dump.keys()
+        key = 'classname'
+        if key in keys :
+            clsname = dump[key]
+            if 'Profil' in clsname :
+                return
+            elif clsname == 'NSplineSimple' :
+                debug(u"Conversion %s => %s"%(clsname, className(self)))
+                cpoints = dump.pop('cpoints')#a l'abri
+                name = dump.pop('name')
+                dump.update(self.Default().dump)
+                _, nba = computeCordeAndNBA(cpoints)
+                dump.update(ruptures=[0, nba, len(cpoints)-1], cpoints=cpoints,
+                            name=name, classname=className(self))
+                return
+        elif dump.has_key('cpoints') : 
+            #pas de key 'classname', appel en provenance de open('xxx.gnu')
+            #ou constructeur vide ou autre
+            cpoints = dump.pop('cpoints')#a l'abri
+            name = dump.pop('name')
+
+            dump.update(self.Default().dump)
+            _, nba = computeCordeAndNBA(cpoints)
+            dump.update(ruptures=[0, nba, len(cpoints)-1], cpoints=cpoints,
+                        name=name, classname=className(self))
+            
     def load(self, dump):
-        u"""dump est un dictionnaire comme celui retourné par self.toDump()"""
-#         debug('entree load',dump_keys=dump.keys())
+        u"""
+        dump est un dictionnaire
+        - comme celui retourné par self.toDump()
+        - ou bien un dump avec 'cpoints' (quasiment) seul
+        - ou bien un dump de SplineSimple  => conversion en Profil
+        - ou bien un dump de SplineComposee => non traité
+        """
+        self.arrange(dump)
+
         super(Profil, self).load(dump)
-        
-#         debug('dump=')
-#         pprint(dump)
-#         debug('entree load apres super.load',dump_keys=dump.keys())
+
+        self.splines[0].name = self.name+'#Extrados'
+        self.splines[0].role = 'extrados'
+
+        self.splines[1].name = self.name+'#Intrados'
+        self.splines[1].role = 'intrados'
         # dump = nom de fichier
-        if isinstance(dump,(str, unicode)) and os.path.isfile(dump):
-            f = open(dump,'r')
-            d = cPickle.load(f)
-            self.load(d)
+#         if isinstance(dump,(str, unicode)) and os.path.isfile(dump):
+#             f = open(dump,'r')
+#             d = cPickle.load(f)
+#             self.load(d)
         try :
             #Constructeur recopie :si dump possede la cle 'profil'
             #On le dumpe => pdump
@@ -266,12 +369,14 @@ class Profil(NSplineComposee):
             dump = super(Profil, self).toDump()
         elif format_=='old':
             #On ne garde que les points échantillonnés
-            dump = {'points' : self.epoints,
-                    'profparam' : self.profparam,#.toDump(),
-                    'name' : self.name,
-                    'role' : self.role,
+            dump = {
+                'points' : self.epoints,
+                'profparam' : self.profparam,#.toDump(),
+                'name' : self.name,
+                'role' : self.role,
                     }
-        dump['pouverture'] = self.pouverture#ouverture en % de corde
+        try : dump['pouverture'] = self.pouverture#ouverture en % de corde
+        except AttributeError : pass
         return dump
 
 #     def __repr__(self, format_='spl'):
@@ -412,7 +517,7 @@ class Profil(NSplineComposee):
 #         debug(pouv=self.pouverture, touv=touv)
 #         if kam!=kav :
         if kam == kav : #deux points sur le meme trados
-            return self.splines[kam].echantillonner(nbp, ta=tam, tb=tav, mode='lineaire', onlyT=False)
+            return self.splines[kam].echantillonner(nbp, ta=tam, tb=tav, mode='linear', onlyT=False)
         else :
             rdebug('TODO. Pour le moment les deux points de l\'ouverture doivent etre sur le meme trados' )
             return zeros((nbp,2))
@@ -434,7 +539,7 @@ class Profil(NSplineComposee):
         - intrados : du dernier point ouverture au BF
         """
 #         epoints = super(Profil, self).echantillonner(nbp, mode)
-        debug(u'%s : <%s> %d-eme echantillonnage'%(self.name, className(self), self.nb_echantillonnages))
+#         debug(u'%s : <%s> %d-eme echantillonnage'%(self.name, className(self), self.nb_echantillonnages))
 
         mode=['courbure','courbure']
         self.nb_echantillonnages += 1
@@ -677,8 +782,18 @@ class Profil(NSplineComposee):
         return 0.5*(self.splines[0](T) + self.splines[1](T)[::-1])
 
     def verification(self):
-        '''Verifions que la nervure est bien dans l'ordre BF>Extrados>BA>intrados'''
-
+        u'''
+        Vérifie que la nervure est bien dans l'ordre
+            BF>Extrados>BA>intrados,
+            avec les yextrados >= 0  et
+            yintrados <= 0
+        '''
+        def fmt(question, reponse, negatif=False):
+            if negatif :
+                alert = u'  ' if not reponse else u'=>'
+            else :
+                alert = u'  ' if reponse else u'=>'
+            return u'%s %30s %s'%(alert, question, reponse)
         points=self.cpoints
         p = Profil(cpoints=points)
 #         debug(p)
@@ -692,16 +807,14 @@ class Profil(NSplineComposee):
         oks=[]
         ok=dist(p[0],p[-1])<=1.0e-8
         oks.append(ok)
-        s='' if ok else '**** '
-        reponse.append(s+u"Profil ferm'e : = %s"%ok)
+        reponse.append(fmt(u"Profil ferm'e ?", ok))
+#         reponse.append(s+u"Profil ferm'e : = %s"%ok)
         ok=dist(p[0],(1.0,0.0))<=1.0e-8
         oks.append(ok)
-        s='' if ok else '**** '
-        reponse.append(s+u"BF : = %s"%str(p[0]))
+        reponse.append(fmt(u"BF =", str(p[0])))
         ok=dist(p[p.nba],(0.0,0.0))<=1.0e-8
         oks.append(ok)
-        s='' if ok else '****'
-        reponse.append(s+u"BA : = %s"%str(p[p.nba]))
+        reponse.append(fmt(u"BA =", str(p[p.nba])))
 
         # Position relative intrados, extrados
         minex=np.argmin(extr[:,1])
@@ -712,44 +825,47 @@ class Profil(NSplineComposee):
         ymaxex=np.amax(extr[:,1])
         yminin=np.amin(intr[:,1])
         ymaxin=np.amax(intr[:,1])
-        reponse.append(u'Extrados :  (min, max)=(%d, %d) ; (ymin, ymax)=(%.2g, %.2g)'%(minex,maxex,yminex,ymaxex))
-        reponse.append(u'Intrados :  (min, max)=(%d, %d) ; (ymin, ymax)=(%.2g, %.2g)'%(minin,maxin,yminin,ymaxin))
+        rep = fmt(u"indices extrados (min, max) =", u"(%-3d,%-3d)"%(minex,maxex))
+        reponse.append(rep)
+        rep = fmt(u"y extrados : (ymin, ymax) =", u"(%-5.3g,%-5.3g)"%(yminex,ymaxex))
+        reponse.append(rep)
+        rep = fmt(u"indices intrados (min, max) =", u"(%-3d,%-3d)"%(minin,maxin))
+        reponse.append(rep)
+        rep = fmt(u"y intrados : (ymin, ymax) =", u"(%-5.3g,%-5.3g)"%(yminin,ymaxin))
+        reponse.append(rep)
+#         reponse.append(u'    Extrados :  (min, max)=(%d, %d) ; (ymin, ymax)=(%.2g, %.2g)'%(minex,maxex,yminex,ymaxex))
+#         reponse.append(u'    Intrados :  (min, max)=(%d, %d) ; (ymin, ymax)=(%.2g, %.2g)'%(minin,maxin,yminin,ymaxin))
 
         # Yi intrados negatif,
         ok=(ymaxin<=1.0e-8)
-        s='' if ok else '****'
         oks.append(ok)
-        reponse.append(s+u'Y intrados <=0 : %s'%ok)
+        reponse.append(fmt(u'Y intrados <=0 ?', ok))
 
         # Yi extrados positif
         ok=(yminex>=-1.0e-8)
-        s='' if ok else '****'
         oks.append(ok)
-        reponse.append(s+u'Y extrados >=0 : %s'%ok)
+        reponse.append(fmt(u'Y extrados >=0 ?',ok))
 
         # Extrados plus épais que intrados
         ok=(abs(ymaxex)>=abs(yminin))
-        s='' if ok else '****'
         oks.append(ok)
-        reponse.append(s+u'Extrados plus epais que intrados : %s'%ok)
+        reponse.append(fmt(u'Extr. plus epais intr. ?' ,ok))
+#         reponse.append(s+u'Extrados plus epais que intrados ? %s'%ok)
 
         # Les xi décroissent pour l'extrados
-        dEx=extr[1:]-extr[:-1]
+        dEx=diff(extr)
         dxex=dEx[:,0]#extr[1:,0] - extr[:-1,0]
         # dyex=dEx[:,1]#extr[1:,0] - extr[:-1,0]
         ok=np.all(dxex<0)
-        s='' if ok else '****'
         oks.append(ok)
-        reponse.append(s+u"les Xi decroissants a l'extrados : %s"%(ok))
+        reponse.append(fmt(u"Pli a l'extrados ?", not ok, negatif=True))
         # Les xi croissent pour l'intrados
-        dIn=intr[1:]-intr[:-1]
+        dIn=diff(intr)
         dxin=dIn[:,0]#intr[1:,0] - intr[:-1,0]
         # dyin=dIn[:,1]#intr[1:,0] - intr[:-1,0]
         ok=np.all(dxin>0)
-        s='' if ok else '****'
         oks.append(ok)
-        reponse.append(s+u"les Xi croissants a l'intrados : %s"%(ok))
-
+        reponse.append(fmt(u"Pli a l'intrados ?", not ok, negatif=True))
         # Convexité de l'extrados => pas significatif.
         if 0 :
             d2Ex=dEx[1:]-dEx[:-1]
@@ -757,13 +873,13 @@ class Profil(NSplineComposee):
             if not ok :
                 debug('dY/dX   extrados\n',-dEx[:,1]/dEx[:,0])
                 debug('d2Y/dX2 extrados\n',d2Ex[:,1]/(dEx[1:,0])*dEx[:-1,0])
-            s='' if ok else '****'
+            s='' if ok else u'*** '
             reponse.append(s+u"Extrados concave : %s"%(ok))
             oks.append(ok)
             # Petit creux en BF à l'intrados ?
             d2In=dIn[1:]-dIn[:-1]
             ok=np.all(d2In[:,1]>=0)
-            s='' if ok else '****'
+            s='' if ok else u'*** '
             if not ok :
                 debug('dY/dX   Intrados\n',dIn[:,1]/dIn[:,0])
                 debug('d2Y/dX2 Intrados\n',d2In[:,1]/(dIn[1:,0])*dIn[:-1,0])
@@ -773,12 +889,19 @@ class Profil(NSplineComposee):
         oks=asarray(oks)
         if np.all(oks) :
             self.conforme=True
-            reponse.append(str(oks))
-            reponse.append('Tout semble OK\n****')
+#             reponse.append(str(oks))
+            reponse.append(u'Tout semble OK\n****')
         else :
             self.conforme=False
-            reponse.append(str(oks))
-            reponse.append(u"Profil douteux. Verifiez qu'il est dans l'ordre : BF>extrados>BA>intrados")
+#             reponse.append(str(oks))
+            reponse.append(
+                u"""
+        Profil douteux.
+        - Verifiez qu'il est dans l'ordre : BF>extrados>BA>intrados.
+        - Verifiez qu'il n'a pas de pli.
+        - Verifiez que l'extrados est plus epais de l'intrados.
+        - Verifiez qu'il est ferme (dernier point=premier point)
+                """)
         return reponse
 
     @property
@@ -890,7 +1013,7 @@ class Profil(NSplineComposee):
         u"Bord d'attaque imposé"
         self.profparam.iba=index
 
-    def plot0(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
+    def plot00(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
 #         from matplotlib import pyplot as plt
 #         from matplotlib.widgets import CheckButtons
 #         plt.figure(numfig)
@@ -920,80 +1043,144 @@ class Profil(NSplineComposee):
         plt.axis('equal')
         if show : plt.show()
 #         return plt
+    def plot0(self, figure=None, aspect={}, titre=None, more=[], texts=[],
+             show=True, buttons=True, numbers=['3p']):
+        return super(Profil, self).plot(figure=figure, aspect=aspect,
+                                        titre=titre, more=more, texts=texts,
+                                        show=show, buttons=buttons,
+                                        numbers=numbers)
 
-    def plot(self, plt, control=True, nbpd=None, nbpe=None, titre=None, show=True):
-        from matplotlib import pyplot as plt
-        from matplotlib.widgets import CheckButtons
-        _, ax = plt.subplots()
-        if titre is None : titre = self.name#+str(self.rba)
-        plt.title(titre)
-        ED = self.splines[0].dpoints
-        EC = self.splines[0].cpoints
-        espline,  = ax.plot(ED[:,0], ED[:,1], 'b-.', lw=1)
-        ID = self.splines[1].dpoints
-        IC = self.splines[1].cpoints
-        ispline,  = ax.plot(ID[:,0], ID[:,1], 'b-.', lw=1)
-#         iechant,  = ax.plot(IC[:,0], IC[:,1], 'ro', lw=1)
-#         debug(epoints=self.epoints.shape)
-        AD = self.dpoints
-#         debug(AD)
-        if AD is None :
-            if show :
-                plt.title('Pas de profil')
-                plt.show()
-                return
+    def plot(self, figure=None, aspect={}, titre=None, more=[], texts=[],
+             show=True, buttons=True, numbers=['3p']):
+#         figure = super(Profil, self).plot(figure=figure, aspect=aspect,
+#                                           titre=titre, more=more, texts=texts,
+#                                           show=False, buttons=buttons,
+#                                           numbers=numbers)
+        defaultaspect = {
+                    'ce':'ro',#control extr:        red
+                    'de':'r-',#discretisation extr : blue
+                    'ee':'k.',#echantillon extr :    green
+                    'ci':'bo',#control intr :        red
+                    'di':'b-',#discretisation intr : blue
+                    'ei':'k.',#echantillon intr :    green
+                    'r' :'k*',#rupture:         black
+                    'o' :'r*',#ouverture:         bleu
+                    }
+        defaultaspect.update(aspect)
+        if figure is None :#pas de figure => on la crée
+            figure = plt.figure('plot(self)')
+
+        axes = figure.get_axes()
+        if axes : ax = axes[0]
+        else : ax = figure.subplots()
+
+        if titre : ax.set_title(titre)
+        ax.axis('equal')
+        C = self.cpoints
+        D = self.dpoints
+        E = self.epoints
+
+        for chars in numbers :
+            if len(chars)>1 :
+                step = eval(chars[:-1])
             else :
-                return
-        all_, = ax.plot(AD[:,0], AD[:,1], 'g--', lw=1)
-        try :
-            self.echantillonner()
-        except ValueError as msg:
-            debug(self, msg=msg)
-        AE = self.epoints
-        ech, = ax.plot(AE[:,0], AE[:,1], 'bo', lw=1)
+                step = 1#numerotation de un point sur step
+            char = chars[-1]
+            if char=='c' :
+                for k, p in enumerate(C[::step]) :
+                    ax.text(p[0], p[1], '%d'%(step*k))
+            elif char=='e' :
+                for k, p in enumerate(E[::step]) :
+                    ax.text(p[0], p[1], '%d'%(step*k))
 
-        plt.subplots_adjust(left=0.2)
-        plt.axis('equal')
+        for txt in texts :
+            ax.text(*txt)
 
-        econtrol, = ax.plot(EC[:,0], EC[:,1], 'ro', lw=1)
-        icontrol, = ax.plot(IC[:,0], IC[:,1], 'ro', lw=1)
+        Cex = self.splines[0].cpoints
+        Dex = self.splines[0].dpoints
+        Eex = self.splines[0].epoints
+        Cin = self.splines[1].cpoints
+        Din = self.splines[1].dpoints
+        Ein = self.splines[1].epoints
+        R = asarray(self[self.ruptures])#des points
         xouvext, youvext = self.epoints[self.profparam.iouvext]
         xouvint, youvint = self.epoints[self.profparam.iouvint]
-        xBA, yBA = self.epoints[self.iba]
-        ouverture, = ax.plot([xouvext, xouvint],[youvext, youvint],'yo', label=u'ouverture:%d, %d'%(self.profparam.iouvext, self.profparam.iouvint))
-        BA, = ax.plot([xBA],[yBA],'go', label=u'BA:%d'%self.iba)
-        rax = plt.axes([0.05, 0.4, 0.1, 0.5])
-        labels   = ('ext', 'ext control','int', 'int control', 'tout', 'Ech', 'BA', 'ouverture')
-        entities = (espline,econtrol,ispline,icontrol,all,  ech,  BA,   ouverture)
-        valinit  = (False,  False,   False,  False,   True, True, True, True)
+        fmtr  = defaultaspect['r']
+        fmto  = defaultaspect['o']
+        fmtce = defaultaspect['ce']
+        fmtde = defaultaspect['de']
+        fmtee = defaultaspect['ee']
+        fmtci = defaultaspect['ci']
+        fmtdi = defaultaspect['di']
+        fmtei = defaultaspect['ei']
+        if fmtce : econtrol,     = ax.plot(Cex[:,0], Cex[:,1], fmtce, lw=1,
+                                            label=u'Contrôle extrados')
+        if fmtde : espline,      = ax.plot(Dex[:,0], Dex[:,1], fmtde, lw=1,
+                                            label=u'Spline extrados')
+        if fmtee : eechantillon, = ax.plot(Eex[:,0], Eex[:,1], fmtee, lw=1,
+                                            label=u'Échantillon extrados')
+        if fmtci : icontrol,     = ax.plot(Cin[:,0], Cin[:,1], fmtci, lw=1,
+                                            label=u'Contrôle intrados')
+        if fmtdi : ispline,      = ax.plot(Din[:,0], Din[:,1], fmtdi, lw=1,
+                                            label=u'Spline intrados')
+        if fmtei : iechantillon, = ax.plot(Ein[:,0], Ein[:,1], fmtei, lw=1,
+                                            label=u'Échantillon intrados')
+        if fmtr  : BABF,         = ax.plot(R[:,0], R[:,1], fmtr, lw=1,
+                                            markersize=12, label=u'BA-BF')
+        if fmto  : ouverture,    = ax.plot([xouvext, xouvint],
+                                            [youvext, youvint],
+                                            fmto, markersize=12,
+                                            label=u'Ouverture')
 
-        for entite, value in zip(entities,valinit):
-#             rdebug(entite=entite)
-            try : entite.set_visible(value)
-            except AttributeError : pass
-        check = CheckButtons(rax,labels,valinit)
+        figure.legend()
+        figure.subplots_adjust(left=0.2)
+        if buttons :
+            rax = figure.add_axes([0.05, 0.4, 0.1, 0.15])#
+            labels = (u'extrados spline', u'extrados control', u'extrados échantillon',
+                      u'intrados spline', u'intrados control', u'intrados échantillon',
+                      u'BA-BF', u'ouverture')
+            draws  = (espline, econtrol, eechantillon,
+                      ispline, icontrol, iechantillon,
+                      BABF,   ouverture)
+            values = (True, True, True,
+                      True, True, True,
+                      True, True)
+#             for item in draws :
+#                 item.set_visible(True)
 
-        def func(label):
-            if label == 'ext':
-                espline.set_visible(not espline.get_visible())
-            elif label == 'ext control':
-                econtrol.set_visible(not econtrol.get_visible())
-            elif label == 'int':
-                ispline.set_visible(not ispline.get_visible())
-            elif label == 'int control':
-                icontrol.set_visible(not icontrol.get_visible())
-            elif label == 'Tout':
-                all.set_visible(not all.get_visible())
-            elif label == 'Ech':
-                ech.set_visible(not ech.get_visible())
-            elif label == 'BA':
-                BA.set_visible(not BA.get_visible())
-            elif label == 'ouverture':
-                ouverture.set_visible(not ouverture.get_visible())
-            plt.draw()
-        check.on_clicked(func)
-#         return plt
+            for draw, value in zip(draws,values):
+                try : draw.set_visible(value)
+                except AttributeError : pass
+            check = CheckButtons(rax, labels, values)
+            def func(label):
+                try :
+                    draw = draws[labels.index(label)]
+                    draw.set_visible(not draw.get_visible())
+                except Exception as msg:
+                    rdebug(u"label=%s marche po : %s"%(label,str(msg)))
+                    pass
+                plt.draw()
+            check.on_clicked(func)
         if show : plt.show()
+        return figure
+#         def func(label):
+#             if label == 'ext':
+#                 espline.set_visible(not espline.get_visible())
+#             elif label == 'ext control':
+#                 econtrol.set_visible(not econtrol.get_visible())
+#             elif label == 'int':
+#                 ispline.set_visible(not ispline.get_visible())
+#             elif label == 'int control':
+#                 icontrol.set_visible(not icontrol.get_visible())
+#             elif label == 'Tout':
+#                 all.set_visible(not all.get_visible())
+#             elif label == 'Ech':
+#                 ech.set_visible(not ech.get_visible())
+#             elif label == 'BA':
+#                 BA.set_visible(not BA.get_visible())
+#             elif label == 'ouverture':
+#                 ouverture.set_visible(not ouverture.get_visible())
+# #         return plt
 
     def update(self):
         u'''

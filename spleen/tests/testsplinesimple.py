@@ -7,10 +7,10 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-11"
+__updated__="2019-02-13"
 '''
 from matplotlib import pyplot as plt
-from utilitaires.utilitairesdivers import stack
+from filenames import filenames
 plt.rcParams["figure.figsize"] = (20,10)
 from numpy.random import rand
 from collections import OrderedDict
@@ -25,7 +25,7 @@ from numpy import log, linspace, asarray, sqrt, zeros
 from numpy.linalg import  norm
 from config import VALIDATION_DIR, RUNS_DIR
 from pprint import pprint
-from utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreEqual)
+from utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreNotEqual, stack)
 import cPickle
 import config
 # from mpi4py import MPI
@@ -191,23 +191,23 @@ def testConstructeurs(filename, show=False) :
     S = NSplineSimple(**dump00)
     dump01 = S.toDump()
     pprint(dump01)
-    debug("dump00==dump01 : %s"%dictsAreEqual(dump00, dump01))
+    debug("dump00!=dump01 : %s"%dictsAreNotEqual(dump00, dump01))
 
     debug(paragraphe='4. S1 = S0.copy() (points:%s)'%filename.name)
     S = S0.copy()
     dump02=S.toDump()
-    debug("dump00==dump02 : %s"%dictsAreEqual(dump00,dump02))
+    debug("dump00!=dump02 : %s"%dictsAreNotEqual(dump00,dump02))
     filename = Path(RUNS_DIR, 'spline.npkl')
     S0.save(filename=filename)
     S0.open(filename)
 #     debug('S0.toDump()')
 #     pprint(S0.toDump())
     debug(S0)
-    debug('S0.toDump()==dump00',dictsAreEqual(S0.toDump(),dump02))
+    debug('S0.toDump()!=dump00',dictsAreNotEqual(S0.toDump(),dump02))
     if show : S0.plot(titre='open pkl')
     S1 = S0.copy()
     d0,d1 = dump00, S1.toDump()
-    debug('d0==d1',dictsAreEqual(d0,d1))
+    debug('d0!=d1',dictsAreNotEqual(d0,d1))
     if show :S1.plot(titre='copy')
     debug(titre='Fin testConstructeurs %s'%filename.name)
 
@@ -502,7 +502,7 @@ def testDivers(filename, show=True):
             'name': u'test',
             'nbpe': 30,
             'precision': 1000,
-            'mode': 'lineaire'}
+            'mode': 'linear'}
     debug(msg)
     S = NSplineSimple(**dump)
     if show : S.plot()
@@ -599,7 +599,7 @@ def testDivers1(filename, show=True):
 #             'name': u'test',
 #             'nbpe': 30,
 #             'precision': 1000,
-#             'mode': 'lineaire'}
+#             'mode': 'linear'}
     dump = {'classename': 'NSplineSimple',
             'cpoints': cpoints,
             'methode': ('cubic', 'not-a-knot'),
@@ -955,18 +955,18 @@ def testCorrectionRM(show=True):
 
 def testMain(show=False):
     files = [
-            Path(VALIDATION_DIR,'spline-0#.spl'),
-            Path(VALIDATION_DIR,'spline-0.spl'),
-            Path(VALIDATION_DIR,'blocjonc.spl'),
-            Path(VALIDATION_DIR,'shark.spl'),
-            Path(VALIDATION_DIR,'diamirE.spl'),
-            Path(VALIDATION_DIR,'P0.spl'),
-            Path(VALIDATION_DIR,'P0#.spl'),
-            Path(VALIDATION_DIR,'E-shark.spl'),
-            Path(VALIDATION_DIR,'E-diamirE.spl'),
-            Path(VALIDATION_DIR,'NACA2415.spl'),
-            Path(VALIDATION_DIR,'unenervure2d.gnu'),
-            Path(VALIDATION_DIR,'spline-0#.pkl'),
+            Path(VALIDATION_DIR,'splinesimple-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'blocjonc-splinesimple.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-21pts.spl'),
+            Path(VALIDATION_DIR,'splinesimple-21pts.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-26pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-24pts.spl'),
+            Path(VALIDATION_DIR,'NACA2415-100pts.spl'),
+            Path(VALIDATION_DIR,'points-86pts.gnu'),
+            Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
             ][::-1]
 
 #     debug(titre='TODO : methode=("us",k) ne marche pas')

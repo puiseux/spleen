@@ -7,7 +7,7 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-11"
+__updated__="2019-02-14"
 '''
 import sys, os, math
 import cPickle
@@ -17,6 +17,7 @@ from matplotlib import pyplot as plt
 from numbers import Number
 from matplotlib.widgets import CheckButtons
 import config
+from preferences import SplinePrefs
 # from brouillon4 import plot
 # from splinecomposee import NSplineComposee
 plt.rcParams["figure.figsize"] = (20,10)
@@ -25,7 +26,7 @@ from utilitaires import (rstack, eliminerPointsDoublesConsecutifs,
                          Path, segmentPlusProche, stack, debug, rdebug, dist,
                          hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
 from utilitaires.lecteurs import pointsFrom, LecteurUniversel
-from splineabstraite import computeSpline, NSplineAbstract
+from splineabstraite import computeSpline, NSplineAbstract, arrange
 from numpy import (log, linspace, asarray, sqrt, arange, zeros, cos,
                    tan, pi, loadtxt, ndarray, argmin, where, savetxt, ones,
                    vstack, insert, delete, isnan, NaN, nan, NAN, empty,
@@ -42,15 +43,30 @@ class NSplineSimple(NSplineAbstract):
         # soit inexistants
         # soit des ndarray de shape (N,2)
     """
-    class Default(object):
-        _nbpd = 1000
-        _methode  = ('ius',1)
-        _mode      = 'linear'
-        _nbpe      = 30
-        _cpoints  = zeros((0,2))
-        gparent = None
-        eps = 1.0e-5 # 10 microns si les distances sont en metres
-
+    prefs = SplinePrefs
+    class Default(dict) :
+        u"""Un dictionnaire avec les valeurs par défaut"""
+        def __init__(self) :
+            prefs = SplinePrefs
+            dict.__init__(self,
+                        _cpoints   = zeros((0,2)),
+                        _methode   = ('ius',1),
+                        _mode      = 'linear',
+                        _nbpe      = 30,
+                        _nbpd      = 1000,
+#                         methode   = ('ius',1),
+#                         mode      = 'linear',
+#                         nbpe      = 30,
+#                         nbpd      = 1000,
+                        role       = 'NSplineSimple',
+                        name       = 'NSplineSimple',
+                        nbspline   = 0,# nb appels à computeSpline
+                        nbdpoint   = 0,# nb calculs dpoints
+                        nbech      = 0,# nb echantillonnages (epoints)
+                        nbupdate   = 0,
+                        eps        = prefs.eps,#precision en mètres
+                        gparent    = None
+                        )
     def __init__(self, **dump):# cpoints=None, name='spline', role='spline'):
         u"""
         * dump DOIT contenir les clés :
@@ -58,7 +74,7 @@ class NSplineSimple(NSplineAbstract):
         * dump PEUT contenir les clés suivantes (sinon il y a des valeurs par défaut)
             - 'points' dont la valeur est un .ndarray, ou un QPolygon
                 ou une liste de points, ou un filename ou encore None
-            - 'precision' = nb de points pour le tracé de la spline
+            - 'nbpd' = nb de points pour le tracé de la spline
             - 'methode' : cf computeSpline() paramètre hyper important.
                 détermine s'il s'agit d'une spline cubique, de degré autre,
                 périodique, si les dérivées aux extrémités sont données, etc...
@@ -70,8 +86,14 @@ class NSplineSimple(NSplineAbstract):
 #         self.setDefaultValues()
 #         self.load(dump)
         if self.mode in ('rayon', 'courbure') :
-            if self.methode in (('ius',1),('us',1)) :
-                raise ValueError(u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode )
+#             if self.methode in (('ius',1),('us',1)) :
+            if self.degre <= 1 :
+                msg0 = u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode
+                msg1 = u"Modification du mode d'echantillonnage : %s => %s"%(u'courbure', self.mode)
+                msg = u'\n'.join([msg0,msg1])
+                debug(msg)
+                self.mode = 'linear'
+#                 raise ValueError, msg0
         self._update()
 
     def __len__(self):
@@ -109,7 +131,9 @@ class NSplineSimple(NSplineAbstract):
             except TypeError : return asarray([X,Y])
 
         except TypeError as msg :#sx pas calculé
-            debug('Spline inconstructible : %s'%str(msg))
+            pass
+            debug(u'Spline inconstructible : %s'%str(msg))
+#             stack()
             return zeros((0,2))
 
     def __setitem__(self,k,value):
@@ -165,30 +189,49 @@ class NSplineSimple(NSplineAbstract):
 
         return infos
 
-    def setDefaultValues(self):
-        """Valeurs par defaut:"""
-        self._cpoints   = self.Default._cpoints
-        self._methode   = self.Default._methode
-        self._mode      = self.Default._mode
-        self._nbpe      = self.Default._nbpe
-        self._nbpd      = self.Default._nbpd
-        self.role       = className(self)
-        self.name       = className(self)
-        self.nbspline   = 0# nb appels à computeSpline
-        self.nbdpoint   = 0# nb calculs dpoints
-        self.nbech      = 0# nb echantillonnages (epoints)
-        self.nbupdate   = 0
-        self.eps        = self.Default.eps#precision en mètres
-        self.gparent    = None
+#     def setDefaultValues(self):
+#         """Valeurs par defaut:"""
+#         self._cpoints   = self.Default._cpoints
+#         self._methode   = self.Default._methode
+#         self._mode      = self.Default._mode
+#         self._nbpe      = self.Default._nbpe
+#         self._nbpd      = self.Default._nbpd
+#         self.role       = className(self)
+#         self.name       = className(self)
+#         self.nbspline   = 0# nb appels à computeSpline
+#         self.nbdpoint   = 0# nb calculs dpoints
+#         self.nbech      = 0# nb echantillonnages (epoints)
+#         self.nbupdate   = 0
+#         self.eps        = self.Default.eps#precision en mètres
+#         self.gparent    = None
+    def arrange(self,dump):
+        arrange(dump)
+        keys = dump.keys()
+        if 'classname' in keys :
+            clsname = dump['classname']
+            if clsname != 'NSplineSimple' : #Pas une spline simple
+                # on arrange le dump pour qu'il soit lisible
+                debug(u"Conversion %s => %s"%(clsname, className(self)))
+                default = self.Default()
+                default.pop('_cpoints')
+                dump.update(default)
+                dump['methode'] = default.pop('_methode')
+                dump['mode'] = default.pop('_mode')
+                dump['nbpe'] = default.pop('_nbpe')
+                dump['nbpd'] = dump['precision'] = default.pop('_nbpd')
 
     def load(self, dump):
-        u"""Ce qui est commun à toutes les splines."""
-#         super(NSplineSimple, self).load(dump)
         u"""
         Attention, la cle est 'points'  dans les anciens projets, et 'cpoints' dans les nouveaux.
         OUI=>On affecte _cpoints directement qui évite l'appel au setter de cpoints (qui appelle _update()).
         cpoints DOIT être liste, tuple, array ou ndarray, sans points doubles consécutifs
+
+        - Si on tente de charger une spline qui n'est pas NSplineSimple, on ne
+            charge que les cpoints, et on utilise les valeurs par défaut pour
+            les autres cles
         """
+        NSplineSimple.arrange(self, dump)
+        #Attention, on appelle le arrange de NSpline Simple
         keys = dump.keys()
         if 'name'      in keys : self.name     = dump.pop('name')
         if 'gparent'   in keys : self.gparent  = dump.pop('gparent')
@@ -230,6 +273,8 @@ class NSplineSimple(NSplineAbstract):
                 'methode'    : self.methode,
                 ############################
                 'nbpd'       : self.nbpd,
+                'nbpe'       : self.nbpe,
+                'mode'       : self.mode,
                 }
 
     def copy(self):
@@ -454,8 +499,8 @@ class NSplineSimple(NSplineAbstract):
         répartition (échantillonnage) de nbp points sur la spline self,
         entre les abscisses ta et tb, suivant le mode précisé par 'mode'
         *supprime self._epoints et modifie self._tech*
-        :return : les abscisses T=ndarray(shape=(n,1)) (je crois!)
-                des points échantillonnés
+        :return : les temps T=ndarray(shape=(n,)) des points échantillonnés,
+            ie les T[i] tels que self.epoints[i]=self(t[i])
 
         :param mode : str ou unicode ou par defaut None
             - si mode==None => mode = self.mode
@@ -464,8 +509,8 @@ class NSplineSimple(NSplineAbstract):
                 répartis tout au long de la spline
             - si mode=='rayon' ou 'courbure' la densité de points est
                 approximativement proportionnelle à la courbure.
-            - si mode=='cpoints' : retourne simplement les points de contrôle.
-            - si mode=='telkel' : ta doit être un tableau des parametres t
+            - si mode=='cpoints' : retourne les temps des points de contrôle.
+            - si mode=='telkel' : ta doit être un tableau de temps ndarray((n,))
                 des points echantillonnés retourne self(ta).
 
         :param nbp : int, nombre de points d'échantillonnage.
@@ -508,7 +553,14 @@ class NSplineSimple(NSplineAbstract):
 
         elif mode in ('linear', 'lineaire', 'lin') :
             self._tech =  linspace(ta, tb, nbp)#y compris ta et tb
-
+        elif mode in  ('telkel', ) :
+            self._tech = ta
+            return self._tech
+#             raise NotImplementedError, u"'%s' mode d'echantillonnage inutile, retourne ta"%mode
+        elif mode in  ('cpoints') :
+            self._tech = self.knots.copy()
+            return self._tech
+#             raise NotImplementedError, u"'%s' mode d'echantillonnage obsolete, utiliser self.knots"%mode
         elif mode in ('rayon', 'courbure') :
             u"""On ne touche plus à RIEN !!!
             Calcul des points d'échantillonnage, de sorte que la densité de points
@@ -525,8 +577,8 @@ class NSplineSimple(NSplineAbstract):
             """
 #             rdebug(mode,self.mode)
             if self.methode[0] in ('us', 'ius') and self.methode[1] < 3 :
-                raise ValueError,\
-            u"""Impossible d'echantillonner, la courbure n'est pas definie pour une spline de degre %d< 3"""%self.methode[1]
+                msg = u"""Impossible d'echantillonner avec le mode '%s', la courbure n'est pas definie pour la spline %s de degre < 3"""%(str(self.mode), str(self.methode))
+                raise ValueError,msg
             if nbp==1 :
                 debug(nbp=nbp, ta=ta,tb=tb)
                 stack()
@@ -554,6 +606,7 @@ class NSplineSimple(NSplineAbstract):
                                ]
                         if j*s0-Sj < s0/1000 :
                             msg = [u'\nPas grave %s'%self.name]
+                            break
                         else :
                             msg = [u'\nAttention']
                             msg += [
@@ -679,7 +732,6 @@ class NSplineSimple(NSplineAbstract):
         :return figure: la figure passée en argument ou nouvelle figure si None
 
         """
-    #     renderer = RendererBase()
         defaultaspect = {
                     'c':'ro',#control :        red
                     'd':'b-',#discretisation : blue
@@ -689,11 +741,7 @@ class NSplineSimple(NSplineAbstract):
         defaultaspect.update(aspect)
         if figure is None :#pas de figure => on la crée
             figure = plt.figure('plot(self)')
-#         debug(figure=figure)
 
-    #     if nbpd is None : nbpd = self.nbpd
-    #     if nbpe is None : nbpe = self.nbpe
-    #     if mode is None : mode = self.mode
         D = self.dpoints
         C = self.cpoints
         E = self.epoints
@@ -1142,16 +1190,6 @@ class NSplineSimple(NSplineAbstract):
         :param centre : [float, float] le centre de la rotation, barycentre
             de self par défaut.
         :param unit: degres ou radians. Degrés par défaut.
-        :param keep: list de int, les points à garder en l'état
-            (ne pas faire tourner), normalement le point 0 ou -1.
-            Pour une spline composée SC, si on appelle SC.rotate(...), on
-            effectue une rotation pour chaque spline composante Si de SC.
-            Comme on n'a qu'un tableau SC.cpoints, le dernier cpoint de S0
-            coïncide avec le premier cpoint de S1, c'est la premiere rupture :
-                S0[-1]==S1[0]==SC.cpoints[SC.rupture[1]].
-            Sans précaution, on effectuerait DEUX FOIS la rotation sur ce
-            point. On ne la fait donc pas pour S1[0].
-            C'est un bug potentiel très difficile à localiser !!
         Si les dérivées aux extremités sont précisées, il faut les tourner elles
         aussi. C'est le cas si self.methode est de la forme ('cubic',(D0, Dn)),
         avec D0 = (d, a, b) où (a,b) est le vecteur dérivée d-ieme au point 0
@@ -1328,7 +1366,7 @@ class NSplineSimple(NSplineAbstract):
         """
         histoire = []
         if len(self) < 10 :
-            rdebug(u"Élagage inutile, %d points de contrôle seulement"%len(self))
+            rdebug(u"(%s) Élagage inutile, %d points de contrôle seulement"%(self.name, len(self)))
             return self, self.pourMille(0),(len(self),len(self))
         nd = 1000
         c0 = self.cpoints.copy()

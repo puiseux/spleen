@@ -4,14 +4,14 @@
 Axile -- Outil de conception/simulation de parapentes Nervures
 Classe xxx
 Description :
-@module : programminghelpers.drawing
+@module : preferences
 @author:      puiseux
 @copyright:   2013 Nervures. All rights reserved.
 @license:    LGPL
 @contact:    be@nervures.com, pierre@puiseux.name
 @deffield    creation: 19 janv. 2013
 '''
-__updated__="2019-02-06"
+__updated__="2019-02-13"
 VERSION = 'v1-'+__updated__
 NAME = 'AXile'
 TEMPLATE = 'temp'
@@ -21,15 +21,15 @@ from numpy import pi
 #from config import LOG_FILES
 #from config import NB_BACKUP
 class SplinePrefs(object) :
-    precision = 1000#nb points affichage
-    tension = 5.0
+    eps = 1.0e-5# 10 micron
+    precision = nbpd = 1000#nb points affichage
     poids = 1.0#le poids des noeuds par defaut
     degre = 3
-    methode = ('cubic','not-a-knot')
+    methode = ('ius',1)#('cubic','not-a-knot')
     modes = ['linear', 'cosinus', 'courbure','segment','cpoints']#comment echantillonner
     nbpe = 30 #nb points echantillonnage
     mode = modes[4]
-    elagage = 1.0#precision elagage, en mm/m
+    elagage = 0.5#precision elagage, en mm/m
 
 class ProfilPrefs(object) :
     pouverture = (
