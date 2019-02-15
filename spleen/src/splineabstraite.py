@@ -48,6 +48,12 @@ def arrange(dump):
             dump['cpoints'] = dump.pop(key)
             break
 
+    for key in ('rayon', 'courbure') :
+        #ya les deux orthographes, c'est une erreur
+        if  key in dump.keys() :
+            dump['courbure'] = dump.pop(key)
+            break
+
 def absCurvReal(S, T):
     u"""
     Calcule et retourne l'abscisse curviligne réelle des points S(T) sur la spline S.
@@ -429,10 +435,6 @@ class NSplineAbstract(object):
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
     def toDump(self):
-        raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
-
-    def load(self):
-        u"""Valeurs par defaut:"""
         raise NotImplementedError(u"la methode() %s doit etre implemente"%(whoami(self)[:-2]))
 
     def copy(self):

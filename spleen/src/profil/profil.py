@@ -610,11 +610,13 @@ class Profil(NSplineComposee):
         Tint = hstack([Tret[1:],Touv[1:-1],Tfin])
         self._techint = Tint
         self._techext = Text
+        self._tech = [Text, Tint]
 #         debug(T_intrados=Tint)
         eint = Si(Tint)#les points intrados théorique echantillonnés
         self._epoints = vstack((eext,eint))
 #         debug(nb_points_echantillonnage=len(self._epoints))
         return self._epoints
+    
     @property
     def info(self):
         infos = super(Profil,self).info

@@ -7,7 +7,7 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-14"
+__updated__="2019-02-15"
 '''
 import sys, os, math
 import cPickle
@@ -85,14 +85,7 @@ class NSplineSimple(NSplineAbstract):
         super(NSplineSimple,self).__init__(**dump)
 #         self.setDefaultValues()
 #         self.load(dump)
-        if self.mode in ('rayon', 'courbure') :
-#             if self.methode in (('ius',1),('us',1)) :
-            if self.degre <= 1 :
-                msg0 = u"Une spline lineaire ne peut pas etre echantillonnee avec le mode '%s'"%self.mode
-                msg1 = u"Modification du mode d'echantillonnage : %s => %s"%(u'courbure', self.mode)
-                msg = u'\n'.join([msg0,msg1])
-                debug(msg)
-                self.mode = 'linear'
+#         debug(len=len(self),mode=self.mode, methode=self.methode, degre=self.degre)
 #                 raise ValueError, msg0
         self._update()
 
@@ -132,7 +125,7 @@ class NSplineSimple(NSplineAbstract):
 
         except TypeError as msg :#sx pas calculé
             pass
-            debug(u'Spline inconstructible : %s'%str(msg))
+#             debug(u'Spline inconstructible : %s'%str(msg))
 #             stack()
             return zeros((0,2))
 
@@ -259,6 +252,13 @@ class NSplineSimple(NSplineAbstract):
                     self._cpoints = cpoints#pas de update pour le moment
                     self.close()#Ca appelle le _update si besoin
                 self.cpoints = cpoints#Ca appelle le _update()
+        if self.mode in ('rayon', 'courbure') :
+            if self.degre <= 1 :
+                self.mode = 'linear'
+                msg0 = u"Une spline lineaire ou quadratique ne peut pas etre echantillonnee avec le mode '%s'"%self.mode
+                msg1 = u"Modification du mode d'echantillonnage : '%s' => '%s'"%(u'courbure', self.mode)
+                msg = u'\n'.join([msg0,msg1])
+                debug(msg)
 
         try : del self._epoints
         except AttributeError : pass
@@ -1171,7 +1171,7 @@ class NSplineSimple(NSplineAbstract):
 
     def removePoint(self, pnum, update=True):
         u"""
-        - Suppression du point pnum de qcpolygon
+        - Suppression du point pnum de self.cpoints
         """
         point = self[pnum]
         if update : #le setter de cpoints fait un update
@@ -1179,6 +1179,7 @@ class NSplineSimple(NSplineAbstract):
         else :
             #le setter de cpoints fait un update, parfois c'est indésirable
             #dans ce cas, on intervient directement sur _cpoints
+            # Jamais appelé. A regarder
             self._cpoints = delete(self._cpoints, pnum, 0)
 #         self._update()#c'est fait par le setter de cpoints
         return point

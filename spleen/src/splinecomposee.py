@@ -58,7 +58,7 @@ class NSplineComposee(NSplineAbstract):
 #                        nbdpoint  = 0,# nb calculs dpoints
 #                        nbech     = 0,# nb echantillonnages (epoints)
 #                        )
-#             
+#
             self.cpoints = zeros((0,2))
                         #les points de séparation des splines
             self.ruptures = [0]
@@ -122,18 +122,18 @@ class NSplineComposee(NSplineAbstract):
         u"""
         """
         #on vire tout
-        if self.splines : 
+        if self.splines :
             while self.splines :
                 self._update()#ne pas bouger, a faire avant
                 spline = self.splines.pop()
                 del spline
                 try : del self._cpoints
                 except AttributeError : pass
-            # on doit réinitialiser aux valeurs par défaut 
+            # on doit réinitialiser aux valeurs par défaut
             #qui ont été supprimées par le _update ci-dessus
             for key, value in self.Default().iteritems() :
                 setattr(self, key, value)
-        
+
         arrange(dump)#renommage de cles mal nommées (precision, classename)
         keys = dump.keys()
         key = 'classname'
@@ -144,13 +144,13 @@ class NSplineComposee(NSplineAbstract):
                 #on la charge comme spline self.splines[0]
                 #self est à une seule composante
                 debug(u"Conversion %s => %s"%(clsname, className(self)))
-    
+
                 S0 = NSplineSimple(**dump)
                 return self.brinUnique(S0)
-# #             else : 
+# #             else :
 # #                 msg = u'Pas de conversion %s => %s'%(clsname, className(self))
 # #                 raise NotImplementedError, msg
-#         elif not hasattr(self, '_ruptures') : 
+#         elif not hasattr(self, '_ruptures') :
 #             #on remet les valeurs par defaut qui on disparu dans le _update plus haut
 #             dump1 = {}
 #             dump1.update(dump)#On conserve une copy de dump
@@ -159,7 +159,7 @@ class NSplineComposee(NSplineAbstract):
 #                 setattr(self, key, value)
 #             dump.update(default.dump)
 #             dump.update(dump1)
-            
+
 #       else : #ici on n'a pas trouve 'classname'
         if 'name'      in keys : self.name       = dump.pop('name')
         if 'gparent'   in keys : self.gparent    = dump.pop('gparent')
@@ -202,12 +202,12 @@ class NSplineComposee(NSplineAbstract):
                     raise TypeError, msg
                 break#la cle 'cpoints' est prioritaire,
         if len(cpoints)>1 and len(self._ruptures) == 1 :
-            #c'est une initialisation avec cpoints, et rupture, ... sont 
-            # a des valeurs de Default. => on met une NSplineSimple unique
-            S0 = NSplineSimple(cpoints=cpoints)
+            #c'est une initialisation avec cpoints, et rupture, ...
+            # avec les valeurs de Default. => on met une NSplineSimple unique
+            S0 = NSplineSimple(cpoints=cpoints, name=self.name)
             self.brinUnique(S0)
             return
-                
+
         ok = self._ruptures[0] == 0 and self._ruptures[-1] in (0,-1,len(cpoints)-1)
         for r in self._ruptures[1:-1] :
             ok = ok and 0 < r < len(cpoints)-1
@@ -232,8 +232,10 @@ class NSplineComposee(NSplineAbstract):
                                             nbpe      = nbpes[k],
                                             mode      = modes[k],
                                             nbpd      = nbpds[k],
-                                            name      = self.name+'-#%d'%k,
-                                            role      = 'spline-#%d'%k))
+                                            name      = self.name+'#%d'%k,
+                                            role      = 'spline#%d'%k))
+#         try : del self._ruptures
+#         except AttributeError : pass
 
     def elaguer(self, eps=0.5, replace=False):
         A = []
@@ -241,6 +243,8 @@ class NSplineComposee(NSplineAbstract):
             a = spline.elaguer(eps, replace)
             A.append(a)
         self._update()
+        try : del self._ruptures
+        except AttributeError : pass
         return A
 
     def echantillonner(self, nbp=None, mode=None):
@@ -253,6 +257,7 @@ class NSplineComposee(NSplineAbstract):
             #avec celui de la spline précédente.
             epoints=vstack([epoints,spline.epoints[1:]])
         self._epoints = epoints
+        self._tech = [s._tech for s in self.splines]
         return epoints
 
     @property
@@ -262,8 +267,13 @@ class NSplineComposee(NSplineAbstract):
         else :
             self.echantillonner()
             return self._epoints
-#     def echantillon(self, corde):
-#         return  self.epoints*corde
+
+    @property
+    def tech(self):
+        u"""Les parametres T de l'echantillonnage"""
+        if not hasattr(self, '_tech') :
+            self.echantillonner()
+        return self._tech
 
     def __pointsFrom(self, listearrays):
         u"""
@@ -532,12 +542,15 @@ class NSplineComposee(NSplineAbstract):
 
     def localiser(self, k):
         u"""
-        k est un numéro de point, entier dans l'intervalle [0, len(self)[
-        Calcule et retourne les numéros des splines auxquelles appartient le point numéro k, ainsi que
-        la position du point k dans ces splines, sous une des deux formes suivantes
-        - [(ks, i),]  ks numero de spline, i = place de k dans cette spline si k appartient à une seule spline ou bien
-        - [(ks0, i0), (ks1, i1)] : un point k peut appartenir à (au plus deux) splines qui sont alors consécutives.
-            Dans cette hypothèse, k est la fin de l'une (ks0) et le début de la suivante (ks1=1+ks0)
+        :param k: int, est un numéro de point, dans l'intervalle [0, len(self)[
+        :return : les numéros des splines auxquelles appartient le point k,
+            ainsi que la position du point k dans ces splines, sous une des deux
+            formes suivantes :
+        - [(ks, i),] ks numero de spline, i = place de k dans cette spline
+            si k appartient à une seule spline ou bien
+        - [(ks0, i0), (ks1, i1)] : un point k peut appartenir à (au plus)
+            deux splines qui sont alors consécutives. Dans cette hypothèse,
+            k est la fin de l'une (ks0) et le début de la suivante (ks1=1+ks0)
             et i0=len(self.splines[ks0]), i1 = 0
         """
         numspl = []
@@ -560,11 +573,15 @@ class NSplineComposee(NSplineAbstract):
             kr = self.join(kr)#le num du point de rupture (dans self.cpoints)
             self.removePoint(kr)#recursif
             #On devrait pas passer ici...
-            raise NotImplementedError('On tente la suppression d\'un point anguleux (%d)'%k)
+            raise NotImplementedError(u'On devrait pas passer ici... On tente la suppression d\'un point anguleux (%d)'%k)
         else :
 #         point = self[k]
             ks, kp = ls[0]#numero de spline, numero de point dans la spline
-            return self.splines[ks].removePoint(kp)
+            pt = self.splines[ks].removePoint(kp)
+            self._update()
+            return pt
+#         try : del self._ruptures
+#         except AttributeError : pass
 
     def hardRotate(self, alfa, centre=None, unit='degres'):
         if unit == 'degres' :
@@ -728,13 +745,13 @@ class NSplineComposee(NSplineAbstract):
             self.nbpe = nbpes
 #             return methodes, nbpds, modes, nbpes, ruptures
         #pour finir :
-            dd  = dict(cpoints=cpoints,
-                       methode=methodes,
-                       nbpd=nbpds,
-                       mode=modes,
-                       nbpe=nbpes,
-                       ruptures=ruptures,
-                       classname=className(self))
+#             dd  = dict(cpoints=cpoints,
+#                        methode=methodes,
+#                        nbpd=nbpds,
+#                        mode=modes,
+#                        nbpe=nbpes,
+#                        ruptures=ruptures,
+#                        classname=className(self))
 #             debug()
 #             pprint(dd)
             self.load(dict(cpoints=cpoints,
@@ -743,7 +760,8 @@ class NSplineComposee(NSplineAbstract):
                            mode=modes,
                            nbpe=nbpes,
                            ruptures=ruptures,
-                           classname=className(self)))
+                           classname=className(self),
+                           name=self.name))
             for s in self.splines :
                 #Pour s'assurer que le update est bien fait car on a affecté
                 # s.methode avec s._methodes, sans passer par le setter methode.setter
@@ -791,7 +809,7 @@ class NSplineComposee(NSplineAbstract):
 #         try : del self._ruptures#c'est juste un intermediaire à la construction
 #         except AttributeError : pass
 
-    def plot(S, figure=None, aspect={}, titre=None, more=[], texts=[], show=True,
+    def plot(self, figure=None, aspect={}, titre=None, more=[], texts=[], show=True,
              buttons=True, numbers=['3p']):
         """
         :param figure: une instance de matplotlib.figure.Figure
@@ -814,16 +832,16 @@ class NSplineComposee(NSplineAbstract):
                   }
         defaultaspect.update(aspect)
         if figure is None :#pas de figure => on la crée
-            figure = plt.figure('plot(S)')
+            figure = plt.figure('plot(self)')
 #         debug(figure=figure)
 
-    #     if nbpd is None : nbpd = S.nbpd
-    #     if nbpe is None : nbpe = S.nbpe
-    #     if mode is None : mode = S.mode
-        D = S.dpoints
-        C = S.cpoints
-        E = S.epoints
-        debug(E.shape)
+    #     if nbpd is None : nbpd = self.nbpd
+    #     if nbpe is None : nbpe = self.nbpe
+    #     if mode is None : mode = self.mode
+        D = self.dpoints
+        C = self.cpoints
+        E = self.epoints
+#         debug(E.shape)
     #     exit()
         axes = figure.get_axes()
         if axes : ax = axes[0]
@@ -834,7 +852,7 @@ class NSplineComposee(NSplineAbstract):
 #         debug(ax=className(ax),figure=className(figure))
         if titre : ax.set_title(titre)
 #         ax.set_title('prout')
-    #         titre = S.name+str(S.methode)
+    #         titre = self.name+str(self.methode)
 
         fmtc, fmtd, fmte, fmtr = (defaultaspect['c'], defaultaspect['d'],
                                   defaultaspect['e'], defaultaspect['r'])
@@ -842,11 +860,9 @@ class NSplineComposee(NSplineAbstract):
         if fmtc : control,     = ax.plot(C[:,0], C[:,1], fmtc, lw=1, label=u'Contrôle')
         if fmtd : spline,      = ax.plot(D[:,0], D[:,1], fmtd, lw=1, label=u'Spline')
         if fmte : echantillon, = ax.plot(E[:,0], E[:,1], fmte, lw=1, label=u'Échantillon')
-        if isinstance(S, NSplineComposee) :
-            R = asarray(S[S.ruptures])#des points
-    #         Rx, Ry = XY(R)
-            fmtr = defaultaspect['r']
-            if fmtr : ruptures,     = ax.plot(R[:,0], R[:,1], fmtr, markersize=12, label=u'Rupture')
+        R = asarray(self[self.ruptures])#des points
+        fmtr = defaultaspect['r']
+        if fmtr : ruptures,     = ax.plot(R[:,0], R[:,1], fmtr, markersize=12, label=u'Rupture')
 
     #     for x, y, color, name in more:
     #         _, = ax.plot(x, y, color, label=name)
@@ -877,7 +893,7 @@ class NSplineComposee(NSplineAbstract):
             labels = [u'control', u'spline',u'echantillon']
             values = [True, True, True]
             draws = [control, spline, echantillon]
-            if isinstance(S, NSplineComposee) :
+            if isinstance(self, NSplineComposee) :
                 labels.append(u'ruptures')
                 values.append(True)
                 draws.append(ruptures)
