@@ -19,17 +19,13 @@ from parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
 from naca import naca4,naca5
 from splinecomposee import NSplineComposee
 from utilitaires.utilitairesprofil import computeCordeAndNBA
-from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace,
-    loadtxt)
+from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace,)
 from scipy.optimize import newton
 from preferences import ProfilPrefs
-from pprint import pprint
 from matplotlib.widgets import CheckButtons
 from matplotlib import pyplot as plt
-from utilitaires.utilitairesdivers import diff
-from splineabstraite import NSplineAbstract, arrange
-from splinesimple import NSplineSimple
-from utilitaires.lecteurs import LecteurUniversel, pointsFrom
+from utilitaires import diff
+from splineabstraite import arrange
 
 class Profil(NSplineComposee):
     prefs = ProfilPrefs
@@ -279,7 +275,8 @@ class Profil(NSplineComposee):
             #pas de key 'classname', appel en provenance de open('xxx.gnu')
             #ou constructeur vide ou autre
             cpoints = dump.pop('cpoints')#a l'abri
-            name = dump.pop('name')
+            try : name = dump.pop('name')
+            except KeyError : pass
 
             dump.update(self.Default().dump)
             _, nba = computeCordeAndNBA(cpoints)

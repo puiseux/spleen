@@ -7,10 +7,9 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-13"
+__updated__="2019-02-15"
 '''
 from matplotlib import pyplot as plt
-from filenames import filenames
 plt.rcParams["figure.figsize"] = (20,10)
 from numpy.random import rand
 from collections import OrderedDict
@@ -969,7 +968,6 @@ def testMain(show=False):
             Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
             ][::-1]
 
-#     debug(titre='TODO : methode=("us",k) ne marche pas')
 #     comm = MPI.COMM_WORLD()
 #     rank = comm.Get_rank()
 #     size = comm.Get_size()
@@ -1015,6 +1013,3 @@ def testMain(show=False):
 
 if __name__=='__main__':
     testMain()
-
-    # sys.exit(app.exec_())
-#     os.system(' '.join(['python', Path('..','splinesimple.py')]))

@@ -11,15 +11,14 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 @contact:    be@nervures.com
 @deffield    updated: 31 Jan 2013
 '''
-
-import sys,os,math
+from config import VALIDATION_DIR
 from path import Path
-# from config import  VALIDATION_DIR
-from utilitaires.utilitairesdivers import (debug, rdebug,absCurv, my2dPlot,)
+from utilitaires import (debug, absCurv, my2dPlot,)
 import numpy as np
+from numpy import asarray
 from utilitaires.lecteurs import pointsFrom, pointsFromFile
 from splinesimple import NSplineSimple
-from numpy import asarray
+from matplotlib import pyplot as plt
 
 class NPolyLine(NSplineSimple):
     u"""
@@ -103,7 +102,6 @@ class NPolygone(NPolyLine):
         self.close_()
 
 def test1NPolyLine():
-    from matplotlib import pyplot as plt
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
     points = pointsFromFile(filename)
     dump = {'classename': 'NGraphicsShapeItem',

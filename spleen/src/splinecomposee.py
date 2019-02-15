@@ -1,10 +1,5 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from utilitaires.utilitairesdivers import diff, absCurv
-from splineabstraite import NSplineAbstract, arrange
-from matplotlib.widgets import CheckButtons
-import preferences
-from preferences import SplinePrefs
 u'''
 Axile -- Outil de conception/simulation de parapentes Nervures
 Classe NSplineComposee
@@ -13,16 +8,16 @@ Description :
 @copyright:   2016 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-import sys,os,math
-import numpy as np
+import math
+from splineabstraite import NSplineAbstract, arrange
+from matplotlib.widgets import CheckButtons
+from preferences import SplinePrefs
 from numpy import (asarray, linspace, log, vstack, zeros, ndarray, empty, nan,
-                   abs, where, isnan, zeros_like, isfinite)
+                   abs, where, isnan, isfinite)
 from collections import Iterable
 from splinesimple import NSplineSimple
-from utilitaires import (dist2, dist, XY, segmentPlusProche,debug, rdebug,
-                         className)
+from utilitaires import (dist2, dist, segmentPlusProche,debug, rdebug, className)
 from matplotlib import pyplot as plt
-from pprint import pprint
 class NSplineComposee(NSplineAbstract):
     u"""
     Une spline composée de plusieurs splines simples non périodiques (des brins),
@@ -969,5 +964,5 @@ class NSplineComposee(NSplineAbstract):
 if __name__=="__main__":
     from testsplinecomposee import testMain
     import config
-    config.TEST_MODE = False
+    config.TEST_MODE = False#pour avoir les liens clickables
     testMain()

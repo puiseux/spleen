@@ -14,7 +14,7 @@ Description : lecteur générique pour fichier paramètres.
 '''
 import sys,os
 from lecteur import Lecteur
-from utilitaires.utilitairesdivers import whoami,trace
+from utilitaires import whoami
 # from config import VALIDATION_DIR,DATA_DIR
 
 class LecteurData(Lecteur):
@@ -121,6 +121,7 @@ class LecteurData(Lecteur):
 
 if __name__=="__main__":
     from path import Path
+    from config import DATA_DIR
     class A():pass
     datadir=Path(DATA_DIR,'preferences')
     files = sorted(datadir.listdir('*.dat'))

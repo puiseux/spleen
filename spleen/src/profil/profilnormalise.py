@@ -1,6 +1,5 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from numpy import asarray
 u'''
 AXile -- Outil de conception/simulation de parapentes Nervures
 
@@ -13,15 +12,11 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 
-from pprint import pprint
-from utilitaires.utilitairesdivers import Path
 from profil import Profil
-from utilitaires import (debug, rdebug,dist2,dist)
+from utilitaires import (rdebug,dist2,dist,className)
 import numpy as np
-# import scipy as sp
-from numpy import linspace, log
+from numpy import linspace, log, asarray
 from scipy.optimize import newton
-from utilitaires.lecteurs import pointsFrom
 from preferences import ProfilPrefs
 
 class ProfilNormalise(Profil):
@@ -42,7 +37,6 @@ class ProfilNormalise(Profil):
         self.nb_normalisations = 0
         if len(self) <= 3 :
             self._nba = 1
-#             self.qpolygon = QPolygonF([QPointF(), QPointF(1,0), QPointF()])
             self._cpoints = self._epoints = asarray([(0.,0.),(1.,0.),(0.,0.)])
             self.nb_normalisations = 1
         else :
@@ -64,18 +58,18 @@ class ProfilNormalise(Profil):
 #             debug("*****", scale=scale)
             Profil.hardScale(self, scale, centre)
         else :
-            raise RuntimeError("%s.hardScale() : operation impossible"%self.classname)
-            rdebug("%s.hardScale() : operation impossible"%self.classname)
+            raise RuntimeError("%s.hardScale() : operation impossible"%className(self))
+            rdebug("%s.hardScale() : operation impossible"%className(self))
 
     def hardRotate(self, angle,centre, unit='degres'):
         if self.nb_normalisations == 0 :
             Profil.hardRotate(self, angle, centre, unit)
         else :
-            rdebug("%s.hardRotate() : operation impossible"%self.classname)
+            rdebug("%s.hardRotate() : operation impossible"%className(self))
 
     def __setitem__(self, k, value):
         if k in (0, self.nba, -1, len(self)-1) and self.nb_normalisations>0:
-            rdebug("%s.__setitem__() : operation impossible"%self.classname)
+            rdebug("%s.__setitem__() : operation impossible"%className(self))
         else :
             Profil.__setitem__(self, k, value)
 
@@ -134,7 +128,7 @@ class ProfilNormalise(Profil):
     def normalise(self):
         """on ne renormalise pas un profil normalisé mais
         normalise() est parfois appelé par Profil (dans le update en particulier)"""
-#         debug("%s.normalise() : ne fait rien"%self.classname)
+#         debug("%s.normalise() : ne fait rien"%className(self))
         return
 
     def normalite(self):
@@ -144,20 +138,20 @@ class ProfilNormalise(Profil):
 #         debug(bf0, bf1,ba)
         msg = []
         if (bf0[0],bf0[1]) != (1.0, 0.0) :
-#             raise RuntimeError("%s non normalisé: self[0]=(%.5g,%.5g) != (0,1) "%(self.classname,bf0[0],bf0[1]))
-            msg.append("%s non normalise: self[0]=(%.5g,%.5g) != (0,1) "%(self.classname,bf0[0],bf0[1]))
+#             raise RuntimeError("%s non normalisé: self[0]=(%.5g,%.5g) != (0,1) "%(className(self),bf0[0],bf0[1]))
+            msg.append("%s non normalise: self[0]=(%.5g,%.5g) != (0,1) "%(className(self),bf0[0],bf0[1]))
         elif (bf1[0],bf1[1])!= (1.0, 0.0) :
-#             raise RuntimeError("%s non normalisé: self[-1]=(%.5g,%.5g) != (0,1) "%(self.classname,bf1[0],bf1[1]))
-            msg.append("%s non normalise: self[-1]=(%.5g,%.5g) != (0,1) "%(self.classname,bf1[0],bf1[1]))
+#             raise RuntimeError("%s non normalisé: self[-1]=(%.5g,%.5g) != (0,1) "%(className(self),bf1[0],bf1[1]))
+            msg.append("%s non normalise: self[-1]=(%.5g,%.5g) != (0,1) "%(className(self),bf1[0],bf1[1]))
         elif (ba[0],ba[1]) != (0.0, 0.0):
-#             raise RuntimeError("%s non normalisé: self[0]=(%.5g,%.5g) != (0,0) "%(self.classname,ba[0],ba[1]))
-            msg.append("%s non normalise: self[0]=(%.5g,%.5g) != (0,0) "%(self.classname,ba[0],ba[1]))
+#             raise RuntimeError("%s non normalisé: self[0]=(%.5g,%.5g) != (0,0) "%(className(self),ba[0],ba[1]))
+            msg.append("%s non normalise: self[0]=(%.5g,%.5g) != (0,0) "%(className(self),ba[0],ba[1]))
         corde, nba = self.corde, self.nba#self.computeCordeAndNBA()
         if abs(corde-1.0)>=self.prefs.EPS:# or nba != self.nba :
-#             raise RuntimeError("%s non normalisé: corde=%.5g != 1.0 ou nba=%d != self.nba=%d"%(self.classname,corde,nba, self.nba))
-            msg.append("%s non normalise: corde=%.5g != 1.0 ou nba=%d != self.nba=%d"%(self.classname,corde,nba, self.nba))
+#             raise RuntimeError("%s non normalisé: corde=%.5g != 1.0 ou nba=%d != self.nba=%d"%(className(self),corde,nba, self.nba))
+            msg.append("%s non normalise: corde=%.5g != 1.0 ou nba=%d != self.nba=%d"%(className(self),corde,nba, self.nba))
         else :
-            msg.append('%s : normalite OK'%self.classname)
+            msg.append('%s : normalite OK'%className(self))
         return '\n'.join(msg)
 
     def echantillonner(self):
@@ -256,8 +250,8 @@ class ProfilNormalise(Profil):
 
     def __normalise(self):
         if self.nb_normalisations>0 :
-            raise RuntimeError("%s.__normalise() : profil deja normalise %d fois"%(self.classname,self.nb_normalisations))
-            rdebug("%s.__normalise() : profil deja normalise %d fois"%(self.classname,self.nb_normalisations))
+            raise RuntimeError("%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
+            rdebug("%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
         else :
             res = super(ProfilNormalise, self).normalise()
             self.nb_normalisations += 1
@@ -270,5 +264,5 @@ class ProfilNormalise(Profil):
         return dump
 
 if __name__=="__main__":
-    from tests.testsprofilnormalise import testMain
+    from testprofilnormalise import testMain
     testMain()

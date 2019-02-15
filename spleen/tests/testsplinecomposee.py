@@ -1,6 +1,5 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from filenames import filenames
 u'''
 Axile -- Outil de conception/simulation de parapentes Nervures
 Classe NSplineComposee
@@ -8,17 +7,14 @@ Description :
 @author:      puiseux
 @copyright:   2016 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
+__updated__ = "2019-02-15"
 '''
 import numpy as np
 from path import Path
-from config import VALIDATION_DIR#, SOURCES_DIR
+from config import VALIDATION_DIR, WORK_DIR
 from splinesimple import NSplineSimple
-from config import WORK_DIR, TEST_MODE
-# from splinesimple import NSplineSimple
 from splinecomposee import NSplineComposee
-# from utilitaires.utilitairesdivers import className
-from utilitaires import (debug, rdebug,dictsAreNotEqual)
-# debug(config.TEST_MODE)
+from utilitaires import (debug, dictsAreNotEqual)
 from utilitaires.utilitairesprofil import computeCordeAndNBA
 from utilitaires.lecteurs import pointsFrom
 from pprint import pprint
@@ -33,7 +29,7 @@ def pprintSaufCpoints(dump):
     dump['cpoints'] = 'Ici les cpoints......'
     pprint(dump)
     dump['cpoints'] = cpoints
-    
+
 def testBlocJonc(filename, show):
 #     show=True
     debug(titre="testBlocJonc()")
@@ -133,7 +129,7 @@ def testConstructeurs(filename, show):
     debug(cpoints = S.cpoints.tolist())
     debug(epoints = S.epoints.tolist())
     if show : S.plot(titre=par+name)
-    
+
     titre='reconstruction (%s)'%name
     debug(paragraphe=titre)
 #     points = pointsFrom(filename)
@@ -183,7 +179,7 @@ def testMethodesGlobales(filename,show):
     S = NSplineComposee()
     S.open(filename)
     print S
-    
+
     a, b = len(S)/3, 2*len(S)/3
     par = '"%s"split([%d,%d])'%(name,a,b)
     debug(paragraphe=par)
@@ -193,7 +189,7 @@ def testMethodesGlobales(filename,show):
     debug(cpoints=S.cpoints.tolist())
     debug(epoints=S.epoints.tolist())
     if show : S.plot(titre='"%s"\nsplit([%d,%d])\n'%(name,a,b)+str(S.methode))
-    
+
     debug(paragraphe='echantillonner() (%s)'%name)
     pts = S.echantillonner()
     debug(echantillon=pts.tolist())
@@ -222,7 +218,7 @@ def testMethodesGlobales(filename,show):
     debug(S)
     S.symetriser(1)
     if show : S.plot(titre='symetriser(1) (%s)'%name)
-    
+
     debug(paragraphe='"%s".join(1) '%name)
     S.join(1)
     debug(S)
@@ -230,7 +226,7 @@ def testMethodesGlobales(filename,show):
     debug(cpoints=S.cpoints.tolist())
     debug(epoints=S.epoints.tolist())
     if show : S.plot(titre='join(1)\n'+str(S.methode))
-    
+
     debug(paragraphe='"%s"._update() '%name)
     S._update()
     debug(S)
@@ -302,7 +298,7 @@ def testMethodesLocales(filename, show):
     k=0
     methode = [['cubic',((1, 0, 2), (1, 0, -2))], #extrados
                ['cubic',((1, 1, 0), (1, 1, 0))]]#intrados
-               
+
     debug(paragraphe='methode-%d : %s (%s)'%(k,str(methode), filename.name))
     k+=1
     points=pointsFrom(filename)
@@ -371,7 +367,7 @@ def testMethodesLocales(filename, show):
     debug(cpoints=S.cpoints.tolist())
     debug(epoints=S.epoints.tolist())
     if show : S.plot(titre=titre)
-    
+
     for pt in((1.5,0.1),(2,2),(3,0)) :
         titre = 'S.appendPoint(%s) (%s)'%(pt,name)
         debug(paragraphe=titre)

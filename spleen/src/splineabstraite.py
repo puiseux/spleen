@@ -10,20 +10,16 @@ Description :
 '''
 from numbers import Number
 import numpy as np
-from numpy import asarray as array, linspace, loadtxt, savetxt
-
-from scipy.optimize import newton, minimize, minimize_scalar
-from scipy.interpolate import CubicSpline, InterpolatedUnivariateSpline, UnivariateSpline
 import cPickle
-from utilitaires.utilitairesdivers import (Path, whoami, debug, rdebug,stack,rstack,
-                        absCurv,dist2, baryCentre, centreGravite, simpson)
-from utilitaires.lecteurs import pointsFrom
-from utilitaires.lecteurs import LecteurUniversel
-# from numpy.core.defchararray import center
-from numpy import sqrt
-from scipy.integrate import quad
+from numpy import asarray as array, linspace, loadtxt, savetxt,sqrt
+from scipy.optimize import minimize_scalar
+from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline, 
+                               UnivariateSpline)
 from scipy.interpolate.fitpack2 import LSQUnivariateSpline
-from pprint import pprint
+from scipy.integrate import quad
+from utilitaires import (Path, whoami, debug, rdebug, absCurv, baryCentre, 
+                         centreGravite)
+from utilitaires.lecteurs import pointsFrom, LecteurUniversel
 
 def arrange(dump):
     u"""

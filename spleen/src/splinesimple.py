@@ -21,16 +21,16 @@ from preferences import SplinePrefs
 # from brouillon4 import plot
 # from splinecomposee import NSplineComposee
 plt.rcParams["figure.figsize"] = (20,10)
-from utilitaires import (rstack, eliminerPointsDoublesConsecutifs,
+from utilitaires import (eliminerPointsDoublesConsecutifs,
                          className, centreGravite, baryCentre, XY,
-                         Path, segmentPlusProche, stack, debug, rdebug, dist,
-                         hardScale, absCurv,dist2,rotate,courbure,symetrieAxe)
-from utilitaires.lecteurs import pointsFrom, LecteurUniversel
-from splineabstraite import computeSpline, NSplineAbstract, arrange
+                         segmentPlusProche, stack, debug, rdebug, dist,
+                         hardScale, absCurv,dist2,rotate,symetrieAxe)
+from utilitaires.lecteurs import pointsFrom
+from splineabstraite import (computeSpline, NSplineAbstract, arrange)
 from numpy import (log, linspace, asarray, sqrt, arange, zeros, cos,
-                   tan, pi, loadtxt, ndarray, argmin, where, savetxt, ones,
-                   vstack, insert, delete, isnan, NaN, nan, NAN, empty,
-                   empty_like, zeros_like, sign, inf)
+                   tan, pi,  ndarray, argmin, where, ones,
+                   vstack, insert, delete, isnan, nan,
+                   empty_like,  sign, inf)
 from numpy.linalg import  norm
 # from scipy.optimize import newton, minimize
 from scipy.integrate.quadpack import quad

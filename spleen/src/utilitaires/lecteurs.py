@@ -11,19 +11,10 @@ Description :
 @contact:    be@nervures.com, pierre@puiseux.name
 @deffield    creation: 11 mars 2013
 '''
-import sys
 import numpy as np
-from lecteur import Lecteur,LecteurGnuplot,LecteurMatlab,LecteurSommaire#,LecteurVTK
-# from lecteurcmi import LecteurCMI
-# from lecteurcmo import LecteurCMO
-from lecteurdata import LecteurData
-from lecteurdxf import LecteurDXF,LecteurDXFNervures,LecteurDXF0, LecteurDXF1
-# from lecteursvg import LecteurSVG
-# from lecteurnervures import LecteurNervures
-from utilitaires.utilitairesdivers import (Path,trace,my2dPlot)
-# from config import VALIDATION_DIR
-from utilitaires.utilitairesdivers import rdebug, debug
-from pprint import pprint
+from lecteur import LecteurGnuplot,LecteurMatlab
+from lecteurdxf import LecteurDXFNervures,LecteurDXF0, LecteurDXF1
+from utilitaires import (Path,trace,my2dPlot,rdebug)
 import cPickle
 
 
@@ -157,7 +148,7 @@ class LecteurUniversel(object):
             self.lecteur=LecteurMatlab(filename)
             self.lire()
         elif 'svg' in ext:
-            from utilitaires.utilitairesdivers.lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
+            from utilitaires.lecteursvg import LecteurSVG#On ne peut pas faire l'import dans l'en-tête
             self.lecteur=LecteurSVG(filename)
             self.lire()
 
@@ -191,6 +182,7 @@ class LecteurUniversel(object):
 ###### tests #####
 
 if __name__=="__main__":
+    from config import VALIDATION_DIR
     print '*******Lecteur DXF******'
     filenames =[
                 Path(VALIDATION_DIR,'decorations','EuroSport.svg'),

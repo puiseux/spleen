@@ -1003,12 +1003,12 @@ def findAll(tag,lines,first=0,last=-1):
     """
     #
     n=first-1
-    n0=_findRel (tag,lines,n+1,last)
+    n0=findRel (tag,lines,n+1,last)
     N=[]
     while n0>=0 :
         n=n0+n+1
         N.append(n)
-        n0=_findRel(tag,lines,n+1,last)
+        n0=findRel(tag,lines,n+1,last)
     return tuple(N)
 
 def findAllLines(tag,lines,first=0,last=-1):
@@ -1023,7 +1023,7 @@ def findAllLines(tag,lines,first=0,last=-1):
             newlist.append(n)
     return tuple(newlist)
 
-def _findRel(tag,lines,first=0,last=-1):
+def findRel(tag,lines,first=0,last=-1):
     """
     Cherche 'tag' dans lines[first:last] et retourne
         * le numero de ligne i-first de la premiere occurence trouvee,
@@ -1041,7 +1041,7 @@ def find0(tag,lines,first=0,last=-1):
           c'est à dire le numéro de ligne RELATIF : dans self.lines[0:]
         * None si le tag n'est pas trouvé
     """
-    found=_findRel(tag,lines,first=first,last=last)
+    found=findRel(tag,lines,first=first,last=last)
     if found is not None : return  found+first
     else : return None
 

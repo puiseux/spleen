@@ -9,8 +9,7 @@ Created on 17 mai 2012
 import sys
 from path import Path
 import numpy as np
-from utilitaires.utilitairesdivers import (find,findAll,findAllLines,_findRel,whoami,debug,rdebug)
-# from config import VALIDATION_DIR
+from utilitaires import (find,findAll, findAllLines, findRel,rdebug)
 TAGS=[]
 
 class Lecteur(file):
@@ -37,7 +36,7 @@ class Lecteur(file):
         rdebug(" methode 'virtuelle' non implementee")
         return None
     run=lire
-    
+
     @property
     def classname(self):
         return self.__class__.__name__
@@ -105,7 +104,7 @@ class Lecteur(file):
         """
 
         for tag in tags :
-            n=self._findRel(tag,deb,fin)
+            n=self.findRel(tag,deb,fin)
             if n>=0 :
                 self.bookmark[tag]=n+deb
                 deb=n
@@ -128,14 +127,14 @@ class Lecteur(file):
         except IndexError : self.position=None
         return linesn
 
-    def _findRel(self,tag,first=0,last=-1):
+    def findRel(self,tag,first=0,last=-1):
         """
         Trouve tag dans lines[first:]
         ATTENTION, retourne le numéro de ligne RELATIF à first
         Pour avoir le numéro de ligne absolu, il faut lui rajouter 'first'
         Par contre, self.position est mis a jour correctement (numéro absolu)
         """
-        line_number=_findRel(tag,self.lines,first,last)
+        line_number = findRel(tag,self.lines,first,last)
         self.position=first+line_number
         return line_number
 
@@ -323,7 +322,7 @@ if __name__=="__main__":
 #    filename = "elastic.dat"
 #    filename =  Path(datadir,'DeuxNervures.txt')
     # from vtk_nervures.grids import PatchCMARC
-
+    from config import VALIDATION_DIR
     print '*******Lecteur******'
     filename=Path(VALIDATION_DIR,'dxf','cot_d03.DXF')
     f=Lecteur(filename)

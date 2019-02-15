@@ -1,7 +1,5 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from numpy import asarray, abs, vstack
-from paramgeneraux import ProfsParamNew
 u'''
 AXile -- Outil de conception/simulation de parapentes Nervures
 
@@ -14,16 +12,16 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 
+from numpy import asarray, abs, vstack
 from pprint import pprint
-from utilitaires import Path, pointLePlusProche
-from profil import Profil
+from utilitaires import Path
+from profil import Profil, ProfilNormalise, ProfsParam1
 from utilitaires import (debug, rdebug,)
-from lecteurs import pointsFrom#, qpolygonFrom
-from profilnormalise import ProfilNormalise
-from config import DATA_DIR,VALIDATION_DIR, RUNS_DIR, WORK_DIR
+from utilitaires import pointsFrom#, qpolygonFrom
+from config import VALIDATION_DIR, RUNS_DIR
+from matplotlib import pyplot as plt
 
-def testProfilNormalise():
-    from matplotlib import pyplot as plt
+def testProfilNormalise(filename, show):
     dump = {'classename': 'ProfilNormalise',
            'cpoints': [[1.0, 1.3552527156068805e-20],
                        [0.7084010949941603, 0.04443863894727284],
@@ -83,33 +81,31 @@ def testProfilNormalise():
            'precision': [1000, 1000],
            'role': 'gprofil',
            'ruptures': [0, 7, 19]}
-    p = Profil(**dump)
-    p.hardRotate(30)
-    p.plot(plt, titre=u'%s : profil original, à normaliser'%p.name)
+    p = Profil()
+    p.open(filename)
+    debug(p)
+#     p = Profil(**dump)
+#     p.hardRotate(30)
+    if show : p.plot(titre=u'%s : profil original, à normaliser'%p.name)
     dump = p.toDump()
     p = ProfilNormalise(**dump)
     p.iba = 40
     p.iouverture = (50, 60)
 
     print p.name, p.epoints.shape
-    pprint (p.epoints.tolist())
-#     print p
-#     plt.figure(1)
-    p.plot(plt, show=False, titre=u'%s normalisé'%p.name)
-    plt.draw()#
+    debug(p.epoints.tolist())
+    if show : p.plot(titre=u'%s normalisé'%p.name)
 
     p = ProfilNormalise(**dump2)
     p.iba = 40
     p.iouverture = (50, 60)
     print p.name, p.epoints.shape
-    pprint (p.epoints.tolist())
+    debug(p.epoints.tolist())
 #     print p
 #     plt.figure(1)
-    p.plot(plt, show=False, titre=u'%s normalisé'%p.name)
-    plt.draw()#
+    if show : p.plot(titre=u'%s normalisé'%p.name)
 
 
-    plt.show()
     return
     filename=Path(VALIDATION_DIR,'1.gnu')
     filename=Path(VALIDATION_DIR,'unenervure2d.gnu')
@@ -191,23 +187,21 @@ def testProfilNormalise():
     print '################## FIN testProfilNormalise'
 #     exit()
 #     p = ProfilNormalise(points=([0,0],[1,0],[1,1]), parent=None)
-def testDivers():
-#
-    from numpy import asarray as array
-    PN = ProfilNormalise()
-    debug(PN)
-    filename = Path(RUNS_DIR,'D2V1-Pb.txt')
-    filename = Path(VALIDATION_DIR,'P0.spl')
-    with open(filename) as f :
-        dump = eval(f.read())
-    print dump
-    p = ProfilNormalise(**dump)
+def testDivers(filename, show):
+    name = filename.name
+    debug(titre=name)
+#     with open(filename) as f :
+#         dump = f.read()
+#         debug(dump)
+#         dump = eval(f.read())
+#     print dump
+    p = ProfilNormalise()
+    p.open(filename)
     print p
     debug(p.echantillonner().tolist())
 
 
-def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
-# def testPinces(pourcentages=(((7, 5, 7.3, 5.5),(7, 5, 7.3, 5.5)))):
+def testPinces(filename, show):
     """
     Les couples de pourcentage concernent les % gauche et droite de
     BF_xt, BA_ext, BA_int, BF_int
@@ -217,10 +211,9 @@ def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
         - pbae% du BA (extrados)
         - pbfe% du BF(extrados)
     """
-    from matplotlib import pyplot as plt
-    filename = Path(VALIDATION_DIR,'P0.spl')
-    P = ProfilNormalise(points=pointsFrom(filename))
-    pp = ProfsParamNew(nptprof=150, iouvext=70, iouvint=76, iba=60)
+    pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5))
+    P = ProfilNormalise(cpoints=pointsFrom(filename), name=filename.name)
+    pp = ProfsParam1(nptprof=150, iouvext=70, iouvint=76, iba=60)
     P.profparam = pp
     debug(pp=pp)
     debug(P)
@@ -293,14 +286,28 @@ def testPinces( pourcentages=((10,10.1), (5,5), (7.3,7.3), (5.5,5.5)) ):
     plt.show()
     return
 
-
-
 def testMain():
-    p=ProfilNormalise()
+    files = [
+            Path(VALIDATION_DIR,'splinesimple-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'blocjonc-splinesimple.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-21pts.spl'),
+            Path(VALIDATION_DIR,'splinesimple-21pts.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-26pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-24pts.spl'),
+            Path(VALIDATION_DIR,'NACA2415-100pts.spl'),
+            Path(VALIDATION_DIR,'points-86pts.gnu'),
+            Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
+            ][::-1]
+    
+    p = ProfilNormalise()
     debug('constructeur vide\n',p)
-    if 1 : testPinces()
-    if 0 : testDivers()
-    if 0 : testProfilNormalise()
+    for filename in files[:2] :
+        if 1 : testPinces(filename, show=True)
+        if 1 : testDivers(filename, show=True)
+        if 1 : testProfilNormalise(filename, show=True)
     print '################## FIN main #################'
 
 if __name__=="__main__":

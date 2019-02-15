@@ -11,15 +11,12 @@ Description :
 @contact:    be@nervures.com, pierre@puiseux.name
 @deffield    creation: 19 janv. 2013
 '''
-__updated__="2019-02-13"
+__updated__="2019-02-15"
 VERSION = 'v1-'+__updated__
 NAME = 'AXile'
 TEMPLATE = 'temp'
 import math
-from utilitaires.utilitairesdivers import trace
 from numpy import pi
-#from config import LOG_FILES
-#from config import NB_BACKUP
 class SplinePrefs(object) :
     eps = 1.0e-5# 10 micron
     precision = nbpd = 1000#nb points affichage

@@ -14,21 +14,12 @@ Description :
 import sys
 import numpy as np
 from utilitaires.lecteur import Lecteur
-# from utilitaires import utilitaires
-from utilitaires.utilitairesdivers import (my2dPlot,Path)
-from utilitaires.utilitairesdivers import debug, rdebug, hardScale#, p2a
-# from dxfgrabber import dxfentities
-# from geomdl import BSpline, utilities
+from utilitaires import (Path, debug, hardScale)
 from matplotlib import pyplot as plt
 from splinesimple import NSplineSimple
-from polyline import NPolyLine, NPolygone
-from svgpathtools import (svg2paths, svg2paths2, wsvg, kinks, smoothed_path,
-                          disvg, Line, CubicBezier, QuadraticBezier, Arc,
-                     )
+from polyline import NPolyLine
+from svgpathtools import (svg2paths2, Line, CubicBezier, )
 from svgpathtools import Path as SVGPath
-from time import sleep
-# from PyQt4.QtCore import QRectF
-# from gui.graphicsbase.graphicscommon import p2t
 
 def continuousPathToArray(path, nbp=20):
     u"""
@@ -471,8 +462,8 @@ if __name__=="__main__":
         filename = Path(VALIDATION_DIR,'faial2.dxf')#3d, je sais pas lire...
         filename = Path(VALIDATION_DIR,'dxf','Faial2v5A.DXF')
 
-        filename = utilitaires.Path(VALIDATION_DIR,'decorations','Bringhen_D_cmyk gross.svg')
-        filename = utilitaires.Path(VALIDATION_DIR,'decorations','EuroSport.svg')
+        filename = Path(VALIDATION_DIR,'decorations','Bringhen_D_cmyk gross.svg')
+        filename = Path(VALIDATION_DIR,'decorations','EuroSport.svg')
         svg = LecteurSVG(filename)
         print svg
 

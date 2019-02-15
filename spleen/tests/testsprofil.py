@@ -7,19 +7,18 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 
 @author:     Pierre Puiseux
 @copyright:  2018 Nervures. All rights reserved.
-__updated__="2019-02-12"
+__updated__="2019-02-15"
 '''
-import sys, cPickle
+import cPickle
 from path import Path
 from pprint import pprint
 from config import VALIDATION_DIR,RUNS_DIR
-from utilitaires import (stack, debug, rdebug)
+from utilitaires import (debug, rdebug, dictsAreNotEqual)
 from utilitaires.lecteurs import pointsFrom, pointsFromFile
 from numpy import asarray as array, where
 from profil import Profil
 from matplotlib import pyplot as plt
 import config
-from utilitaires.utilitairesdivers import className, dictsAreNotEqual
 config.TEST_MODE = True
 
 def testProfil(filename,show=True):
@@ -41,7 +40,7 @@ def testProfil(filename,show=True):
 
     par = 'p.open("%s")'%name
     debug(paragraphe=par)
-    try : 
+    try :
         p.open(filename)
         expose(par)
     except ValueError as msg :
@@ -198,7 +197,7 @@ def testSaveAndOpen(filename,show=False):
 #             lines = f.read()
 #         dump = eval(lines)
         S = Profil()
-        try : 
+        try :
             S.open(filename)
             print S
         except IndexError as msg:

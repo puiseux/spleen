@@ -14,13 +14,7 @@ Description :
 import sys
 import numpy as np
 from lecteur import Lecteur
-from utilitaires.utilitairesdivers import (find,findAll,_findRel,whoami,Path,trace,my2dPlot)
-# from config import VALIDATION_DIR
-from utilitaires.utilitairesdivers import debug
-from dxfgrabber import dxfentities
-# from geomdl import BSpline, utilities
-from matplotlib import pyplot as plot
-# from model.basicobjects.splinesimple import NSplineSimple
+from utilitaires import (Path, my2dPlot)
 TAGS=['PTSPROFIL','CLOITROU','CLOISON','BLOCK','ENDBLK','SECTION','ENTITIES','POLYLINE','VERTEX','SEQEND','POINT','ENDSEC','EOF','CIRCLE','LINE']
 POINT_TAGS=('10','20','30')
 ENDLINE_TAGS=('11','21','31')
@@ -233,12 +227,13 @@ class LecteurDXF1(object):
 
     def lire(self):
         pass
-    
+
 
 ###### tests #####
 
 if __name__=="__main__":
     print '*******Lecteur DXF1******'
+    from config import VALIDATION_DIR
     filename = Path(VALIDATION_DIR,'decorations','Bringhen_D_cmyk gross.dxf')
     fl=LecteurDXF1(filename)
     dxf = fl.dxf
@@ -262,11 +257,11 @@ if __name__=="__main__":
     for k, pol in enumerate(lwpolylines) :
         pp = np.asarray([p[:-1] for p in pol])
         plot.plot(pp[:,0],pp[:,1],'r')
-    
+
     for k, pol in enumerate(polylines) :
         pp = np.asarray([p[:-1] for p in pol])
         plot.plot(pp[:,0],pp[:,1],'g')
-    
+
     for k, spl in enumerate(splines) :
 #         if k>0 : continue
         print('\n***   k=%d'%k)

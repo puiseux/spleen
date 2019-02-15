@@ -3,11 +3,20 @@
 from setuptools import setup
 import spleen
 setup(name='spleen',
-      version='0.1',
+      version=spleen.__version__,
       description=u'splines 2d paramétriques d\'interpolation et d\'ajustement',
       url='',
       author='Pierre Puiseux',
       author_email='pierre@puiseux.name',
       license='None',
-      packages=['spleen'],
-      zip_safe=False)
+      packages=find_packages(),
+      zip_safe=False,
+      classifiers=[
+        "Programming Language :: Python",
+        "Development Status :: 1 - Planning",
+        "License :: None",
+        "Natural Language :: French",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Topic :: Mathematics, spline",
+    ],)
