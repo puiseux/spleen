@@ -10,6 +10,8 @@ Description :
 __updated__="2019-02-15"
 '''
 from matplotlib import pyplot as plt
+from matplotlib.widgets import CheckButtons
+
 plt.rcParams["figure.figsize"] = (20,10)
 from numpy.random import rand
 from collections import OrderedDict
@@ -443,7 +445,8 @@ def testEchantillonnage(filename, trados, show=True):
     debug(titre="Fin testEchantillonnage %s-trados : %s"%(trados,filename.name))
 
 def testDivers(filename, show=True):
-    debug(titre="testDivers : %s"%filename.name)
+    name = filename.name
+    debug(titre="testDivers : %s"%name)
 
     msg=u"""Dans cet exemple, on a des points doubles p4=p5=p6 et p8=p9,
     donc la spline x(t) ne peut pas être construite.
@@ -453,21 +456,6 @@ def testDivers(filename, show=True):
     - faire une spline composée, splittée en 6
     """
     debug(msg)
-#     cpoints = [
-#                [ 1.00827138,  0.08545793],
-#                [ 1.0063704 ,  0.06720821],
-#                [ 1.00541204,  0.04849635],
-#                [ 1.00541204,  0.02962959],
-#                [ 1.0063704 ,  0.01091773],
-#                [ 1.0063704 ,  0.01091773],
-#                [ 1.0063704 ,  0.01091773],
-#                [ 1.00827138, -0.00733198],
-#                [ 1.12226291,  0.03906297],
-#                [ 1.12226291,  0.03906297],
-#                [ 1.12178274,  0.02023498],
-#                [ 1.00827138,  0.08545793],
-#                [ 1.00827138,  0.08545793],
-#                ]
     cpoints = pointsFrom(filename)
     S0 = NSplineSimple(cpoints=cpoints, name=filename.name)
     debug(S0)
@@ -722,8 +710,8 @@ def testPlacementRM(show=True):
     debug(titre="Fin testPlacementRM : pas de fichier")
 
 def testElaguer(filename, trados, fonction='elaguer', show=True):
-    debug(titre="testElaguer : %s"%filename.name)
-    from matplotlib.widgets import CheckButtons
+    name = filename.name
+    debug(titre="testElaguer : %s"%name)
     if fonction=='ajuster' :
         msg=u"""L'élagage par "ajustement" ne marche pas, et il est très long.
         Je le supprime des tests.

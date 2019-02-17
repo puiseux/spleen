@@ -265,7 +265,7 @@ class NSplineComposee(NSplineAbstract):
 
     @property
     def tech(self):
-        u"""Les parametres T de l'echantillonnage"""
+        u"""Les temps T de l'echantillonnage"""
         if not hasattr(self, '_tech') :
             self.echantillonner()
         return self._tech
@@ -417,9 +417,9 @@ class NSplineComposee(NSplineAbstract):
 
         infos1 = [
 #             u"nb updates          = %s"%self.nbupdate,
-            '%25s = '%u"ruptures"+"%s"%self.ruptures,
-            '%25s = '%u"composantes"+"%s"%[s.name for s in self.splines],
-            '%25s = '%u"nb pts ctl par comp"+"%s"%[len(s) for s in self.splines]
+            u'%25s = '%u"ruptures"+"%s"%self.ruptures,
+            u'%25s = '%u"composantes"+"%s"%[s.name for s in self.splines],
+            u'%25s = '%u"nb pts ctl par comp"+"%s"%[len(s) for s in self.splines]
             ]
         return infos + infos1
 
@@ -490,7 +490,8 @@ class NSplineComposee(NSplineAbstract):
         for ks in range(len(self.splines)) :
             deb, fin = ruptures[ks], ruptures[ks+1]
             if deb <= k <= fin : #k est dans la spline ks
-                self.splines[ks][k-deb] = value
+                debug(ks=ks, k=k-deb, value=value)
+                self.splines[ks][k-deb] = asarray(value)
                 # ici ne pas faire de break, car k peut être dans 2 splines
                 # p.ex. k==fin de la spline 0 et k==deb de la spline 1
                 # il faut modifier les deux splines 0 et 1
@@ -528,6 +529,7 @@ class NSplineComposee(NSplineAbstract):
         #i est le kp-ieme point de la spline ks, H est inséré entre i et i+1
         self.splines[ks].insertPoint(pos, 1+kp)
         self._update()
+        del self._ruptures
         return i
 
     def appendPoint(self,pos):
@@ -574,9 +576,9 @@ class NSplineComposee(NSplineAbstract):
             ks, kp = ls[0]#numero de spline, numero de point dans la spline
             pt = self.splines[ks].removePoint(kp)
             self._update()
+            try : del self._ruptures
+            except AttributeError : pass
             return pt
-#         try : del self._ruptures
-#         except AttributeError : pass
 
     def hardRotate(self, alfa, centre=None, unit='degres'):
         if unit == 'degres' :

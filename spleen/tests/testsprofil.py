@@ -16,7 +16,7 @@ from config import VALIDATION_DIR,RUNS_DIR
 from utilitaires import (debug, rdebug, dictsAreNotEqual)
 from utilitaires.lecteurs import pointsFrom, pointsFromFile
 from numpy import asarray as array, where
-from profil import Profil
+from profils import Profil
 from matplotlib import pyplot as plt
 import config
 config.TEST_MODE = True
@@ -44,13 +44,13 @@ def testProfil(filename,show=True):
         p.open(filename)
         expose(par)
     except ValueError as msg :
-        debug("TODO : %s, %s"%(par, msg))
+        rdebug("TODO : %s, %s"%(par, msg))
     except IndexError as msg :
         rdebug("TODO : %s, %s"%(par, msg))
 #     exit()
     par = 'Profil(points) (%s)'%name
     debug(paragraphe=par)
-    p = Profil(cpoints=pointsFromFile(filename))
+    p = Profil(cpoints=pointsFromFile(filename), name=name)
     expose(par)
 
     par = "p = Profil(naca=['2415', 50], name=None)"
@@ -91,19 +91,7 @@ def testProfil(filename,show=True):
     debug(paragraphe=par)
     p = p.scaled(2.0)
     expose(par)
-    #print "constructeur QPolygon :",p
-    #print '########## Profil divers (BA, absCurv, extrados, ligne moyenne...) ##########'
-#     p.removePoint(0)
-#     curv = absCurv(p)
-#     dcurv = curv[1:]-curv[:-1]
-#     print dcurv
-#     print 'p.absCurv()',absCurv(p)
-#     debug('########## Profil geometrie ##########')
-#     rdebug(p.profparam)
-#     exit()
-#     p.iouverture = p.iba+3,p.iba+10#sinon il sait pas echantillonner
-#     debug(p)
-#     if show : p.plot(titre='p.iouverture = p.iba+3,p.iba+10')
+    
     par = '%s.hardScale((2,2))'%name
     debug(paragraphe=par)
     p.hardScale((2,2))
@@ -287,16 +275,18 @@ def testMain(show = False):
     print p
     pprint(p.toDump())
     files = [
-            Path(VALIDATION_DIR,'spline-0#.pkl'),
-            Path(VALIDATION_DIR,'diamirE.spl'),
-            Path(VALIDATION_DIR,'unenervure2d.gnu'),
-            Path(VALIDATION_DIR,'E-diamirE.spl'),
-            Path(VALIDATION_DIR,'E-shark.spl'),
-            Path(VALIDATION_DIR,'shark.spl'),
-            Path(VALIDATION_DIR,'naca2415.spl'),
-            Path(VALIDATION_DIR,'spline-0#.spl'),
-            Path(VALIDATION_DIR,'spline-0.spl'),
-
+            Path(VALIDATION_DIR,'splinesimple-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'blocjonc-splinesimple.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-86pts.spl'),
+            Path(VALIDATION_DIR,'profilnormalise-21pts.spl'),
+            Path(VALIDATION_DIR,'splinesimple-21pts.spl'),
+            Path(VALIDATION_DIR,'shark-profilnormalise-26pts.spl'),
+            Path(VALIDATION_DIR,'diamirE-profilnormalise-24pts.spl'),
+            Path(VALIDATION_DIR,'NACA2415-100pts.spl'),
+            Path(VALIDATION_DIR,'points-86pts.gnu'),
+            Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
             ]
 
     for filename in files[:] :

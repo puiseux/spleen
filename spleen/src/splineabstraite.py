@@ -305,7 +305,7 @@ class NSplineAbstract(object):
         faire suivre les points échantillonnés devient trop lourd
     FIN_TODO
     NSplineAbstract est une interface commune à toutes les splines
-    (simple, composées, profil...)
+    (simple, composées, profils...)
     Ne peut pas être instancié, car elle a des méthodes virtuelles pures.
     ========================================================================
     = La spline est auto-suffisante, le _update() ne doit pas être appelé  =

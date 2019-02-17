@@ -10,17 +10,13 @@ Description :
 __updated__="2019-02-15"
 '''
 import sys, os, math
-import cPickle
-from array import array
-from matplotlib import pyplot as plt
-# from pprint import pprint
-from numbers import Number
-from matplotlib.widgets import CheckButtons
 import config
-from preferences import SplinePrefs
-# from brouillon4 import plot
-# from splinecomposee import NSplineComposee
+from array import array
+from numbers import Number
+from matplotlib import pyplot as plt
+from matplotlib.widgets import CheckButtons
 plt.rcParams["figure.figsize"] = (20,10)
+from preferences import SplinePrefs
 from utilitaires import (eliminerPointsDoublesConsecutifs,
                          className, centreGravite, baryCentre, XY,
                          segmentPlusProche, stack, debug, rdebug, dist,
@@ -32,7 +28,6 @@ from numpy import (log, linspace, asarray, sqrt, arange, zeros, cos,
                    vstack, insert, delete, isnan, nan,
                    empty_like,  sign, inf)
 from numpy.linalg import  norm
-# from scipy.optimize import newton, minimize
 from scipy.integrate.quadpack import quad
 from scipy.optimize._minimize import minimize_scalar
 
@@ -138,9 +133,11 @@ class NSplineSimple(NSplineAbstract):
         >>> print S[1]
         [20.0, 30.0]
         """
-        if all(self._cpoints[k]==value) : #inutile de déclencher un _update()
+#         debug(k=k,value=value, p_egal_val=self.cpoints[k]==value)
+        if all(self.cpoints[k]==value) : #inutile de déclencher un _update()
+#         if (self.cpoints[k]==value) : #inutile de déclencher un _update()
             return
-        self._cpoints[k] = value
+        self.cpoints[k] = value
         self._update()#indispensable pour mettre à jour self._xxx
 
     @property

@@ -5,7 +5,7 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 
 Classe xxx
 Description :
-@module : model.profil.naca
+@module : model.profils.naca
 @author:      puiseux
 @copyright:   2013 Nervures. All rights reserved.
 @license:    LGPL

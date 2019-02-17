@@ -12,12 +12,13 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 
-from profil import Profil
-from utilitaires import (rdebug,dist2,dist,className)
+from profils import Profil
+from utilitaires import (debug,rdebug,dist2,dist,className)
 import numpy as np
 from numpy import linspace, log, asarray
 from scipy.optimize import newton
 from preferences import ProfilPrefs
+import config
 
 class ProfilNormalise(Profil):
     prefs = ProfilPrefs()
@@ -29,11 +30,30 @@ class ProfilNormalise(Profil):
     on ne peut pas le normaliser, sauf une fois à l'initialisation.
     Tant qu'on n'ajoute ni ne retranche de point à l'extrados, son nba reste constant.
     """
+    class Default(Profil.Default) :
+        u"""Un dictionnaire avec les valeurs par défaut"""
+        def __init__(self) :
+#             prefs = ProfilPrefs
+            Profil.Default.__init__(self)
+            self.update(name='ProfilNormalise', role='ProfilNormalise')
+            self.name      = 'ProfilNormalise'
+            self.role      = 'ProfilNormalise'
 
     def __init__(self,**dump):
         u"""
         """
         super(ProfilNormalise, self).__init__(**dump)
+#         self.nb_normalisations = 0
+#         if len(self) <= 3 :
+#             self._nba = 1
+#             self._cpoints = self._epoints = asarray([(0.,0.),(1.,0.),(0.,0.)])
+#             self.nb_normalisations = 1
+#         else :
+#             self.__normalise()
+#             self.normalite()
+    
+    def load(self, dump):
+        super(ProfilNormalise,self).load(dump)
         self.nb_normalisations = 0
         if len(self) <= 3 :
             self._nba = 1
@@ -42,6 +62,7 @@ class ProfilNormalise(Profil):
         else :
             self.__normalise()
             self.normalite()
+
 
     def scaled(self,scale):
         '''
@@ -73,7 +94,8 @@ class ProfilNormalise(Profil):
         else :
             Profil.__setitem__(self, k, value)
 
-    def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, maxiter=50):
+    def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, 
+              maxiter=50,full_output=False):
         u"""
         Retourne la valeur du paramètre t correspondant à l'abscisse |x|/100.
         Si t est non trouvé, retourne np.nan
@@ -81,36 +103,32 @@ class ProfilNormalise(Profil):
             S = extrados si x>0
             S = intrados si x<0
             le t retourné est l'unique t tel que |x|/100 == S.sx(t)
-        - t0 : la recherche se fait par iterations de Newton, elle démarre à t=t0
-        - nbit : si nbit est True, retourne le couple (t, nb iterations)
+        :param t0 : float, en % de corde, la recherche se fait par iterations 
+            de Newton, elle démarre à t=t0% de corde
+        :param nbit : si nbit est True, retourne le couple (t, nb iterations)
                 si nbit est False, retourne t
-        - dt est l'intervalle de recherche.
+        :param dt: est l'intervalle de recherche.
         """
         if x == 0.0 : return (np.nan, 0) if nbit else np.nan
         ax = abs(x)/100.0#abscisse du point situé à ax% de corde
-#         BA, BF = self[self.nba], self[0]
-#         P = BA + ax*(BF-BA)
         if ax > 1.0 :
-            raise ValueError("∣x∣=%g devrait etre dans [0,100]. C'est une abscisse en %% de corde"%abs(x))
-        if x>=0 : S = self.splines[0]
-        else    : S = self.splines[1]
+            raise ValueError(u"∣x∣=%g devrait etre dans [0,100]. C'est une abscisse en %% de corde"%abs(x))
+        S = self.splines[0] if x >= 0 else self.splines[1]
         if t0 is None :
-            if x>0 : t0 = 1.0 - ax
-            elif x<0 : t0 = ax
+            t0 = 1.0 - ax if x>0 else ax
         k = 0
         while 1 :
-            t = newton(lambda t: S.sx(t)-ax, t0, lambda t:S.sx(t,1),
-                       tol=tol, maxiter=50, fprime2=lambda t:S.sx(t,2))
+            t, r = newton(lambda t: S.sx(t)-ax, t0, lambda t:S.sx(t,1),
+                       tol=tol, maxiter=50, fprime2=lambda t:S.sx(t,2),
+                       full_output=True)
+            
             k += 1
-#             #pour que le BA et le BF ne bougent pas, à 0.01 mm
-#             if abs(t)<=1.0e-5 :
-#                 t = 0.0#0.01 mm
-#             elif abs(t-1)<=1.0e-5 :
-#                 t = 1.0
-            return (t,k) if nbit else t
+#             debug(r)
+            return (t,r) if nbit else t
             if not dt[0] <= t <= dt[1] : #dépasse les bornes
                 return (np.nan, k) if nbit else np.nan
             t0 += 0.1
+            
     def insertPoint(self, pos, k=None):
 #         i = super(Profil, self).insertPoint(pos)
         if dist(pos, self[0]) >= 1 :
@@ -126,9 +144,9 @@ class ProfilNormalise(Profil):
         return dist2((1,0),p) < 1.0 and 0<p[0]<1
 
     def normalise(self):
-        """on ne renormalise pas un profil normalisé mais
-        normalise() est parfois appelé par Profil (dans le update en particulier)"""
+        msg = u"""Aucune action. On ne renormalise pas un profil normalisé"""
 #         debug("%s.normalise() : ne fait rien"%className(self))
+        rdebug(msg)
         return
 
     def normalite(self):
@@ -222,47 +240,25 @@ class ProfilNormalise(Profil):
         Doit être appelé à chaque modification (suppression, insertion, deplacement) d'un point du profil
         - suppression, insertion de point : on reconstruit profparam entier.
         - déplacement de point : seul nba peut changer.
-        On appelle le _update de NSplineComposee (i.e. celui de NSplineAbstraite),
-         ************************
-         mais PAS celui de Profil (Qui n'existe pas à l'heure ou je parle)
-         ************************
         '''
-        return super(Profil,self)._update()
-#         #Le nba a possiblement changé => non, il a ete modifié
-# #         if hasattr(self, '_nba') :
-# #             del self._nba
-#         try :
-#             ppold = self.profparam
-# #            trace(self, 'Prof, ppold', ppold)
-#         except AttributeError :
-#             return
-#         #mise à jour de iba
-#         if ppold.nptprof == len(self) :#déplacement de noeud
-#             self.normalite()
-#         else : #suppression ou insertion de noeud : on ne peut pas maintenir les parametres
-#             nbanew = self.nba#a faire en premier car recalcule self._nba
-#             nptext = 1 + nbanew# + nptret
-#             nptint = len(self) - nptext
-#             self.profparam = ProfsParam(nptext, nptint, nbanew)
-# #            trace(self, 'Prof:self.profparam', self.profparam)
-#         try : del self.smoothpoints
-#         except AttributeError : pass
+        return super(ProfilNormalise,self)._update()
 
     def __normalise(self):
         if self.nb_normalisations>0 :
-            raise RuntimeError("%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
-            rdebug("%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
+            raise RuntimeError(u"%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
+            rdebug(u"%s.__normalise() : profil deja normalise %d fois"%(className(self),self.nb_normalisations))
         else :
             res = super(ProfilNormalise, self).normalise()
             self.nb_normalisations += 1
             return res
 
     def toDump(self, format_='new'):
-        '''Lors d'un dump d'une base de profils, le profil self est sauvée sous cette forme'''
+        u'''Lors d'un dump d'une base de profils, le profil self est sauvée sous cette forme'''
         dump = super(ProfilNormalise, self).toDump(format_)
 #         dump['profparam'] = self.profparam.dump
         return dump
 
 if __name__=="__main__":
-    from testprofilnormalise import testMain
+    from testsprofilnormalise import testMain
+    config.TEST_MODE = False
     testMain()
