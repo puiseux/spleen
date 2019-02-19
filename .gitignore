@@ -4,8 +4,6 @@
 .settings/
 .settings/org.eclipse.core.resources.prefs
 *.pyc
-
 *.log
-spleen/work/
-work/
+spleen/work/*
 brouillon*
