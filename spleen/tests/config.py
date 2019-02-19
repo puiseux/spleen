@@ -49,19 +49,7 @@ u'''
 
 '''
 dirname = Path(__file__).dirname
-#confSpleen.txt est dans le meme rep. que config
 path_ = Path(dirname, "confSpleen.txt")
-# print path_
-# paths = [Path("confSpleen.txt"),
-#          Path("..","confSpleen.txt"),
-#          Path("..","..","confSpleen.txt"),
-#          Path("..","..","..","confSpleen.txt"),
-#          Path("..","..","..","..","confSpleen.txt"),
-#          ]
-# for path_ in paths :
-#     if path_.isfile():break
-#if not path_.isfile():
-#    alert("", "Le fichier de configuration \"confAxile.txt\" est introuvable. Il devrait etre dans le repertoire \"sources\"" )
 
 with open(path_) as file_:
     for line in file_:

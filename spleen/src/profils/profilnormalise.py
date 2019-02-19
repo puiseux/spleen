@@ -90,7 +90,7 @@ class ProfilNormalise(Profil):
 
     def __setitem__(self, k, value):
         if k in (0, self.nba, -1, len(self)-1) and self.nb_normalisations>0:
-            rdebug("%s.__setitem__() : operation impossible"%className(self))
+            rdebug("%s.__setitem__(%d) : operation impossible"%(className(self),k))
         else :
             Profil.__setitem__(self, k, value)
 

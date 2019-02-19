@@ -25,8 +25,14 @@ from preferences import ProfilPrefs
 from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons
 plt.rcParams["figure.figsize"] = (20,10)
-
 from splineabstraite import arrange
+from utilitaires import debug, XY, rdebug, dist2
+# import plotly.plotly as py
+# import plotly.tools as tls
+# from plotly import offline
+from plotly.offline import plot
+# from plotly.offline import enable_mpl_offline
+import plotly.graph_objs as go
 
 class Profil(NSplineComposee):
     prefs = ProfilPrefs
@@ -188,7 +194,7 @@ class Profil(NSplineComposee):
 
     def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, maxiter=50):
         u"""
-        :return t: float, la valeur du paramètre t correspondant à l'abscisse 
+        :return t: float, la valeur du paramètre t correspondant à l'abscisse
             |x|/100. Si t est non trouvé, ou si x==0.0 retourne np.nan
             Plus précisement la recherche se fait dans
 
@@ -197,11 +203,11 @@ class Profil(NSplineComposee):
 
             le t retourné est l'UNIQUE t tel que |x|/100 == S.sx(t).
             On suppose que l'intrados et l'extrados sont des FONCTIONS de x,
-            c'est à dire qu'à un x donné dans [0,100], ne correspond qu'un seul 
+            c'est à dire qu'à un x donné dans [0,100], ne correspond qu'un seul
             point de l'[in,ex]trados.
             Si (par exemple à l'intrados) à x correspondent DEUX points,
             alors _getT(x) retourne est le premier point trouvé.
-            Il faut donc utiliser t0 pour trouver le second, mais ça n'est pas 
+            Il faut donc utiliser t0 pour trouver le second, mais ça n'est pas
             prévu pour...
             Non testé dans ce dernier cas.
         :param x: float, 0<=x<=100. la position du point (dont on cherche
@@ -543,6 +549,102 @@ class Profil(NSplineComposee):
 
     def echantillonner(self):
         u"""
+        Echantillonnage de tout le profil, compte tenu de l'ouverture,
+        selon les prescriptions de self.profparam.
+        ********************************************************************
+        *******On suppose que l'ouverture est entièrement à l'intrados******
+        ********************************************************************
+        Le profil est constitué de 2 splines.
+        - la spline extrados, du BF au BA (vrai BA, le point le plus éloigné du BF)
+        - la spline intrados, du vrai BA au BF
+        les deux splines sont echantillonnées en mode 'cos', i.e. beaucoup de
+        points au début et à la fin (BA et BF) et points espacés au milieu.
+        Les epoints sont ensuite modifiés pour satisfaire les prescriptions
+        de profparam
+        Les points d'échantillonnage sont constitués de 4 morceaux :
+        - extrados : du BF au vrai BA => Text, eext
+        - retour : du BA au 1er point de l'ouverture => Tret
+        - ouverture : l'ouverture = Touv
+        - intrados : du dernier point ouverture au BF => Tfin
+        """
+#         epoints = super(Profil, self).echantillonner(nbp, mode)
+#         debug(u'%s : <%s> %d-eme echantillonnage'%(self.name, className(self), self.nb_echantillonnages))
+
+        mode=['cos','courbure']
+        self.nb_echantillonnages += 1
+        _, ri = self.rba
+        if abs(ri) < self.corde/100 :
+            raise RuntimeWarning('Rayon de bord d\'attaque quasi nul (%.2g) à l\'intrados, => problemes d\'echantillonnage'%ri)
+
+        """extrados : echantillonnage standard"""
+
+        pp = self.profparam
+        Se = self.splines[0]#extrados
+        Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0])
+        eext = Se(Text)#points echantillon extrados
+        #pour debug
+#         eint = np.zeros((pp.nptint-pp.nptret,2))
+#         self._epoints = np.vstack((eext,eint))
+#         return self._epoints
+        #fin pour debug
+
+        u"""Intrados : les ouvertures doivent coincider avec des points echantillon fixés par profparam"""
+        pam, pav = self.pouverture[0], self.pouverture[1]#ouverture amont/aval en % de corde
+        if pam>0 or pav>0 :
+            raise NotImplementedError(u"Ouverture sur l'extrados : pouverture=%s"%str(self.pouverture))
+
+        Si = self.splines[1]#pam<0, et Si = intrados
+        (kam, tam), (kav, tav) = self.touverture#l'abscisse curv de pam/pav dans la spline Si
+        # Il faut nbpret points dans [BA, am], y compris BA et ouvamont
+        if kam==0 or kav==0 :#kam, kav=numéro de la spline
+            raise NotImplementedError('Les deux points d\'ouverture doivent être sur l\'intrados')
+
+        nbpret = pp.nptret
+#         debug(nbpret=nbpret)
+        nbpouv = pp.nptouv+2#les points ouverture ne sont pas compris dans pp.nptouv
+        nbpfin = pp.nptprof - pp.iouvint
+#         debug(touv=(tam,tav), nbpret=nbpret, nbpouv=nbpouv, nbpfin=nbpfin)
+#         debug('appel echantillonner retour', nbpret=nbpret, ta=0, tb=tam, mode=mode[1])
+        try :
+            #echantillonnage retour BA=>am
+            Tret = Si.echantillonner(nbp=nbpret, ta=0, tb=tam, mode='courbure')
+        except RuntimeWarning :
+            rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
+            raise
+        except ValueError :#as msg :
+            rdebug('nbpret=%d<0 ?'%nbpret)
+            raise
+#         debug(eret=eret, len_eret=len(eret))
+#         debug('appel echantillonner ouverture', nbpouv=nbpouv, ta=tam, tb=tav, mode=mode[1])
+        try :
+            Touv = Si.echantillonner(nbp=nbpouv, ta=tam, tb=tav, mode='courbure')#echantillonnage ouverture
+        except RuntimeWarning :
+            rdebug('Verifier que le Rayon de bord d\'attaque est non nul')
+            raise
+#         rdebug(eouv=eouv, len_eouv=len(eouv))
+        #Tfin = les t de l'intrados tissu
+        Tfin = Si.echantillonner(nbp=nbpfin, ta=tav, tb=1, mode='cos')#echantillonnage ouverture=>BF
+#         rdebug('===> Nb points', ret=len(eret), ouv=len(eouv),efin=len(efin))
+#         debug(Tret=Tret, Touv=Touv,Tfin=Tfin)
+        # les trois absc. curv. Tret[0], Touv[0] et Touv[-1] désignent des points doubles
+        # - Tret[0]  est l'absc. curv. du BA ; S(Tret[0]) il est deja dans eext
+        # - Touv[0]  est l'absc. curv. de l'extrémité amont de l'ouverture, elle coincide avec Tret[-1]
+        # - Touv[-1] est l'absc. curv. de l'extrémité avale de l'ouverture, elle coincide avec Tfin[0]
+        # Tfin contient les absc. curv. des points intrados tissu
+        # Tint = les t de l'intrados théorique
+        Tint = hstack([Tret[1:],Touv[1:-1],Tfin])
+        self._techint = Tint
+        self._techext = Text
+        self._tech = [Text, Tint]
+#         debug(T_intrados=Tint)
+        eint = Si(Tint)#les points intrados théorique echantillonnés
+        self._epoints = vstack((eext,eint))
+#         debug(nb_points_echantillonnage=len(self._epoints))
+        return self._epoints
+
+
+    def echantillonnerOld(self):
+        u"""
         Echantillonnage de tout le profil, par tranche, compte tenu de l'ouverture,
         selon les prescriptions de self.profparam.
         ********************************************************************
@@ -552,10 +654,10 @@ class Profil(NSplineComposee):
         - la spline extrados, du BF au BA (vrai BA, le point le plus éloigné du BF)
         - la spline intrados, du vrai BA au BF
         Les points d'échantillonnage sont constitués de 4 morceaux :
-        - extrados : du BF au vrai BA
-        - retour : du BA au 1er point de l'ouverture
-        - ouverture : l'ouverture
-        - intrados : du dernier point ouverture au BF
+        - extrados : du BF au vrai BA => Text, eext
+        - retour : du BA au 1er point de l'ouverture => Tret
+        - ouverture : l'ouverture = Touv
+        - intrados : du dernier point ouverture au BF => Tfin
         """
 #         epoints = super(Profil, self).echantillonner(nbp, mode)
 #         debug(u'%s : <%s> %d-eme echantillonnage'%(self.name, className(self), self.nb_echantillonnages))
@@ -570,9 +672,7 @@ class Profil(NSplineComposee):
 
         pp = self.profparam
         Se = self.splines[0]#extrados
-#         nbpBF = 20 #je garde 10 points pour BF, pour les pinces
         Text = Se.echantillonner(nbp=1+pp.iba, ta=0, tb=1, mode=mode[0])
-#         debug(Text)
         eext = Se(Text)#points echantillon extrados
         #pour debug
 #         eint = np.zeros((pp.nptint-pp.nptret,2))
@@ -584,11 +684,9 @@ class Profil(NSplineComposee):
         pam, pav = self.pouverture[0], self.pouverture[1]#ouverture amont/aval en % de corde
         if pam>0 or pav>0 :
             raise NotImplementedError(u"Ouverture sur l'extrados : pouverture=%s"%str(self.pouverture))
-#         S = self.splines[0] if pam>=0 else self.splines[1]#Normalement pam<0, et S = intrados
 
         Si = self.splines[1]#pam<0, et Si = intrados
         (kam, tam), (kav, tav) = self.touverture#l'abscisse curv de pam/pav dans la spline Si
-#         am, av = S(tam), S(tav)#Le point ouverture amont/aval
         # Il faut nbpret points dans [BA, am], y compris BA et ouvamont
         if kam==0 or kav==0 :#kam, kav=numéro de la spline
             raise NotImplementedError('Les deux points d\'ouverture doivent être sur l\'intrados')
@@ -1052,6 +1150,80 @@ class Profil(NSplineComposee):
         u"Bord d'attaque imposé"
         self.profparam.iba=index
 
+    def plot0(self, figure=None, aspect={}, titre=None, more=[], texts=[],
+             show=True, numbers=['3p'], filename='temp-plot.html'):
+        """
+        :param figure: une instance de matplotlib.figure.Figure
+        :param titre : str ou unicode, titre
+        :param more : list, [(X,Y, couleur,'nom'), ...] tracé supplementaire
+        :param texts : list, [(x,y, 'text', style=, fontsize=...), ...] texts en x,y
+        :param numbers: list ou set ou tuple ['3c','12e','100d'] numéroter les
+            points controle, echantillon, discretisation
+            - '3c' pour numéroter les points de Contrôle par pas de 3,
+            - '100d' les points de Discrétisation par pas de 100,
+            - '24e' les points d'Echantillonnage par pas de 24.
+        :param show: bool, True pour affichage de TOUS les plots en attente, False sinon
+        :param aspect: dict, cf defaultaspect ci-dessous.
+        :return figure: la figure passée en argument ou nouvelle figure si None
+
+        """
+    #     enable_mpl_offline()
+        defaultaspect = {
+                    'ce':'ro',#control extr:        red
+                    'de':'r-',#discretisation extr : blue
+                    'ee':'k.',#echantillon extr :    green
+                    'ci':'bo',#control intr :        red
+                    'di':'b-',#discretisation intr : blue
+                    'ei':'k.',#echantillon intr :    green
+                    'r' :'k*',#rupture:         black
+                    'o' :'r*',#ouverture:         bleu
+                    }
+        defaultaspect.update(aspect)
+        C = self.cpoints
+        D = self.dpoints
+        E = self.epoints
+        CX, CY = XY(C)
+        DX, DY = XY(D)
+        EX, EY = XY(E)
+        xouvext, youvext = self.epoints[self.profparam.iouvext]
+        xouvint, youvint = self.epoints[self.profparam.iouvint]
+        goOuv = go.Scatter({'x':(xouvext,xouvint), 'y':(youvext,youvint)},
+                           mode='markers',
+                           marker={'color':'green','size':12,'symbol':"diamond"},
+                           name=u'Ouverture',
+                           hoverinfo='x+y')
+        goC = go.Scatter({'x':CX, 'y':CY, 'text':range(len(C))},
+                         mode='markers',
+                         marker={'color':'red','size':12},
+                         name=u'Points de contrôle',
+                         hoverinfo='text')
+        goE = go.Scatter({'x':EX, 'y':EY, 'text':range(len(E))},
+                         mode='markers',
+                         marker={'color':'blue','size':8,'symbol':'star'},
+                         name=u'Points échantillonnés',
+                         hoverinfo='text')
+        goD = go.Line({'x':DX, 'y':DY},
+                      mode='lines',
+                      line={'color':'green','width':1},
+                      name=u'Spline',
+                      hoverinfo='none')
+        data = [goC,goD,goE,goOuv]
+        #Pour aspect ratio
+        layout = go.Layout(width = 2200, height = 1200,
+                           title = titre,
+                           xaxis = dict(nticks = 20,domain = [0, 1],
+                                        title = 'x'),
+                           yaxis = dict(scaleanchor = "x", nticks = 10,
+                                        domain = [0, 1],),
+                           legend = dict(x=0.9,y=0.9),
+                           hovermode = 'closest')
+
+        figure = go.Figure(data=data, layout=layout)
+        plot(figure, show_link=True,
+             link_text=u'Exporter vers plot.ly (pour édition)', filename=filename)
+    #     fig['layout'].update(scene=dict(aspectmode="data"))
+        return
+
     def plot(self, figure=None, aspect={}, titre=None, more=[], texts=[],
              show=True, buttons=True, numbers=['3p']):
         """
@@ -1105,16 +1277,16 @@ class Profil(NSplineComposee):
             elif char=='e' :
                 for k, p in enumerate(E[::step]) :
                     ax.text(p[0], p[1], '%d'%(step*k))
-                    
+
         for txt in texts :
             ax.text(*txt)
 
         Cex = self.splines[0].cpoints
         Dex = self.splines[0].dpoints
-        Eex = self.splines[0].epoints
+        Eex = self.splines[0](self.techext)
         Cin = self.splines[1].cpoints
         Din = self.splines[1].dpoints
-        Ein = self.splines[1].epoints
+        Ein = self.splines[1](self.techint)
         R = asarray(self[self.ruptures])#des points
         xouvext, youvext = self.epoints[self.profparam.iouvext]
         xouvint, youvint = self.epoints[self.profparam.iouvint]
@@ -1157,9 +1329,9 @@ class Profil(NSplineComposee):
         figure.subplots_adjust(left=0.2)
         if buttons :
             rax = figure.add_axes([0.05, 0.4, 0.1, 0.15])#
-            labels = (u'extrados spline', u'extrados control', u'extrados échantillon',
-                      u'intrados spline', u'intrados control', u'intrados échantillon',
-                      u'BA-BF', u'ouverture')
+            labels = (u'Extrados spline', u'Extrados control', u'Extrados échantillon',
+                      u'Intrados spline', u'Intrados control', u'Intrados échantillon',
+                      u'BA-BF', u'Ouverture')
             draws  = (espline, econtrol, eechantillon,
                       ispline, icontrol, iechantillon,
                       BABF,   ouverture)

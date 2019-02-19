@@ -529,7 +529,8 @@ class NSplineComposee(NSplineAbstract):
         #i est le kp-ieme point de la spline ks, H est inséré entre i et i+1
         self.splines[ks].insertPoint(pos, 1+kp)
         self._update()
-        del self._ruptures
+        try : del self._ruptures
+        except AttributeError : pass
         return i
 
     def appendPoint(self,pos):

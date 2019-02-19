@@ -7,12 +7,12 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 
 @author:     Pierre Puiseux
 @copyright:  2018 Nervures. All rights reserved.
-__updated__="2019-02-15"
+__updated__="2019-02-17"
 '''
 import cPickle
 from path import Path
 from pprint import pprint
-from config import VALIDATION_DIR,RUNS_DIR
+from config import VALIDATION_DIR,RUNS_DIR, WORK_DIR
 from utilitaires import (debug, rdebug, dictsAreNotEqual)
 from utilitaires.lecteurs import pointsFrom, pointsFromFile
 from numpy import asarray as array, where
@@ -25,9 +25,11 @@ def testProfil(filename,show=True):
 
     def expose(par) :
         print p
-        print 'cpoints=',p.cpoints.tolist()
+        print 'cpoints = asarray(%s)'%p.cpoints.tolist()
         ep = p.epoints.tolist()
-        print 'epoints=',ep
+        print 'epoints = asarray(%s)'%ep
+        print 'techext = asarray(%s)'%p.techext.tolist()
+        print 'techint = asarray(%s)'%p.techint.tolist()
         if show : p.plot(titre=par, show=True)
         return ep
     name = filename.name
@@ -37,6 +39,12 @@ def testProfil(filename,show=True):
     debug(paragraphe=par)
     p = Profil()
     expose(par)
+
+    par = "p = Profil(naca=['2415', 50], name=None)"
+    debug(paragraphe=par)
+    p = Profil(naca=['2415', 20], name=None)
+    expose(par + 'verification')
+    for v in p.verification() : print v
 
     par = 'p.open("%s")'%name
     debug(paragraphe=par)
@@ -53,19 +61,13 @@ def testProfil(filename,show=True):
     p = Profil(cpoints=pointsFromFile(filename), name=name)
     expose(par)
 
-    par = "p = Profil(naca=['2415', 50], name=None)"
-    debug(paragraphe=par)
-    p = Profil(naca=['2415', 20], name=None)
-    expose(par)
-    for v in p.verification() : print v
-
     par = "toDump/load (%s)"%name
     debug(paragraphe=par)
     dump = p.toDump()
     p = Profil(**dump)
     expose(par)
     dump1 = p.toDump()
-    debug(dump_not_equal_dump1=dictsAreNotEqual(dump,dump1))
+    debug(dump_NOT_equal_dump1=dictsAreNotEqual(dump,dump1))
 
     iouv = p.iba+5, p.iba+10
     ouv = -1.0, -10.0
@@ -91,7 +93,7 @@ def testProfil(filename,show=True):
     debug(paragraphe=par)
     p = p.scaled(2.0)
     expose(par)
-    
+
     par = '%s.hardScale((2,2))'%name
     debug(paragraphe=par)
     p.hardScale((2,2))
@@ -203,7 +205,7 @@ def testSaveAndOpen(filename,show=False):
     S.normalise()
     debug(ouvertures=S.pouverture)
     debug(paragraphe="pickle.dump() et pickle.load() %s"%name)
-    fname = Path(filename.dirname, filename.namebase+'Test.spl')
+    fname = Path(WORK_DIR, filename.namebase+'Test.spl')
     debug(fname)
     with open(fname,'w') as f :
         cPickle.dump(S.toDump(),f)
@@ -289,7 +291,7 @@ def testMain(show = False):
             Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
             ]
 
-    for filename in files[:] :
+    for filename in files[:1] :
         if 1:testProfil(filename, show=show)
         if 1:testSaveAndOpen(filename, show=show)
 #         return
