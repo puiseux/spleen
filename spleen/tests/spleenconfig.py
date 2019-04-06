@@ -4,10 +4,11 @@ u"""
 Pierre PUISEUX
 Octobre 96, Mai 2012, juillet 2016
 """
-import sys, os
-from path import Path
-
-u'''
+import sys
+sys.path.append("/Users/puiseux/Documents/GitHub/spleen/spleen")
+for p in sorted(sys.path) : print p
+from spleen.src import Path
+u"""
 - Le module 'config.py' EST sur le dépot central,
 - Chaque utilisateur a sa propre configuration, qui est lue sur 'configSpleen.txt'
     lequel 'configSpleen.txt' N'EST PAS sur le dépot car il est propre à chaque utilisateur.
@@ -47,7 +48,7 @@ u'''
         ROOT_DIR = 'Le/path/vers/le/repertoire'
         ROOT_DIR = 'Le\path\vers\le\repertoire' etc...
 
-'''
+"""
 dirname = Path(__file__).dirname
 path_ = Path(dirname, "confSpleen.txt")
 
