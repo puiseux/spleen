@@ -39,7 +39,7 @@ from scipy.optimize import minimize_scalar
 from shapely.geometry import LinearRing, Point, Polygon
 from matplotlib import pylab
 from collections import OrderedDict
-import config
+import spleenconfig
 # import logging
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)
@@ -924,7 +924,7 @@ def _strace(*args,**kargs) :
     fcode = frame.f_code
     fonction = fcode.co_name
     filename = Path(fcode.co_filename)#.name
-    if config.TEST_MODE :
+    if spleenconfig.TEST_MODE :
         toclick = u"(module %s)"%filename.name
     else :
         toclick = clickableLink(filename, frame.f_lineno)

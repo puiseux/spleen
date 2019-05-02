@@ -7,7 +7,7 @@ Octobre 96, Mai 2012, juillet 2016
 import sys
 sys.path.append("/Users/puiseux/Documents/GitHub/spleen/spleen")
 for p in sorted(sys.path) : print p
-from spleen.src import Path
+from path import Path
 u"""
 - Le module 'config.py' EST sur le dépot central,
 - Chaque utilisateur a sa propre configuration, qui est lue sur 'configSpleen.txt'

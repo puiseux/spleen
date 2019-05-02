@@ -24,13 +24,13 @@ import sys,os,math
 import numpy as np
 from numpy import log, linspace, asarray, sqrt, zeros
 from numpy.linalg import  norm
-from config import VALIDATION_DIR, RUNS_DIR
+from spleenconfig import VALIDATION_DIR, RUNS_DIR
 from pprint import pprint
 from utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreNotEqual, stack)
 import cPickle
-import config
+import spleenconfig
 # from mpi4py import MPI
-config.TEST_MODE = True
+spleenconfig.TEST_MODE = True
 def mesures(S0) :
     def fmt(r):return int(1000*r)/1000.0
     x, y = S0.barycentre[0]

@@ -10,7 +10,7 @@ Description :
 __updated__="2019-02-15"
 '''
 import sys, os, math
-import config
+import spleenconfig
 from array import array
 from numbers import Number
 from matplotlib import pyplot as plt
@@ -1627,8 +1627,8 @@ def correctionReperesMontage(B,R, mode='production'):
         return sR(T)#en production
 
 if __name__=="__main__":
-    from testsplinesimple import testMain
-    config.TEST_MODE = False
+    from tests.testsplinesimple import testMain
+    spleenconfig.TEST_MODE = False
     testMain()
 #     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
 #                              TR=asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))

@@ -1,0 +1,16 @@
+#Configuration des répertoires utiles à Axile :
+#   ROOT_DIR : repertoire racine
+#   RUNS_DIR : répertoire de stockage des projets
+#Ce fichier doit se trouver sous <ROOT_DIR>/dist/guimain
+#-------------------------------------------------------
+#Mac-II
+ROOT_DIR       = /Users/puiseux/GitHub/spleen
+RUNS_DIR       = /Users/puiseux/GitHub/spleen/work
+VALIDATION_DIR = /Users/puiseux/GitHub/spleen/validation
+
+#Mac-book-pro-2
+ROOT_DIR       = /Users/puiseux/Documents/GitHub/spleen
+RUNS_DIR       = /Users/puiseux/Documents/github/spleen/work
+VALIDATION_DIR = /Users/puiseux/Documents/GitHub/spleen/validation
+
+VTK_ENABLED    = True
