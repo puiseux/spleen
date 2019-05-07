@@ -8,3 +8,4 @@ from splinecomposee import NSplineComposee
 from splineabstraite import NSplineAbstract
 from utilitaires import *
 from profils import Profil, ProfilNormalise, naca4, naca5
+import spleenconfig

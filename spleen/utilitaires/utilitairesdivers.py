@@ -39,7 +39,7 @@ from scipy.optimize import minimize_scalar
 from shapely.geometry import LinearRing, Point, Polygon
 from matplotlib import pylab
 from collections import OrderedDict
-import spleenconfig
+from spleen import spleenconfig
 # import logging
 # logger = logging.getLogger('')
 # logger.setLevel(logging.DEBUG)

@@ -11,7 +11,6 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 @contact:    be@nervures.com
 @deffield    updated: 31 Jan 2013
 '''
-from config import VALIDATION_DIR
 from path import Path
 from utilitaires import (debug, absCurv, my2dPlot,)
 import numpy as np
@@ -168,5 +167,7 @@ def testNPolyLine():
         my2dPlot((XY0,XY0,XY,XY,np.asarray(centre).reshape((1,2))),equal=True,cosmetic=('b-','bo','r-','ro','g^','r*','r^'))
 
 if __name__=="__main__":
+    from spleenconfig import VALIDATION_DIR
+
     testNPolyLine()
     test1NPolyLine()

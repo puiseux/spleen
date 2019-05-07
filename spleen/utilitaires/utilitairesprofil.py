@@ -7,7 +7,7 @@ Created on 28 octobre 2016
 @author: puiseux
 '''
 import numpy as np
-from utilitaires import absCurv, splineInterpolation, dist2
+from spleen.utilitaires.utilitairesdivers import absCurv, splineInterpolation, dist2
 from shapely.geometry import LineString
 
 def computeCordeAndNBA(points):

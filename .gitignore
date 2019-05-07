@@ -5,5 +5,8 @@
 .settings/org.eclipse.core.resources.prefs
 *.pyc
 *.log
-spleen/work/*
+work/*
 brouillon*
+build/*
+dist/*
+spleen.egg-info/*

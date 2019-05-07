@@ -14,7 +14,7 @@ Description :
 import numpy as np
 from lecteur import LecteurGnuplot,LecteurMatlab
 from lecteurdxf import LecteurDXFNervures,LecteurDXF0, LecteurDXF1
-from utilitaires import (Path,trace,my2dPlot,rdebug)
+from utilitairesdivers import (Path,trace,my2dPlot,rdebug)
 import cPickle
 
 

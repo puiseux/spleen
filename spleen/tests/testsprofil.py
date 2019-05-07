@@ -10,16 +10,13 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 __updated__="2019-02-17"
 '''
 import cPickle
-from path import Path
 from pprint import pprint
-from config import VALIDATION_DIR,RUNS_DIR, WORK_DIR
-from utilitaires import (debug, rdebug, dictsAreNotEqual)
-from utilitaires.lecteurs import pointsFrom, pointsFromFile
+from spleen.path import Path
+from spleen.utilitaires import (debug, rdebug, dictsAreNotEqual)
+from spleen.utilitaires.lecteurs import pointsFromFile
+from spleen.profils import Profil
 from numpy import asarray as array, where
-from profils import Profil
 from matplotlib import pyplot as plt
-import config
-config.TEST_MODE = True
 
 def testProfil(filename,show=True):
 
@@ -142,7 +139,7 @@ def testProfil(filename,show=True):
 def testElaguer(filename,show=False):
     name = filename.name
     debug(titre='testElaguer : %s'%name)
-    p = Profil(points=pointsFrom(filename), precision=[1000,1000])
+    p = Profil(points=pointsFromFile(filename), precision=[1000,1000])
     debug(rba=p.rba)
     debug("Extrados : Se'(1.0)=%s"%(p.splines[0](1.0,1)))
     debug("Intrados : Si'(0.0)=%s"%(p.splines[1](0.0,1)))
@@ -169,7 +166,7 @@ def testDivers(filename,show=False):
     debug(titre='testDivers : %s'%name)
     if 'spl' in filename.ext :
         pass
-    p = Profil(points=pointsFrom(filename), precision=[1000, 1000])
+    p = Profil(points=pointsFromFile(filename), precision=[1000, 1000])
     debug(rba=p.rba, corde=p.corde)
     p.normalise()
     debug(rba=p.rba, corde=p.corde)
@@ -195,7 +192,7 @@ def testSaveAndOpen(filename,show=False):
             return#On peut pas continuer S est verolé
     else :
         debug(paragraphe="Ouverture fichier %s"%name)
-        S = Profil(points=pointsFrom(filename),
+        S = Profil(points=pointsFromFile(filename),
     #                methode=('cubic',((2, 0, 0), (1, 0, -5))),
                    mode=['courbure', 'courbure'],
                    precision=[3000,3000])
@@ -233,7 +230,7 @@ def testSaveAndOpen(filename,show=False):
 def testEchantillonner(filename,show=False):
     name = filename.name
     debug(titre='testEchantillonner : %s'%name)
-    P = Profil(points=pointsFrom(filename),
+    P = Profil(points=pointsFromFile(filename),
 #                       methode=('cubic',((2, 0, 0), (1, 0, -5))),
 #                       mode=['linear'],
                       nbpd=[1000,1000])
@@ -263,7 +260,7 @@ def testEchantillonner(filename,show=False):
 def testOuverture(filename,show=False):
     name = filename.name
     debug(titre='testOuverture : %s'%name)
-    P = Profil(points=pointsFrom(filename), name='Ouverture')
+    P = Profil(points=pointsFromFile(filename), name='Ouverture')
     if show : P.plot(titre='testOuverture:%s'%P.name)
     pouv = (-20, -50)
     P.pouverture = pouv
@@ -294,7 +291,6 @@ def testMain(show = False):
     for filename in files[:1] :
         if 1:testProfil(filename, show=show)
         if 1:testSaveAndOpen(filename, show=show)
-#         return
         if 1:testOuverture(filename, show=show)
         if 1:testEchantillonner(filename, show=show)
         if 1:testElaguer(filename, show=show)
@@ -302,4 +298,8 @@ def testMain(show = False):
     debug(titre='Fin testMain')
 
 if __name__=="__main__":
+    from spleen.spleenconfig import VALIDATION_DIR, RUNS_DIR, WORK_DIR
+    from spleen import spleenconfig
+
+    spleenconfig.TEST_MODE = True
     testMain()

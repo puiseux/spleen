@@ -14,7 +14,8 @@ Description :
 import sys
 import numpy as np
 from lecteur import Lecteur
-from utilitaires import (Path, my2dPlot)
+from utilitairesdivers import (my2dPlot)
+from path import Path
 TAGS=['PTSPROFIL','CLOITROU','CLOISON','BLOCK','ENDBLK','SECTION','ENTITIES','POLYLINE','VERTEX','SEQEND','POINT','ENDSEC','EOF','CIRCLE','LINE']
 POINT_TAGS=('10','20','30')
 ENDLINE_TAGS=('11','21','31')

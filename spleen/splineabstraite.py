@@ -13,11 +13,11 @@ import numpy as np
 import cPickle
 from numpy import asarray as array, linspace, loadtxt, savetxt,sqrt
 from scipy.optimize import minimize_scalar
-from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline, 
+from scipy.interpolate import (CubicSpline, InterpolatedUnivariateSpline,
                                UnivariateSpline)
 from scipy.interpolate.fitpack2 import LSQUnivariateSpline
 from scipy.integrate import quad
-from utilitaires import (Path, whoami, debug, rdebug, absCurv, baryCentre, 
+from utilitaires.utilitairesdivers import (Path, whoami, debug, rdebug, absCurv, baryCentre,
                          centreGravite)
 from utilitaires.lecteurs import pointsFrom, LecteurUniversel
 

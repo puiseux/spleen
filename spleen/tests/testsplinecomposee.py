@@ -7,21 +7,18 @@ Description :
 @author:      puiseux
 @copyright:   2016 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__ = "2019-02-15"
+__updated__ = "2019-05-06"
 '''
 import numpy as np
-from path import Path
-from config import VALIDATION_DIR, WORK_DIR
-from splinesimple import NSplineSimple
-from splinecomposee import NSplineComposee
-from utilitaires import (debug, dictsAreNotEqual)
-from utilitaires.utilitairesprofil import computeCordeAndNBA
-from utilitaires.lecteurs import pointsFrom
+from spleen.path import Path
+from spleen.splinesimple import NSplineSimple
+from spleen.splinecomposee import NSplineComposee
+from spleen.utilitaires import (debug, dictsAreNotEqual)
+from spleen.utilitaires.utilitairesprofil import computeCordeAndNBA
+# from spleen.utilitaires.lecteurs import pointsFrom
 from pprint import pprint
 from matplotlib import pyplot as plt
 plt.rcParams["figure.figsize"] = (20,10)
-import config
-config.TEST_MODE = True
 
 def pprintSaufCpoints(dump):
     u"""Sinon ca fait des fichiers trop lourds, illisibles"""
@@ -91,7 +88,7 @@ def testParticulier(filename, show):
                ('cubic',((1, 0, 3.14), (1, 0, -3.14))),
                ('cubic',((1, 0, 0), (1, 0, 0)))
                ]
-    S = NSplineComposee(points=pointsFrom(filename),
+    S = NSplineComposee(points=pointsFromFile(filename),
                         ruptures=[0,40,-1],
                         methode=methode,
                         precision=[10000,10000],
@@ -115,7 +112,7 @@ def testConstructeurs(filename, show):
     pprintSaufCpoints(S0.toDump())
     methodes = [('cubic','not-a-knot'),('ius',3), ('cubic','natural'), ('ius',1)]
     par = u"Construction spline à 4 brins %s"%str(methodes)
-    points=pointsFrom(filename)
+    points=pointsFromFile(filename)
     _, nba = computeCordeAndNBA(points=points)
     S = NSplineComposee(points=points,
                         ruptures=[0,nba/2,nba, nba+nba/2,-1],
@@ -268,7 +265,7 @@ def testElagage(filename, show):
                     ):
         debug(paragraphe='methode-%d : %s (%s)'%(k,str(methode), filename.name))
         k+=1
-        points=pointsFrom(filename)
+        points=pointsFromFile(filename)
         _, nba = computeCordeAndNBA(points=points)
         S = NSplineComposee(points=points,
                              ruptures=[0,nba,-1],
@@ -301,7 +298,7 @@ def testMethodesLocales(filename, show):
 
     debug(paragraphe='methode-%d : %s (%s)'%(k,str(methode), filename.name))
     k+=1
-    points=pointsFrom(filename)
+    points=pointsFromFile(filename)
     _, nba = computeCordeAndNBA(points=points)
     S = NSplineComposee(points=points,
                          ruptures=[0,nba,-1],
@@ -411,4 +408,9 @@ def testMain(show=False):
         if 1:testElagage(filename, show=show)
     debug(titre='Fin testMain : %s'%filename.name)
 if __name__=="__main__":
+    from spleen.spleenconfig import VALIDATION_DIR, WORK_DIR
+    from spleen import spleenconfig, pointsFromFile
+
+    spleenconfig.TEST_MODE = True
+
     testMain()

@@ -7,17 +7,16 @@ Description :
 @author:      puiseux
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
-__updated__="2019-02-15"
+__updated__="2019-05-06"
 '''
 import sys, os, math
-import spleenconfig
 from array import array
 from numbers import Number
 from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons
 plt.rcParams["figure.figsize"] = (20,10)
 from preferences import SplinePrefs
-from utilitaires import (eliminerPointsDoublesConsecutifs,
+from utilitaires.utilitairesdivers import (eliminerPointsDoublesConsecutifs,
                          className, centreGravite, baryCentre, XY,
                          segmentPlusProche, stack, debug, rdebug, dist,
                          hardScale, absCurv,dist2,rotate,symetrieAxe)
@@ -1628,6 +1627,8 @@ def correctionReperesMontage(B,R, mode='production'):
 
 if __name__=="__main__":
     from tests.testsplinesimple import testMain
+    import spleenconfig
+
     spleenconfig.TEST_MODE = False
     testMain()
 #     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),

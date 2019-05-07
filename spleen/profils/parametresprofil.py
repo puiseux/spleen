@@ -13,8 +13,8 @@ Axile -- Outil de conception/simulation de parapentes Nervures
 __updated__ = "2019-02-06"
 '''
 import sys, os
-from utilitaires import debug, rdebug, stack
-from preferences import ProfilPrefs
+from spleen.utilitaires.utilitairesdivers import debug, rdebug, stack
+from spleen.preferences import ProfilPrefs
 
 class ProfsParamNew(object):
     u'''

@@ -8,8 +8,8 @@ Description :
 @copyright:   2016-2017-2018 Nervures. All rights reserved.
 @contact:    pierre@puiseux.name
 '''
-__updated__="2018-07-01"
-from .. import config
+__updated__="2019-05-06"
+from spleenconfig import *
 import os, sys
 from path import Path
 from utilitaires import debug, rdebug

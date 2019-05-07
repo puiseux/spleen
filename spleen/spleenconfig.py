@@ -4,12 +4,13 @@ u"""
 Pierre PUISEUX
 Octobre 96, Mai 2012, juillet 2016
 """
-import sys
-sys.path.append("/Users/puiseux/Documents/GitHub/spleen/spleen")
-for p in sorted(sys.path) : print p
+import sys, os
+# sys.path.append("/Users/puiseux/Documents/GitHub/spleen/spleen")
+# for p in sorted(sys.path) : print p
 from path import Path
+# from utilitaires.utilitairesdivers import debug
 u"""
-- Le module 'config.py' EST sur le dépot central,
+- Le module 'spleenconfig.py' EST sur le dépot central,
 - Chaque utilisateur a sa propre configuration, qui est lue sur 'configSpleen.txt'
     lequel 'configSpleen.txt' N'EST PAS sur le dépot car il est propre à chaque utilisateur.
 - Un 'configSpleen.txt'  minimal est le suivant :
@@ -30,7 +31,7 @@ u"""
 - VTK_ENABLED = False si vtk5 n'est pas dispo, dans ce cas, la vue 3d est désactivée.
 - Remarques :
   --------
-    - Dans le fichier 'configAxile.txt' toutes les lignes commencant par '#' sont ignorées
+    - Dans le fichier 'configSpleen.txt' toutes les lignes commencant par '#' sont ignorées
     - hors d'une ligne commentaire le signe '=' ne doit être utilisé que pour indiquer
         la valeur d'une variable (comme ROOT_DIR)
     - Une variable simple, peut être évaluée :
@@ -49,7 +50,11 @@ u"""
         ROOT_DIR = 'Le\path\vers\le\repertoire' etc...
 
 """
-dirname = Path(__file__).dirname
+dirname = os.path.expanduser('~')+'/.spleen'
+dirname = Path('~','.spleen').expanduser()
+# print dirname.abspath
+# print 'dirname=',dirname
+# dirname = Path(__file__).dirname
 path_ = Path(dirname, "confSpleen.txt")
 
 with open(path_) as file_:
@@ -64,18 +69,21 @@ with open(path_) as file_:
                 RUNS_DIR = Path(words[1].strip().strip("'").strip('"'))
             if 'VTK_ENABLED' in words[0] :
                 VTK_ENABLED = eval(words[1])
+            if 'TEST_MODE' in words[0] :
+                TEST_MODE = eval(words[1])
 WORK_DIR = RUNS_DIR
-SOURCES_DIR = Path(ROOT_DIR,'sources')
+SOURCES_DIR = Path(ROOT_DIR,'spleen')
 # sys.path.append(SOURCES_DIR)
-DATA_DIR = Path(ROOT_DIR,'data')
+# DATA_DIR = Path(ROOT_DIR,'data')
 VALIDATION_DIR = Path(ROOT_DIR,'validation')
 TRASH_DIR = Path(RUNS_DIR,'trash')
-TEST_MODE = False
-print 'config.py = OK'
+# TEST_MODE = True
+print 'spleenconfig.py = OK'
 print "ROOT_DIR       = '%s'"%ROOT_DIR
 print "RUNS_DIR       = '%s'"%RUNS_DIR
 print "SOURCES_DIR    = '%s'"%SOURCES_DIR
-print "DATA_DIR       = '%s'"%DATA_DIR
+# print "DATA_DIR       = '%s'"%DATA_DIR
 print "VALIDATION_DIR = '%s'"%VALIDATION_DIR
 print "VTK_ENABLED    = '%s'"%VTK_ENABLED
+print "TEST_MODE      = '%s'"%TEST_MODE
 

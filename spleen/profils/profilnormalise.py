@@ -12,13 +12,12 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @deffield    updated: 31 Jan 2013
 '''
 
-from profils import Profil
-from utilitaires import (debug,rdebug,dist2,dist,className)
+from profil import Profil
+from spleen.utilitaires import (debug,rdebug,dist2,dist,className)
 import numpy as np
 from numpy import linspace, log, asarray
 from scipy.optimize import newton
-from preferences import ProfilPrefs
-import config
+from spleen.preferences import ProfilPrefs
 
 class ProfilNormalise(Profil):
     prefs = ProfilPrefs()
@@ -51,7 +50,7 @@ class ProfilNormalise(Profil):
 #         else :
 #             self.__normalise()
 #             self.normalite()
-    
+
     def load(self, dump):
         super(ProfilNormalise,self).load(dump)
         self.nb_normalisations = 0
@@ -94,7 +93,7 @@ class ProfilNormalise(Profil):
         else :
             Profil.__setitem__(self, k, value)
 
-    def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10, 
+    def _getT(self, x, t0=None, nbit=False, dt=[-0.1, 1.1], tol=1.0e-10,
               maxiter=50,full_output=False):
         u"""
         Retourne la valeur du paramètre t correspondant à l'abscisse |x|/100.
@@ -103,7 +102,7 @@ class ProfilNormalise(Profil):
             S = extrados si x>0
             S = intrados si x<0
             le t retourné est l'unique t tel que |x|/100 == S.sx(t)
-        :param t0 : float, en % de corde, la recherche se fait par iterations 
+        :param t0 : float, en % de corde, la recherche se fait par iterations
             de Newton, elle démarre à t=t0% de corde
         :param nbit : si nbit est True, retourne le couple (t, nb iterations)
                 si nbit est False, retourne t
@@ -121,14 +120,14 @@ class ProfilNormalise(Profil):
             t, r = newton(lambda t: S.sx(t)-ax, t0, lambda t:S.sx(t,1),
                        tol=tol, maxiter=50, fprime2=lambda t:S.sx(t,2),
                        full_output=True)
-            
+
             k += 1
 #             debug(r)
             return (t,r) if nbit else t
             if not dt[0] <= t <= dt[1] : #dépasse les bornes
                 return (np.nan, k) if nbit else np.nan
             t0 += 0.1
-            
+
     def insertPoint(self, pos, k=None):
 #         i = super(Profil, self).insertPoint(pos)
         if dist(pos, self[0]) >= 1 :
@@ -259,6 +258,7 @@ class ProfilNormalise(Profil):
         return dump
 
 if __name__=="__main__":
-    from testsprofilnormalise import testMain
-    config.TEST_MODE = False
+    from spleen import spleenconfig
+    from spleen.tests.testsprofilnormalise import testMain
+    spleenconfig.TEST_MODE = False
     testMain()

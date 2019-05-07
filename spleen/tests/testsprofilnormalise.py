@@ -1,6 +1,6 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-from utilitaires.utilitairesdivers import dictsAreNotEqual
+from spleen.utilitaires.utilitairesdivers import dictsAreNotEqual
 from testsplinecomposee import pprintSaufCpoints
 u'''
 AXile -- Outil de conception/simulation de parapentes Nervures
@@ -16,14 +16,11 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 
 from numpy import asarray, abs, vstack
 from pprint import pprint
-from utilitaires import Path
-from profils import ProfilNormalise, ProfsParam1
-from utilitaires import (debug, rdebug,)
-from utilitaires import pointsFrom#, qpolygonFrom
-from config import VALIDATION_DIR
+from spleen.utilitaires import Path
+from spleen.profils import ProfilNormalise, ProfsParam1
+from spleen.utilitaires import (debug, rdebug,)
+from spleen.utilitaires import pointsFrom#, qpolygonFrom
 from matplotlib import pyplot as plt
-import config
-config.TEST_MODE = False
 def testProfilNormalise(filename, show):
     name = filename.name
     debug(titre="testProfilNormalise(%s)"%name)
@@ -79,13 +76,13 @@ def testProfilNormalise(filename, show):
 #     exit()
     print p.cpoints.tolist()
     mp = ProfilNormalise(points=pointsFrom(filename), name=name)
-    if show : 
+    if show :
         p.plot(show=show, titre='p = Profil(**p.toDump())')
         p.plotCourbure()#(plt, titre='p = Profil(**p.toDump())')
-        
+
     titre = u'ProfilNormalise opérations interdites (%s)'%name
     debug(titre=titre)
-    
+
     par = '    #hardScale'
     debug(paragraphe=par)
     try : p.hardScale((2,2))
@@ -119,7 +116,7 @@ def testProfilNormalise(filename, show):
     except Exception as msg : print msg
     print p.normalite()
     debug(titre="Fin testProfilNormalise(%s)"%name)
-    
+
 #     exit()
 #     p = ProfilNormalise(points=([0,0],[1,0],[1,1]), parent=None)
 def testDivers(filename, show):
@@ -243,5 +240,10 @@ def testMain():
     print '################## FIN main #################'
 
 if __name__=="__main__":
+    from spleen.spleenconfig import VALIDATION_DIR
+    import spleen.spleenconfig as spleenconfig
+
+    spleenconfig.TEST_MODE = False
+
     testMain()
 #     sys.exit(app.exec_())

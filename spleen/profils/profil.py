@@ -1,6 +1,6 @@
 #!/usr/local/bin/python2.7
 # encoding: utf-8
-'''
+"""
 AXile -- Outil de conception/simulation de parapentes Nervures
 
     Classe Profil
@@ -10,28 +10,22 @@ AXile -- Outil de conception/simulation de parapentes Nervures
 @license:    LGPL
 @contact:    be@nervures.com
 @deffield    updated: 31 Jan 2013
-'''
-from utilitaires import (className, debug, rdebug, dist, rcercle,)
+"""
+from spleen.utilitaires.utilitairesdivers import (className, debug, rdebug, dist, rcercle,diff, debug, XY, rdebug, dist2)
 import numpy as np
 import cPickle, os
-from profils.parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
+from parametresprofil import ProfsParamNew, ProfsParam, ProfsParam1
 from naca import naca4,naca5
-from splinecomposee import NSplineComposee
-from utilitaires.utilitairesprofil import computeCordeAndNBA
-from utilitaires import diff
 from numpy import (zeros,abs, arctan2,asarray, hstack, vstack, linspace,)
 from scipy.optimize import newton
-from preferences import ProfilPrefs
 from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons
 plt.rcParams["figure.figsize"] = (20,10)
-from splineabstraite import arrange
-from utilitaires import debug, XY, rdebug, dist2
-# import plotly.plotly as py
-# import plotly.tools as tls
-# from plotly import offline
+from spleen.preferences import ProfilPrefs
+from spleen.splineabstraite import arrange
+from spleen.splinecomposee import NSplineComposee
+from spleen.utilitaires.utilitairesprofil import computeCordeAndNBA
 from plotly.offline import plot
-# from plotly.offline import enable_mpl_offline
 import plotly.graph_objs as go
 
 class Profil(NSplineComposee):
@@ -1372,7 +1366,7 @@ class Profil(NSplineComposee):
     _update = update
 
 if __name__=="__main__":
-    from testsprofil import testMain
-    import config
-    config.TEST_MODE = False
+    from spleen.tests.testsprofil import testMain
+    from spleen import spleenconfig
+    spleenconfig.TEST_MODE = False
     testMain()

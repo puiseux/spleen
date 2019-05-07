@@ -16,7 +16,7 @@ from numpy import (asarray, linspace, log, vstack, zeros, ndarray, empty, nan,
                    abs, where, isnan, isfinite)
 from collections import Iterable
 from splinesimple import NSplineSimple
-from utilitaires import (dist2, dist, segmentPlusProche,debug, rdebug, className)
+from utilitaires.utilitairesdivers import (dist2, dist, segmentPlusProche,debug, rdebug, className)
 from matplotlib import pyplot as plt
 class NSplineComposee(NSplineAbstract):
     u"""
@@ -965,7 +965,7 @@ class NSplineComposee(NSplineAbstract):
             return super(NSplineComposee, self).longueur(p)
 
 if __name__=="__main__":
-    from testsplinecomposee import testMain
-    import config
-    config.TEST_MODE = False#pour avoir les liens clickables
+    from spleen.tests.testsplinecomposee import testMain
+    import spleenconfig
+    spleenconfig.TEST_MODE = False#pour avoir les liens clickables
     testMain()

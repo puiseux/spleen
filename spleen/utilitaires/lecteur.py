@@ -9,7 +9,7 @@ Created on 17 mai 2012
 import sys
 from path import Path
 import numpy as np
-from utilitaires import (find,findAll, findAllLines, findRel,rdebug)
+from .utilitairesdivers import (find,findAll, findAllLines, findRel,rdebug)
 TAGS=[]
 
 class Lecteur(file):
