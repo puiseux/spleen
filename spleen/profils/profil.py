@@ -1350,13 +1350,13 @@ class Profil(NSplineComposee):
         return figure
 
     def update(self):
-        u'''
+        u"""
         Mise à jour de nba et profparam.
         Doit être appelé à chaque modification (suppression, insertion, deplacement) d'un point du profil
         - suppression, insertion de point : on reconstruit profparam entier=> ?????.
         - déplacement de point : seul nba peut changer.
         On appelle le _update de NSplineComposee (i.e. celui de NSplineAbstraite),
-        '''
+        """
         try : del self._techint
         except AttributeError : pass
         try : del self._techext

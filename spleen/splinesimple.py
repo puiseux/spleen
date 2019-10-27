@@ -1626,11 +1626,13 @@ def correctionReperesMontage(B,R, mode='production'):
         return sR(T)#en production
 
 if __name__=="__main__":
-    from tests.testsplinesimple import testMain
+    from tests.testsplinesimple import (files, testMain, testCorrectionRM, testConstructeurs)
     import spleenconfig
-
     spleenconfig.TEST_MODE = False
-    testMain()
+
+    if 0 : testCorrectionRM()
+    if 1 : testConstructeurs(files[-1], show=True)
+    if 0 : testMain()
 #     placementReperesMontage(T=asarray([[2,-2],[1,-1],[0,0],[1,1],[2,2]]),
 #                              TR=asarray([[1.5,-2.5],[0.5,-1.5],[-math.sqrt(2)*0.5,0],[0.5,1.5],[1.5,2.5]]))
 #     exit()

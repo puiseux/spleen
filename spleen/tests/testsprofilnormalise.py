@@ -233,17 +233,18 @@ def testMain():
 
     p = ProfilNormalise()
     debug('constructeur vide\n',p)
-    for filename in files[:2] :
-        if 0 : testPinces(filename, show=True)
-        if 0 : testDivers(filename, show=True)
-        if 1 : testProfilNormalise(filename, show=False)
+    show=False
+    for filename in files[:] :
+        if 1 : testPinces(filename, show=show)
+        if 1 : testDivers(filename, show=show)
+        if 1 : testProfilNormalise(filename, show=show)
     print '################## FIN main #################'
 
 if __name__=="__main__":
     from spleen.spleenconfig import VALIDATION_DIR
     import spleen.spleenconfig as spleenconfig
 
-    spleenconfig.TEST_MODE = False
+    spleenconfig.TEST_MODE = True
 
     testMain()
 #     sys.exit(app.exec_())

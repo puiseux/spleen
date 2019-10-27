@@ -9,6 +9,7 @@ import sys, os
 # for p in sorted(sys.path) : print p
 from path import Path
 # from utilitaires.utilitairesdivers import debug
+from utilitaires.utilitairesdivers import stack, rstack
 u"""
 - Le module 'spleenconfig.py' EST sur le dépot central,
 - Chaque utilisateur a sa propre configuration, qui est lue sur 'configSpleen.txt'
@@ -78,6 +79,7 @@ SOURCES_DIR = Path(ROOT_DIR,'spleen')
 VALIDATION_DIR = Path(ROOT_DIR,'validation')
 TRASH_DIR = Path(RUNS_DIR,'trash')
 # TEST_MODE = True
+rstack("splineconfig")
 print 'spleenconfig.py = OK'
 print "ROOT_DIR       = '%s'"%ROOT_DIR
 print "RUNS_DIR       = '%s'"%RUNS_DIR

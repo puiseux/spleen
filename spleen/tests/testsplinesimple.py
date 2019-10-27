@@ -11,26 +11,37 @@ __updated__="2019-02-15"
 '''
 from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons
-
 plt.rcParams["figure.figsize"] = (20,10)
-from numpy.random import rand
 from collections import OrderedDict
-from path import Path
-from splinesimple import (NSplineSimple, placementReperesMontage,
-                          correctionReperesMontage)
-from utilitaires.lecteurs import pointsFrom
-from utilitaires.utilitairesprofil import computeCordeAndNBA
 import sys,os,math
+import cPickle
+from pprint import pprint
 import numpy as np
 from numpy import log, linspace, asarray, sqrt, zeros
 from numpy.linalg import  norm
-from spleenconfig import VALIDATION_DIR, RUNS_DIR
-from pprint import pprint
-from utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreNotEqual, stack)
-import cPickle
-import spleenconfig
+from numpy.random import rand
+from spleen.path import Path
+from spleen.splinesimple import (NSplineSimple, placementReperesMontage, correctionReperesMontage)
+from spleen.utilitaires.lecteurs import pointsFrom, pointsFromFile
+from spleen.utilitaires.utilitairesprofil import computeCordeAndNBA
+from spleen.spleenconfig import VALIDATION_DIR, RUNS_DIR
+from spleen.utilitaires import (debug,absCurv,dist2,diff,XY, dictsAreNotEqual, stack)
 # from mpi4py import MPI
-spleenconfig.TEST_MODE = True
+files = [
+        Path(VALIDATION_DIR, 'splinesimple-86pts.spl'),
+        Path(VALIDATION_DIR, 'profilnormalise-86pts.spl'),
+        Path(VALIDATION_DIR, 'blocjonc-splinesimple.spl'),
+        Path(VALIDATION_DIR, 'shark-profilnormalise-86pts.spl'),
+        Path(VALIDATION_DIR, 'diamirE-profilnormalise-86pts.spl'),
+        Path(VALIDATION_DIR, 'profilnormalise-21pts.spl'),
+        Path(VALIDATION_DIR, 'splinesimple-21pts.spl'),
+        Path(VALIDATION_DIR, 'shark-profilnormalise-26pts.spl'),
+        Path(VALIDATION_DIR, 'diamirE-profilnormalise-24pts.spl'),
+        Path(VALIDATION_DIR, 'NACA2415-100pts.spl'),
+        Path(VALIDATION_DIR, 'points-86pts.gnu'),
+        Path(VALIDATION_DIR, 'splinesimple-86pts.pkl'),
+        ][: :-1]
+
 def mesures(S0) :
     def fmt(r):return int(1000*r)/1000.0
     x, y = S0.barycentre[0]
@@ -83,7 +94,7 @@ def testSequenceBasique(filename, show=True):
 #                                 ('ius',7),#'courbure'),
                                 )):
         debug(paragraphe='1. methode-%d=%s (fichier %s)'%(k, str(methode),filename.name))
-        S = NSplineSimple(cpoints=pointsFrom(filename), methode=methode, name=str(methode))
+        S = NSplineSimple(cpoints=pointsFromFile(filename), methode=methode, name=str(methode))
         debug(S)
         debug(u'    Normal, S.dpoint est calcule',lendpoints=len(S.dpoints))
         debug(paragraphe='2. S._update() methode-%d=%s  (fichier %s)'%(k, str(methode),filename.name))
@@ -174,11 +185,11 @@ def testConstructeurs(filename, show=False) :
     # for point in p.qdpolygon :
     #     print point
     debug(paragraphe='3. p vide => p.cpoints=points de %s'%filename.name)
-    points = pointsFrom(filename)
+    points = pointsFromFile(filename)
     p.cpoints = points
-    if show : p.plot(titre='cpoints=pointsFrom()')
+    if show : p.plot(titre='cpoints=pointsFromFile()')
 
-    S0 = NSplineSimple(points=pointsFrom(filename),
+    S0 = NSplineSimple(points=pointsFromFile(filename),
                        methode=('cubic','periodic'),
 #                        mode='courbure',
                        name=filename.name)
@@ -224,7 +235,7 @@ def testMethodes(filename, show=True):
                     ('cubic',((1, 0, -5), (2, 0, 0))), #intrados
                     ):
         k +=1
-        S = NSplineSimple(points=pointsFrom(filename),
+        S = NSplineSimple(points=pointsFromFile(filename),
                           methode=methode,
                           mode='courbure',
                           name='SPLINE%d'%(k+1))
@@ -245,7 +256,7 @@ def testMethodes(filename, show=True):
                     (('us',4),'courbure'),
                     (('us',7),'courbure'),
                     ):
-        S = NSplineSimple(points=pointsFrom(filename), methode=methode, mode=mode)
+        S = NSplineSimple(points=pointsFromFile(filename), methode=methode, mode=mode)
         debug(S)
 
         if show and methode[1]<=5 : #pour k=7 ca plante
@@ -256,17 +267,17 @@ def testModifGlobales(filename, show=True) :
     debug(titre="testModifGlobales : %s"%filename.name)
 #     numfig = 0
 #     plt.figure(numfig)
-    S0 = NSplineSimple(points=pointsFrom(filename),
+    S0 = NSplineSimple(points=pointsFromFile(filename),
                        methode=('cubic',((2, 0, 0), (1, 0, -5))),
                        precision=1000,
                        mode='courbure',
                        name='SPLINE01')
-    if show : S0.plot(titre='NSplineSimple(points=pointsFrom(filename),...')
+    if show : S0.plot(titre='NSplineSimple(points=pointsFromFile(filename),...')
 #     numfig += 1
 #     plt.figure(numfig)
-    S0.cpoints = pointsFrom(filename)
+    S0.cpoints = pointsFromFile(filename)
     debug(initial=mesures(S0))
-    if show : S0.plot(titre=filename.name+'cpoints = pointsFrom()')
+    if show : S0.plot(titre=filename.name+'cpoints = pointsFromFile()')
 
 #     numfig += 1
 #     plt.figure(numfig)
@@ -303,7 +314,7 @@ def testModifGlobales(filename, show=True) :
 def testModifLocales(filename, show=True)  :
     debug(titre="testModifLocales : %s"%filename.name)
 #     exit()
-    S = NSplineSimple(points=pointsFrom(filename),
+    S = NSplineSimple(points=pointsFromFile(filename),
                        methode=('cubic',((2, 0, 0), (1, 0, -5))),
                        mode='courbure',
                        name='SPLINE01')
@@ -364,7 +375,7 @@ def testSaveRead(filename, show=True):
     u"""Diverses manières de lire, construire, sauvegarder une NSplineSimple"""
     debug(titre="testSaveRead : %s"%filename.name)
     print "    ==> NSplineSimple::__init__()"
-    S = NSplineSimple(points=pointsFrom(filename),
+    S = NSplineSimple(points=pointsFromFile(filename),
                       methode=('cubic',((2, 0, 0), (1, 0, -5))),
                       mode='courbure',
                       name='SPLINE01')
@@ -409,11 +420,11 @@ def testSaveRead(filename, show=True):
 
 def testEchantillonnage(filename, trados, show=True):
     u"""echantillonnage entre ta et tb. [ta,tb]=[0,1] => echantillonnage complet"""
-#     s = NSplineSimple(points=pointsFrom(filename))
+#     s = NSplineSimple(points=pointsFromFile(filename))
     u"""Extraction intrados et extrados, normalisation"""
     debug(titre="testEchantillonnage %s-trados : %s"%(trados,filename.name))
 
-    points = pointsFrom(filename)
+    points = pointsFromFile(filename)
     corde, nba = -1.0, np.nan
     bf = points[0]
     for k, point in enumerate(points) :
@@ -456,7 +467,7 @@ def testDivers(filename, show=True):
     - faire une spline composée, splittée en 6
     """
     debug(msg)
-    cpoints = pointsFrom(filename)
+    cpoints = pointsFromFile(filename)
     S0 = NSplineSimple(cpoints=cpoints, name=filename.name)
     debug(S0)
     if show : S0.plot(show=True)
@@ -568,7 +579,7 @@ def testDivers1(filename, show=True):
     NSplineSimple.projection(obj).
     """
     debug(msg)
-    cpoints = pointsFrom(filename)[::-1]
+    cpoints = pointsFromFile(filename)[::-1]
     #On recale le BA en 0,0
     corde, nba = computeCordeAndNBA(cpoints)
     debug(corde=corde,nba=nba, len_cpoints=len(cpoints))
@@ -795,7 +806,7 @@ def testElaguer(filename, trados, fonction='elaguer', show=True):
         if show : s.plot(more=([P[:,0], P[:,1],'g.', 'C0'], [pjs[:,0], pjs[:,1],'y.','projections']))
 
     u"""Extraction intrados et extrados, normalisation"""
-    points = pointsFrom(filename)
+    points = pointsFromFile(filename)
     corde, nba = -1.0, np.nan
     bf = points[0]
     for k, point in enumerate(points) :
@@ -912,11 +923,11 @@ def testCorrectionRM(show=True):
     plt.axis('equal')
 #     if show : plt.show()
     def deltaLongueur(B, R, sCR, T):
-        Bac, Rac, CRac = absCurv(B), absCurv(R), sCR.abscurv(T)
+        Bac, Rac, CRac = absCurv(B), absCurv(R), sCR.absCurv(T)
         lB, lR, lCR = diff(Bac), diff(Rac), diff(CRac)
         return lB-lR, lB-lCR
     lBR, lBCR = deltaLongueur(B, R, SCR, T)
-    lB, lR, lCR = absCurv(B)[-1], absCurv(R)[-1], SCR.abscurv(T[-1])
+    lB, lR, lCR = absCurv(B)[-1], absCurv(R)[-1], SCR.absCurv(T[-1])
     plt.subplot(1,2,2)
     plt.title(u"$\Delta$longueurs. (Longueur totale R Corrigé=%.5g)"%(lCR))
     plt.plot(lBR,'b.-', label=u'initial : max($\delta l)=$%.2g'%max(abs(lBR)))
@@ -940,30 +951,18 @@ def testCorrectionRM(show=True):
 #     if show : plt.show()
     debug(titre="Fin testCorrectionRM ")
 
-def testMain(show=False):
-    files = [
-            Path(VALIDATION_DIR,'splinesimple-86pts.spl'),
-            Path(VALIDATION_DIR,'profilnormalise-86pts.spl'),
-            Path(VALIDATION_DIR,'blocjonc-splinesimple.spl'),
-            Path(VALIDATION_DIR,'shark-profilnormalise-86pts.spl'),
-            Path(VALIDATION_DIR,'diamirE-profilnormalise-86pts.spl'),
-            Path(VALIDATION_DIR,'profilnormalise-21pts.spl'),
-            Path(VALIDATION_DIR,'splinesimple-21pts.spl'),
-            Path(VALIDATION_DIR,'shark-profilnormalise-26pts.spl'),
-            Path(VALIDATION_DIR,'diamirE-profilnormalise-24pts.spl'),
-            Path(VALIDATION_DIR,'NACA2415-100pts.spl'),
-            Path(VALIDATION_DIR,'points-86pts.gnu'),
-            Path(VALIDATION_DIR,'splinesimple-86pts.pkl'),
-            ][::-1]
+def testMain(show=True):
 
 #     comm = MPI.COMM_WORLD()
 #     rank = comm.Get_rank()
 #     size = comm.Get_size()
     #for i in range(0,size):
-
+    if show : raw_input("show=True : dans PyCharm, il faut exécuter testsplinesimple.py en mode console, dans Liclipse, ca plante... ")
     for filename in files[:] :
         if 1:
+            debug(show=show)
             testSequenceBasique(filename, show=show)
+            return
         if 1:
             testConstructeurs(filename, show=show)
         if 1:
@@ -1000,4 +999,6 @@ def testMain(show=False):
     debug(titre='fin tests')
 
 if __name__=='__main__':
-    testMain()
+    from spleen import spleenconfig
+    spleenconfig.TEST_MODE = True
+    testMain(show=True)
