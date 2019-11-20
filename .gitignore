@@ -10,3 +10,4 @@ brouillon*
 build/*
 dist/*
 spleen.egg-info/*
+.ideas/*
