@@ -11,6 +11,8 @@ __updated__="2019-02-15"
 '''
 from matplotlib import pyplot as plt
 from matplotlib.widgets import CheckButtons
+from twisted.python.compat import raw_input
+
 plt.rcParams["figure.figsize"] = (20,10)
 from collections import OrderedDict
 import sys,os,math
@@ -962,7 +964,7 @@ def testMain(show=True):
         if 1:
             debug(show=show)
             testSequenceBasique(filename, show=show)
-            return
+            # return
         if 1:
             testConstructeurs(filename, show=show)
         if 1:
